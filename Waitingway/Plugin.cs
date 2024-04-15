@@ -61,6 +61,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Configuration.Save();
+
         SettingsWindow.Dispose();
         LobbyButtonWindow.Dispose();
         QueueWindow.Dispose();
