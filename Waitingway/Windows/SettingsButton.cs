@@ -1,5 +1,5 @@
+using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Interface.Internal;
-using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
@@ -9,7 +9,7 @@ using Waitingway.Utils;
 
 namespace Waitingway.Windows;
 
-public sealed unsafe class LobbyButton : Window, IDisposable
+public sealed unsafe class SettingsButton : Window, IDisposable
 {
     private const ImGuiWindowFlags WindowFlags =
         ImGuiWindowFlags.AlwaysAutoResize |
@@ -22,13 +22,29 @@ public sealed unsafe class LobbyButton : Window, IDisposable
 
     private IDalamudTextureWrap SettingsImage { get; }
 
-    public LobbyButton() : base("###Waitingway Lobby Button", WindowFlags)
+    private Vector2 ButtonSize { get; set; }
+
+    private short? DecreasedWidth { get; set; }
+    private const float Padding = 0;
+    private const float Scale = 1.1f;
+
+    public SettingsButton() : base("###Waitingway Settings Button", WindowFlags)
     {
         SettingsImage = Service.IconManager.GetAssemblyTexture("Graphics.settings.png");
 
         ForceMainWindow = true;
 
         IsOpen = true;
+
+        Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, (_, _) =>
+        {
+            DecreasedWidth = null;
+        });
+
+        Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, (_, _) =>
+        {
+            RevertNativeUi();
+        });
 
         Service.WindowSystem.AddWindow(this);
     }
@@ -50,7 +66,6 @@ public sealed unsafe class LobbyButton : Window, IDisposable
         return true;
     }
 
-    private Vector2 ButtonSize { get; set; }
     public override void PreDraw()
     {
         base.PreDraw();
@@ -75,10 +90,6 @@ public sealed unsafe class LobbyButton : Window, IDisposable
         base.PostDraw();
     }
 
-    private short? DecreasedWidth { get; set; }
-    private float Padding => 0;
-    private float Scale => 1.1f;
-
     private void AdjustNativeUi()
     {
         if (DecreasedWidth.HasValue)
@@ -87,8 +98,6 @@ public sealed unsafe class LobbyButton : Window, IDisposable
         var worldBtn = Addon->UldManager.SearchNodeById(4);
         var newCharaBtn = Addon->UldManager.SearchNodeById(5);
         var backupBtn = Addon->UldManager.SearchNodeById(6);
-
-        Log.Debug($"{newCharaBtn->X} {worldBtn->X + worldBtn->Width} {Addon->RootNode->ScaleX}");
 
         var width = (short)MathF.Round(backupBtn->Width * Scale + Padding);
         DecreasedWidth = width;

@@ -14,6 +14,7 @@ public sealed class Service
     [PluginService] public static DalamudPluginInterface PluginInterface { get; private set; }
     [PluginService] public static ICommandManager CommandManager { get; private set; }
     [PluginService] public static IObjectTable Objects { get; private set; }
+    [PluginService] public static IAddonLifecycle AddonLifecycle { get; private set; }
     [PluginService] public static ISigScanner SigScanner { get; private set; }
     [PluginService] public static IGameGui GameGui { get; private set; }
     [PluginService] public static IClientState ClientState { get; private set; }

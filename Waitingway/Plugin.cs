@@ -11,7 +11,7 @@ public sealed class Plugin : IDalamudPlugin
 {
     public WindowSystem WindowSystem { get; }
     public Settings SettingsWindow { get; }
-    public LobbyButton LobbyButtonWindow { get; }
+    public SettingsButton LobbyButtonWindow { get; }
     public Queue QueueWindow { get; }
 
     public Configuration Configuration { get; }
