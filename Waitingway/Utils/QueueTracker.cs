@@ -22,11 +22,12 @@ public sealed class QueueTracker : IDisposable
         public Recap(DateTime startTime)
         {
             StartTime = startTime;
-            Positions = new();
+            Positions = [];
         }
     }
 
     public bool InQueue => CurrentRecap != null;
+    public DateTime? StartTime => CurrentRecap?.StartTime;
     public int? Position => CurrentRecap?.Positions.LastOrDefault()?.PositionNumber;
 
     public event Action<int>? OnPositionUpdate;
@@ -40,6 +41,15 @@ public sealed class QueueTracker : IDisposable
         Service.Hooks.OnEnterQueue += OnEnterQueue;
         Service.Hooks.OnExitQueue += OnExitQueue;
         Service.Hooks.OnNewQueuePosition += OnNewQueuePosition;
+    }
+
+    public DateTime? EstimateTimeRemaining(DateTime now, float defaultPositionsPerMinute, Func<int, double> weightFunction)
+    {
+        if (CurrentRecap is not { } recap)
+            return null;
+
+        var history = recap.Positions.Select(p => (p.Time, p.PositionNumber));
+        return Estimator.EstimateRate(history, now, defaultPositionsPerMinute, weightFunction);
     }
 
     private void OnEnterQueue()
