@@ -1,0 +1,30 @@
+[package]
+name = "waitingway-web"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-cors = "0.7"
+actix-web = "4"
+actix-web-httpauth = "0.8"
+awc = "3"
+base64 = "0.22"
+config = "0.14"
+dotenvy = "0.15"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_urlencoded = "0.7"
+sqlx = { version = "0.7", features = [
+    "runtime-tokio",
+    "all-databases",
+    "time",
+    "uuid",
+] }
+thiserror = "1.0"
+time = { version = "0.3", features = ["serde"] }
+uuid = { version = "1", features = ["serde", "fast-rng"] }
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
+
+[dev-dependencies]

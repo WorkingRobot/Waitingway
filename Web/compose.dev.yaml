@@ -1,0 +1,12 @@
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    environment:
+      POSTGRES_USER: waitingway
+      POSTGRES_PASSWORD: waitingway_passwd
+      POSTGRES_DB: waitingway
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
