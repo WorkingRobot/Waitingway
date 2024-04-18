@@ -7,13 +7,26 @@ edition = "2021"
 actix-cors = "0.7"
 actix-web = "4"
 actix-web-httpauth = "0.8"
-awc = "3"
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "json",
+] }
 base64 = "0.22"
 config = "0.14"
 dotenvy = "0.15"
+env_logger = "0.11"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_urlencoded = "0.7"
+serenity = { version = "0.12", default-features = false, features = [
+    "builder",
+    "client",
+    "framework",
+    "gateway",
+    "http",
+    "model",
+    "utils",
+    "rustls_backend",
+] }
 sqlx = { version = "0.7", features = [
     "runtime-tokio",
     "all-databases",
@@ -21,8 +34,10 @@ sqlx = { version = "0.7", features = [
     "uuid",
 ] }
 thiserror = "1.0"
-time = { version = "0.3", features = ["serde"] }
-uuid = { version = "1", features = ["serde", "fast-rng"] }
+time = { version = "0.3", features = ["serde", "formatting"] }
+tokio = { version = "1.37", features = ["rt", "rt-multi-thread", "macros"] }
+url = "2.5"
+uuid = { version = "1", features = ["serde", "fast-rng", "v7"] }
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

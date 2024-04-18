@@ -1,4 +1,4 @@
-use crate::{auth::BasicAuthentication, db};
+use crate::{auth::BasicAuthentication, db, models::Recap};
 use actix_web::{
     dev::HttpServiceFactory,
     error::{ErrorInternalServerError, ErrorNotFound},
@@ -11,7 +11,6 @@ pub fn service() -> impl HttpServiceFactory {
     web::scope("/api/v1")
         .service(get_connections)
         .service(delete_connection)
-        .service(create_connection)
         .service(create_recap)
         .service(get_queue)
 }
@@ -47,14 +46,21 @@ async fn delete_connection(
     }
 }
 
-#[route("/connections", method = "POST", wrap = "BasicAuthentication")]
-async fn create_connection() -> Result<HttpResponse> {
-    Ok(HttpResponse::Created().finish())
-}
-
 #[route("/recap", method = "POST", wrap = "BasicAuthentication")]
-async fn create_recap() -> Result<HttpResponse> {
-    Ok(HttpResponse::Created().finish())
+async fn create_recap(
+    pool: web::Data<PgPool>,
+    username: web::ReqData<Uuid>,
+    recap: web::Json<Recap>,
+) -> Result<HttpResponse> {
+    let mut recap = recap.into_inner();
+    recap.user_id = *username;
+    recap.id = Uuid::now_v7();
+
+    let resp = db::create_recap(&pool, recap).await;
+    match resp {
+        Ok(_) => Ok(HttpResponse::Created().finish()),
+        Err(e) => Err(ErrorInternalServerError(e)),
+    }
 }
 
 #[get("/queue")]

@@ -5,3 +5,4 @@ bin/
 
 /Web/target
 /Web/postgres-data
+/Web/.secrets.env

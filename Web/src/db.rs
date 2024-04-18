@@ -1,9 +1,21 @@
-use sqlx::{postgres::PgQueryResult, Error, PgPool};
+use std::io;
+
+use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
 use uuid::Uuid;
 
 use crate::models::{Connection, Recap};
 
-pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<PgQueryResult, Error> {
+pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
+    // Limit the number of positions to 1 week
+    if recap.positions.len() > 60 * 24 * 7 {
+        return Err(Error::Decode(Box::new(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Too many positions",
+        ))));
+    }
+
+    let mut tx = pool.begin().await?;
+
     sqlx::query!(
         r#"INSERT INTO recaps
         (id, user_id, world_id, successful, start_time, end_time)
@@ -15,22 +27,36 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<PgQueryResult, 
         recap.start_time,
         recap.end_time
     )
-    .execute(pool)
-    .await
+    .execute(&mut *tx)
+    .await?;
+
+    let mut query_builder =
+        QueryBuilder::new("INSERT INTO recap_positions (recap_id, time, position) ");
+    query_builder.push_values(recap.positions, |mut b, position| {
+        b.push_bind(recap.id)
+            .push_bind(position.time)
+            .push_bind(position.position);
+    });
+    query_builder.build().execute(&mut *tx).await?;
+
+    tx.commit().await
 }
 
 pub async fn create_connection(
     pool: &PgPool,
     connection: Connection,
+    max_connections_per_user: i64,
 ) -> Result<PgQueryResult, Error> {
     sqlx::query!(
         r#"INSERT INTO connections
         (user_id, conn_user_id, username, display_name)
-        VALUES ($1, $2, $3, $4)"#r,
+        SELECT $1, $2, $3, $4
+        WHERE (SELECT COUNT(*) FROM connections WHERE user_id = $1) < $5"#r,
         connection.user_id,
         connection.conn_user_id.as_db(),
         connection.username,
-        connection.display_name
+        connection.display_name,
+        max_connections_per_user
     )
     .execute(pool)
     .await
