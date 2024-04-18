@@ -3,6 +3,6 @@ obj/
 bin/
 *.user
 
-/Web/target
-/Web/postgres-data
-/Web/.secrets.env
+/web/target
+/web/postgres-data
+/web/.secrets.env
