@@ -1,11 +1,10 @@
-using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Interface.Internal;
 using Dalamud.Interface.Windowing;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Numerics;
-using Waitingway.Utils;
+using Bounds = FFXIVClientStructs.FFXIV.Common.Math.Bounds;
 
 namespace Waitingway.Windows;
 
@@ -24,7 +23,7 @@ public sealed unsafe class SettingsButton : Window, IDisposable
 
     private Vector2 ButtonSize { get; set; }
 
-    private short? DecreasedWidth { get; set; }
+    private float? DecreasedWidth { get; set; }
     private const float Padding = 0;
     private const float Scale = 1.1f;
 
@@ -35,16 +34,6 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         ForceMainWindow = true;
 
         IsOpen = true;
-
-        Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, (_, _) =>
-        {
-            DecreasedWidth = null;
-        });
-
-        Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, (_, _) =>
-        {
-            RevertNativeUi();
-        });
 
         Service.WindowSystem.AddWindow(this);
     }
@@ -90,21 +79,34 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         base.PostDraw();
     }
 
+    private bool IsAdjusted()
+    {
+        var backupBtn = Addon->UldManager.SearchNodeById(6);
+        var connectionText = Addon->UldManager.SearchNodeById(10);
+        Bounds b, b2;
+        connectionText->GetBounds(&b);
+        backupBtn->GetBounds(&b2);
+
+        var dist = (b2.Pos1.X - b.Pos2.X) / Addon->RootNode->ScaleX;
+        return dist != 8;
+    }
+
     private void AdjustNativeUi()
     {
-        if (DecreasedWidth.HasValue)
+        if (IsAdjusted())
             return;
         
         var worldBtn = Addon->UldManager.SearchNodeById(4);
         var newCharaBtn = Addon->UldManager.SearchNodeById(5);
         var backupBtn = Addon->UldManager.SearchNodeById(6);
 
-        var width = (short)MathF.Round(backupBtn->Width * Scale + Padding);
+        var width = MathF.Round(backupBtn->Width * Scale + Padding);
         DecreasedWidth = width;
 
-        AdjustWidth(worldBtn, (short)-width);
-        AdjustX(newCharaBtn, (short)-width);
-        AdjustX(backupBtn, (short)-width);
+        AdjustWidth(worldBtn, -width / 2);
+        AdjustX(newCharaBtn, -width / 2);
+        AdjustWidth(newCharaBtn, -width / 2);
+        AdjustX(backupBtn, -width);
     }
 
     private void RevertNativeUi()
@@ -117,16 +119,20 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         if (Addon == null)
             return;
 
+        if (!IsAdjusted())
+            return;
+
         var worldBtn = Addon->UldManager.SearchNodeById(4);
         var newCharaBtn = Addon->UldManager.SearchNodeById(5);
         var backupBtn = Addon->UldManager.SearchNodeById(6);
 
-        AdjustWidth(worldBtn, width);
-        AdjustX(newCharaBtn, width);
+        AdjustWidth(worldBtn, width / 2);
+        AdjustX(newCharaBtn, width / 2);
+        AdjustWidth(newCharaBtn, width / 2);
         AdjustX(backupBtn, width);
     }
 
-    private void AdjustWidth(AtkResNode* node, short delta)
+    private void AdjustWidth(AtkResNode* node, float delta)
     {
         node->SetWidth((ushort)(node->Width + delta));
 
@@ -138,9 +144,9 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         }
     }
 
-    private void AdjustX(AtkResNode* node, short delta)
+    private void AdjustX(AtkResNode* node, float delta)
     {
-        node->SetX((short)(node->X + delta));
+        node->SetX(node->X + delta);
     }
 
     public override void Draw()
