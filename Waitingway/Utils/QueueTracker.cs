@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 
 namespace Waitingway.Utils;
 
@@ -10,31 +11,79 @@ public sealed class QueueTracker : IDisposable
     {
         public sealed record Position
         {
-            public int PositionNumber { get; init; }
-            public DateTime Time { get; init; }
+            [JsonPropertyName("position")]
+            public required int PositionNumber { get; init; }
+            public required DateTime Time { get; init; }
         }
 
-        public DateTime StartTime { get; }
-        public List<Position> Positions { get; }
-        public DateTime EndTime { get; set; }
-        public bool WasSuccessful { get; set; }
+        [JsonIgnore]
+        public string CharacterName { get; }
+        [JsonIgnore]
+        public ushort HomeWorldId { get; }
 
-        public Recap(DateTime startTime)
+        public ushort WorldId { get; }
+        public bool Successful { get; private set; }
+        public DateTime StartTime { get; }
+        public DateTime EndTime { get; private set; }
+
+        private List<Position> _positions { get; }
+        public IReadOnlyList<Position> Positions => _positions;
+
+        [JsonIgnore]
+        public DateTime EstimatedEndTime => EstimateEndTime(DateTime.UtcNow);
+
+        [JsonIgnore]
+        public Position? CurrentPosition => Positions.Count == 0 ? null : Positions[^1];
+
+        public Recap(string characterName, ushort homeWorldId, ushort worldId, DateTime startTime)
         {
+            CharacterName = characterName;
+            HomeWorldId = homeWorldId;
+            WorldId = worldId;
             StartTime = startTime;
-            Positions = [];
+            _positions = [];
+        }
+
+        public void AddPosition(int positionNumber)
+        {
+            _positions.Add(new Position { PositionNumber = positionNumber, Time = DateTime.UtcNow });
+        }
+
+        public void Complete(bool successful)
+        {
+            EndTime = DateTime.UtcNow;
+            Successful = successful;
+        }
+
+        public DateTime EstimateEndTime(DateTime now)
+        {
+            var config = Service.Configuration;
+            return EstimateEndTime(now, config.DefaultRate, config.Estimator switch
+            {
+                EstimatorType.Geometric => Estimator.GeometricWeight,
+                EstimatorType.MinorGeometric => Estimator.MinorGeometricWeight,
+                EstimatorType.Inverse => Estimator.InverseWeight,
+                EstimatorType.ShiftedInverse => Estimator.ShiftedInverseWeight,
+                _ => throw new NotSupportedException()
+            });
+        }
+
+        private DateTime EstimateEndTime(DateTime now, float defaultPositionsPerMinute, Func<int, double> weightFunction)
+        {
+            var history = Positions.Select(p => (p.Time, p.PositionNumber));
+            return Estimator.EstimateRate(history, now, defaultPositionsPerMinute, weightFunction);
         }
     }
 
     public bool InQueue => CurrentRecap != null;
-    public DateTime? StartTime => CurrentRecap?.StartTime;
-    public int? Position => CurrentRecap?.Positions.LastOrDefault()?.PositionNumber;
 
-    public event Action<int>? OnPositionUpdate;
+    public event Action<Recap>? OnBeginQueue;
 
-    public event Action<Recap>? OnRecap;
+    public event Action<Recap>? OnUpdateQueue;
 
-    private Recap? CurrentRecap { get; set; }
+    public event Action<Recap>? OnCompleteQueue;
+
+    public Recap? CurrentRecap { get; private set; }
 
     public QueueTracker()
     {
@@ -43,41 +92,31 @@ public sealed class QueueTracker : IDisposable
         Service.Hooks.OnNewQueuePosition += OnNewQueuePosition;
     }
 
-    public DateTime? EstimateTimeRemaining(DateTime now, float defaultPositionsPerMinute, Func<int, double> weightFunction)
+    private void OnEnterQueue(string characterName, ushort homeWorldId, ushort worldId)
     {
-        if (CurrentRecap is not { } recap)
-            return null;
-
-        var history = recap.Positions.Select(p => (p.Time, p.PositionNumber));
-        return Estimator.EstimateRate(history, now, defaultPositionsPerMinute, weightFunction);
-    }
-
-    private void OnEnterQueue()
-    {
-        Log.Debug("Entered queue");
-        CurrentRecap = new(DateTime.UtcNow);
+        CurrentRecap = new(characterName, homeWorldId, worldId, DateTime.UtcNow);
+        OnBeginQueue?.Invoke(CurrentRecap);
     }
 
     private void OnExitQueue(bool isSuccessful)
     {
-        Log.Debug($"Exited queue (successful login: {isSuccessful})");
         if (CurrentRecap is { } recap)
         {
-            recap.EndTime = DateTime.UtcNow;
-            recap.WasSuccessful = isSuccessful;
-            OnRecap?.Invoke(recap);
+            recap.Complete(isSuccessful);
+            OnCompleteQueue?.Invoke(recap);
             CurrentRecap = null;
         }
     }
 
     private void OnNewQueuePosition(int newPosition)
     {
-        Log.Debug($"New queue position: {newPosition}");
         if (CurrentRecap is { } recap)
-            recap.Positions.Add(new Recap.Position { PositionNumber = newPosition, Time = DateTime.UtcNow });
+        {
+            recap.AddPosition(newPosition);
+            OnUpdateQueue?.Invoke(recap);
+        }
         else
-            Log.Error($"Received new queue position ({newPosition}) while not in queue");
-        OnPositionUpdate?.Invoke(newPosition);
+            Log.ErrorNotify($"Received new queue position ({newPosition}) while prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
     }
 
     public void Dispose()

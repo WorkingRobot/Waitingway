@@ -61,32 +61,17 @@ public unsafe sealed class Queue : Window, IDisposable
     {
         var now = DateTime.UtcNow;
 
-        var startTime = Service.QueueTracker.StartTime ?? throw new InvalidOperationException("Start time is null");
-        var position = Service.QueueTracker.Position ?? throw new InvalidOperationException("Position is null");
-        var eta = (Service.QueueTracker.EstimateTimeRemaining(now, Config.DefaultRate, Config.Estimator switch
-        {
-            EstimatorType.Geometric => Estimator.GeometricWeight,
-            EstimatorType.MinorGeometric => Estimator.MinorGeometricWeight,
-            EstimatorType.Inverse => Estimator.InverseWeight,
-            EstimatorType.ShiftedInverse => Estimator.ShiftedInverseWeight,
-            _ => throw new NotSupportedException()
-        }) ?? throw new InvalidOperationException("ETA is null")) - now;
-        var elapsed = now - startTime;
+        var recap = Service.QueueTracker.CurrentRecap ?? throw new InvalidOperationException("Recap is null");
+        var position = recap.CurrentPosition ?? throw new InvalidOperationException("Current position is null");
+        var eta = recap.EstimatedEndTime - now;
+        var elapsed = now - recap.StartTime;
 
-        ImGui.TextUnformatted($"Your position: {position}");
-        ImGui.TextUnformatted($"Elapsed: {elapsed.ToString(GetTimeSpanFormat(elapsed))}");
-        if (eta.Ticks > 0 && position > Config.MinimumPositionThreshold)
-            ImGui.TextUnformatted($"Estimated time remaining: {eta.ToString(GetTimeSpanFormat(eta))}");
+        ImGui.TextUnformatted($"Your position: {position.PositionNumber}");
+        ImGui.TextUnformatted($"Elapsed: {elapsed.ToString(Log.GetTimeSpanFormat(elapsed))}");
+        if (eta.Ticks > 0 && position.PositionNumber > Config.MinimumPositionThreshold)
+            ImGui.TextUnformatted($"Estimated time remaining: {eta.ToString(Log.GetTimeSpanFormat(eta))}");
         else
             ImGui.TextUnformatted("Estimated time remaining: Less than a minute");
-    }
-
-    private static string GetTimeSpanFormat(TimeSpan span)
-    {
-        var neg = span.Ticks < 0 ? @"\-" : string.Empty;
-        var day = Math.Abs(span.TotalDays) >= 1 ? @"d\d\ " : string.Empty;
-        var hour = Math.Abs(span.TotalHours) >= 1 ? @"hh\:" : string.Empty;
-        return @$"{neg}{day}{hour}mm\:ss";
     }
 
     public void Dispose()

@@ -4,6 +4,8 @@ using Dalamud.Interface.Windowing;
 using Waitingway.Windows;
 using Waitingway.Utils;
 using System.Text.Json;
+using Dalamud.Interface.ImGuiNotification;
+using Dalamud.Interface.Internal.Notifications;
 
 namespace Waitingway;
 
@@ -18,6 +20,8 @@ public sealed class Plugin : IDalamudPlugin
     public IconManager IconManager { get; }
     public Hooks Hooks { get; }
     public QueueTracker QueueTracker { get; }
+    public Api Api { get; }
+    public NotificationTracker NotificationTracker { get; }
 
     public Plugin([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
     {
@@ -28,6 +32,8 @@ public sealed class Plugin : IDalamudPlugin
         IconManager = new();
         Hooks = new();
         QueueTracker = new();
+        Api = new();
+        NotificationTracker = new();
 
         SettingsWindow = new();
         LobbyButtonWindow = new();
@@ -36,14 +42,27 @@ public sealed class Plugin : IDalamudPlugin
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += OpenSettingsWindow;
 
-        QueueTracker.OnRecap += recap =>
-        {
-            Log.Debug($"EVENT: New recap: {JsonSerializer.Serialize(recap)}");
-        };
+        QueueTracker.OnBeginQueue += recap =>
+            Log.Debug($"EVENT: BEGIN: {JsonSerializer.Serialize(recap, Api.JsonOptions)}");
 
-        QueueTracker.OnPositionUpdate += position =>
+        QueueTracker.OnUpdateQueue += recap =>
+            Log.Debug($"EVENT: UPDATE: {recap.CurrentPosition!.PositionNumber}");
+
+        QueueTracker.OnCompleteQueue += recap =>
+            Log.Debug($"EVENT: FINISH: {JsonSerializer.Serialize(recap, Api.JsonOptions)}");
+
+        QueueTracker.OnCompleteQueue += recap =>
         {
-            Log.Debug($"EVENT: New position: {position}");
+            var elapsed = recap.EndTime - recap.StartTime;
+            var world = World.GetWorld(recap.WorldId);
+            Log.Notify(new Notification
+            {
+                Type = recap.Successful ? NotificationType.Success : NotificationType.Warning,
+                Title = $"Queue {(recap.Successful ? "Successful" : "Unsuccessful")}",
+                MinimizedText = $"Queued for {elapsed.ToString(Log.GetTimeSpanFormat(elapsed))}",
+                Content = $"Queued for {elapsed.ToString(Log.GetTimeSpanFormat(elapsed))} for {world?.WorldName ?? "Unknown"} ({world?.DatacenterName ?? "Unknown"})",
+                Minimized = false
+            });
         };
     }
 
@@ -63,10 +82,12 @@ public sealed class Plugin : IDalamudPlugin
     {
         Configuration.Save();
 
-        SettingsWindow.Dispose();
-        LobbyButtonWindow.Dispose();
         QueueWindow.Dispose();
+        LobbyButtonWindow.Dispose();
+        SettingsWindow.Dispose();
 
+        NotificationTracker.Dispose();
+        Api.Dispose();
         QueueTracker.Dispose();
         Hooks.Dispose();
         IconManager.Dispose();

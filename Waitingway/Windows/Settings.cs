@@ -1,9 +1,12 @@
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 using System;
+using System.Collections.Generic;
 using System.Numerics;
+using System.Threading.Tasks;
 using Waitingway.Utils;
 
 namespace Waitingway.Windows;
@@ -19,6 +22,13 @@ public sealed class Settings : Window, IDisposable
 
     private string? SelectedTab { get; set; }
 
+    private Task<Api.Connection[]>? ConnectionsTask { get; set; }
+    private DateTime? ConnectionsLastRefresh { get; set; }
+
+    private Api.Connection[]? Connections => (ConnectionsTask?.IsCompletedSuccessfully ?? false) ? ConnectionsTask.Result : null;
+    private bool IsLoadingConnections => !(ConnectionsTask?.IsCompleted ?? false);
+    private bool IsConnectionsUnderCooldown => ConnectionsLastRefresh is { } lastRefresh && DateTime.UtcNow - lastRefresh < TimeSpan.FromSeconds(3);
+
     public Settings() : base("Waitingway Settings", WindowFlags)
     {
         Service.WindowSystem.AddWindow(this);
@@ -31,6 +41,20 @@ public sealed class Settings : Window, IDisposable
             MinimumSize = new(450, 400),
             MaximumSize = new(float.PositiveInfinity)
         };
+    }
+
+    private void UpdateConnections(bool force = false)
+    {
+        if (IsConnectionsUnderCooldown && !force)
+            return;
+
+        ConnectionsLastRefresh = DateTime.UtcNow;
+        ConnectionsTask = Service.Api.GetConnectionsAsync();
+        _ = ConnectionsTask.ContinueWith(t =>
+        {
+            if (t.Exception is { } e)
+                Log.ErrorNotify(e, "Failed to load connections", "Couldn't Load Connections");
+        });
     }
 
     public void SelectTab(string label)
@@ -56,6 +80,25 @@ public sealed class Settings : Window, IDisposable
         {
             setter(val);
             isDirty = true;
+        }
+        if (ImGui.IsItemHovered())
+            ImGuiUtils.TooltipWrapped(tooltip);
+    }
+
+    private static void DrawOption<T>(string label, string tooltip, T value, Func<T, string> toString, Func<string, T?> fromString, Action<T> setter, ref bool isDirty)
+    {
+        ImGui.SetNextItemWidth(OptionWidth);
+        var text = toString(value);
+        if (ImGui.InputText(label, ref text, 256, ImGuiInputTextFlags.AutoSelectAll))
+        {
+            if (fromString(text) is { } newValue)
+            {
+                if (!EqualityComparer<T>.Default.Equals(value, newValue))
+                {
+                    setter(newValue);
+                    isDirty = true;
+                }
+            }
         }
         if (ImGui.IsItemHovered())
             ImGuiUtils.TooltipWrapped(tooltip);
@@ -146,15 +189,74 @@ public sealed class Settings : Window, IDisposable
 
         var isDirty = false;
 
-        DrawDiscordAccountLink();
+        if (ImGui.Button("Link Discord Account", OptionButtonSize))
+        {
+            var task = Service.Api.OpenConnectionLinkInBrowserAsync();
+            _ = task.ContinueWith(t =>
+            {
+                if (t.Exception is { } e)
+                    Log.ErrorNotify(e, "Failed to open Discord");
+            });
+        }
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        var pos = ImGui.GetCursorPosX();
+        var frameWidth = ImGui.CalcItemWidth();
+
+        ImGui.AlignTextToFramePadding();
+
+        ImGuiUtils.TextCentered("Connections", frameWidth);
+
+        ImGui.SameLine();
+
+        var buttonWidth = ImGui.GetFrameHeight();
+        ImGuiUtils.AlignRight(buttonWidth, frameWidth - (ImGui.GetCursorPosX() - pos));
+        var isUnderCooldown = IsConnectionsUnderCooldown;
+        using (ImRaii.Disabled(isUnderCooldown))
+        {
+            if (ImGuiUtils.IconButtonSquare(FontAwesomeIcon.Sync, buttonWidth) || ConnectionsTask == null)
+                UpdateConnections();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && isUnderCooldown)
+                ImGuiUtils.TooltipWrapped("Please wait a moment before refreshing");
+        }
+
+        using (var frame = ImRaii.Child("connectionsFrame", new Vector2(frameWidth, 200), true))
+        {
+            if (IsLoadingConnections)
+                ImGuiUtils.TextCentered("Loading...");
+            else if (Connections == null)
+                ImGuiUtils.TextCentered("Failed to load connections");
+            else if (Connections.Length == 0)
+                ImGuiUtils.TextCentered("No connections!");
+            else
+            {
+                foreach (var connection in Connections)
+                {
+                    ImGui.AlignTextToFramePadding();
+                    ImGui.TextUnformatted($"{connection.DisplayName} ({connection.Username})");
+                    if (ImGui.IsItemHovered())
+                        ImGui.SetTooltip($"ID: {connection.ConnUserId}");
+
+                    ImGui.SameLine();
+                    ImGuiUtils.AlignRight(buttonWidth);
+                    if (ImGuiUtils.IconButtonSquare(FontAwesomeIcon.TrashAlt, buttonWidth))
+                    {
+                        var task = Service.Api.DeleteConnectionAsync(connection.ConnUserId);
+                        _ = task.ContinueWith(t =>
+                        {
+                            if (t.Exception is { } e)
+                                Log.ErrorNotify(e, "Failed to delete connection", "Couldn't Delete Connection");
+                            else if (!IsLoadingConnections)
+                                UpdateConnections(true);
+                        });
+                    }
+                }
+            }
+        }
 
         if (isDirty)
             Config.Save();
-    }
-
-    private void DrawDiscordAccountLink()
-    {
-        // TODO!
     }
 
     private void DrawTabAdvanced()
@@ -196,6 +298,30 @@ public sealed class Settings : Window, IDisposable
             Config.MinimumPositionThreshold,
             0, 100,
             v => Config.MinimumPositionThreshold = v,
+            ref isDirty
+        );
+
+        ImGui.Separator();
+
+        DrawOption(
+            "Notification Threshold",
+            "Queue positions above this level will trigger a notification. " +
+            "Keep in mind that the server also has its own threshold, so setting " +
+            "this below a certain point won't have any effect.",
+            Config.NotificationThreshold,
+            0, 1000,
+            v => Config.NotificationThreshold = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Server API Url",
+            "The URL of the server API to use for queue tracking. Keep this " +
+            "as the default unless you're hosting a private server.",
+            Config.ServerUri,
+            v => v.AbsoluteUri,
+            v => Uri.TryCreate(v, UriKind.Absolute, out var ret) ? ret : null,
+            v => Config.ServerUri = v,
             ref isDirty
         );
 

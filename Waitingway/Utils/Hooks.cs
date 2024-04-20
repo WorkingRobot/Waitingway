@@ -1,4 +1,5 @@
 using Dalamud.Hooking;
+using Dalamud.Memory;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
@@ -16,7 +17,7 @@ public sealed unsafe class Hooks : IDisposable
         [FieldOffset(0x1C)] public int QueuePosition;
     }
 
-    public event Action? OnEnterQueue;
+    public event Action<string, ushort, ushort>? OnEnterQueue; // characterName, homeWorldId, worldId
     public event Action<bool>? OnExitQueue; // true => successful, false => cancelled/left
     public event Action<int>? OnNewQueuePosition;
 
@@ -58,10 +59,11 @@ public sealed unsafe class Hooks : IDisposable
             switch (eventKind)
             {
                 case 0x03:
+                    var entry = agent->LobbyData.CharaSelectEntries.Get((ulong)agent->SelectedCharacterIndex).Value;
                     // 0 = OK
                     // 1 = Cancel
                     if (values[0].Int == 0)
-                        OnEnterQueue?.Invoke();
+                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->HomeWorldId, agent->WorldId);
                     break;
                 case 0x1C:
                     // 0 = OK

@@ -15,6 +15,7 @@ public sealed class Service
     [PluginService] public static ICommandManager CommandManager { get; private set; }
     [PluginService] public static IObjectTable Objects { get; private set; }
     [PluginService] public static IAddonLifecycle AddonLifecycle { get; private set; }
+    [PluginService] public static INotificationManager NotificationManager { get; private set; }
     [PluginService] public static ISigScanner SigScanner { get; private set; }
     [PluginService] public static IGameGui GameGui { get; private set; }
     [PluginService] public static IClientState ClientState { get; private set; }
@@ -32,6 +33,8 @@ public sealed class Service
     public static IconManager IconManager => Plugin.IconManager;
     public static Hooks Hooks => Plugin.Hooks;
     public static QueueTracker QueueTracker => Plugin.QueueTracker;
+    public static Api Api => Plugin.Api;
+    public static NotificationTracker NotificationTracker => Plugin.NotificationTracker;
 #pragma warning restore CS8618
 
     internal static void Initialize(Plugin plugin, DalamudPluginInterface iface)
