@@ -1,7 +1,9 @@
 using Dalamud.Interface;
+using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
+using Dalamud.Utility.Numerics;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
@@ -22,6 +24,9 @@ public sealed class Settings : Window, IDisposable
 
     private string? SelectedTab { get; set; }
 
+    private IFontHandle HeaderFont { get; }
+    private IFontHandle SubheaderFont { get; }
+
     private Task<Api.Connection[]>? ConnectionsTask { get; set; }
     private DateTime? ConnectionsLastRefresh { get; set; }
 
@@ -33,8 +38,8 @@ public sealed class Settings : Window, IDisposable
     {
         Service.WindowSystem.AddWindow(this);
 
-        Size = new(600, 0);
-        SizeCondition = ImGuiCond.FirstUseEver;
+        HeaderFont = Service.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * 2f)));
+        SubheaderFont = Service.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * 1.5f)));
 
         SizeConstraints = new WindowSizeConstraints()
         {
@@ -189,20 +194,9 @@ public sealed class Settings : Window, IDisposable
 
         var isDirty = false;
 
-        if (ImGui.Button("Link Discord Account", OptionButtonSize))
-        {
-            var task = Service.Api.OpenConnectionLinkInBrowserAsync();
-            _ = task.ContinueWith(t =>
-            {
-                if (t.Exception is { } e)
-                    Log.ErrorNotify(e, "Failed to open Discord");
-            });
-        }
-
-        ImGuiHelpers.ScaledDummy(5);
+        var frameWidth = ImGui.GetContentRegionAvail().X;
 
         var pos = ImGui.GetCursorPosX();
-        var frameWidth = ImGui.CalcItemWidth();
 
         ImGui.AlignTextToFramePadding();
 
@@ -255,6 +249,16 @@ public sealed class Settings : Window, IDisposable
             }
         }
 
+        if (ImGui.Button("Connect Discord Account", OptionButtonSize.WithX(frameWidth)))
+        {
+            var task = Service.Api.OpenOAuthInBrowserAsync();
+            _ = task.ContinueWith(t =>
+            {
+                if (t.Exception is { } e)
+                    Log.ErrorNotify(e, "Failed to open Discord");
+            });
+        }
+
         if (isDirty)
             Config.Save();
     }
@@ -268,6 +272,30 @@ public sealed class Settings : Window, IDisposable
         ImGuiHelpers.ScaledDummy(5);
 
         var isDirty = false;
+
+        DrawOption(
+            "Notification Threshold",
+            "Queue positions above this level will trigger a notification. " +
+            "Keep in mind that the server also has its own threshold, so setting " +
+            "this below a certain point won't have any effect.",
+            Config.NotificationThreshold,
+            0, 1000,
+            v => Config.NotificationThreshold = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Server API Url",
+            "The URL of the server API to use for queue tracking. Keep this " +
+            "as the default unless you're hosting a private server.",
+            Config.ServerUri,
+            v => v.AbsoluteUri,
+            v => Uri.TryCreate(v, UriKind.Absolute, out var ret) ? ret : null,
+            v => Config.ServerUri = v,
+            ref isDirty
+        );
+
+        ImGui.Separator();
 
         DrawOption(
             "Estimator",
@@ -301,30 +329,6 @@ public sealed class Settings : Window, IDisposable
             ref isDirty
         );
 
-        ImGui.Separator();
-
-        DrawOption(
-            "Notification Threshold",
-            "Queue positions above this level will trigger a notification. " +
-            "Keep in mind that the server also has its own threshold, so setting " +
-            "this below a certain point won't have any effect.",
-            Config.NotificationThreshold,
-            0, 1000,
-            v => Config.NotificationThreshold = v,
-            ref isDirty
-        );
-
-        DrawOption(
-            "Server API Url",
-            "The URL of the server API to use for queue tracking. Keep this " +
-            "as the default unless you're hosting a private server.",
-            Config.ServerUri,
-            v => v.AbsoluteUri,
-            v => Uri.TryCreate(v, UriKind.Absolute, out var ret) ? ret : null,
-            v => Config.ServerUri = v,
-            ref isDirty
-        );
-
         if (isDirty)
             Config.Save();
     }
@@ -337,7 +341,63 @@ public sealed class Settings : Window, IDisposable
 
         ImGuiHelpers.ScaledDummy(5);
 
-        // TODO!
+        var version = Service.Version;
+
+        using (var table = ImRaii.Table("settingsAboutTable", 2))
+        {
+            if (table)
+            {
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, version.Icon.Width);
+
+                ImGui.TableNextColumn();
+                ImGui.Image(version.Icon.ImGuiHandle, new(version.Icon.Width, version.Icon.Height));
+
+                ImGui.TableNextColumn();
+                ImGuiUtils.AlignMiddle(new(float.PositiveInfinity, HeaderFont.GetFontSize() + SubheaderFont.GetFontSize() + ImGui.GetFontSize() * 3 + ImGui.GetStyle().ItemSpacing.Y * 4), new(0, version.Icon.Height));
+
+                using (HeaderFont.Push())
+                {
+                    ImGuiUtils.AlignCentered(ImGui.CalcTextSize("Waitingway").X);
+                    ImGuiUtils.Hyperlink("Waitingway", "https://github.com/avafloww/Waitingway", false);
+                }
+
+                using (SubheaderFont.Push())
+                    ImGuiUtils.TextCentered($"v{version.Version} {version.BuildConfiguration}");
+
+                ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"By {version.Author} (WorkingRobot)").X);
+                ImGui.Text($"By {version.Author} (");
+                ImGui.SameLine(0, 0);
+                ImGuiUtils.Hyperlink("WorkingRobot", "https://github.com/WorkingRobot");
+                ImGui.SameLine(0, 0);
+                ImGui.Text(")");
+
+                ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"Discord").X + ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize($"Ko-fi").X);
+                ImGuiUtils.Hyperlink("Discord", "https://waiting.camora.dev/discord");
+                ImGui.SameLine();
+                ImGuiUtils.Hyperlink("Ko-fi", "https://waiting.camora.dev/funding");
+            }
+        }
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        ImGui.Separator();
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        using (SubheaderFont.Push())
+            ImGuiUtils.TextCentered("Special Thanks");
+
+        var startPosX = ImGui.GetCursorPosX();
+
+        ImGuiUtils.TextWrappedTo("Thank you to ");
+        ImGui.SameLine(0, 0);
+        ImGuiUtils.Hyperlink("Lumi", "https://github.com/avafloww");
+        ImGui.SameLine(0, 0);
+        ImGuiUtils.TextWrappedTo(" and ");
+        ImGui.SameLine(0, 0);
+        ImGuiUtils.Hyperlink("NPittinger", "https://github.com/NPittinger");
+        ImGui.SameLine(0, 0);
+        ImGuiUtils.TextWrappedTo(" for the original Waitingway plugin");
     }
 
     public void Dispose()

@@ -8,7 +8,7 @@ namespace Waitingway.Utils;
 
 public sealed class IconManager : IDisposable
 {
-    private readonly Dictionary<string, IDalamudTextureWrap> assemblyCache = new();
+    private readonly Dictionary<string, IDalamudTextureWrap> assemblyCache = [];
 
     public IDalamudTextureWrap GetAssemblyTexture(string filename)
     {

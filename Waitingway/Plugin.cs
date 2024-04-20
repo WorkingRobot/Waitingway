@@ -18,6 +18,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public Configuration Configuration { get; }
     public IconManager IconManager { get; }
+    public Versioning Version { get; }
     public Hooks Hooks { get; }
     public QueueTracker QueueTracker { get; }
     public Api Api { get; }
@@ -30,6 +31,7 @@ public sealed class Plugin : IDalamudPlugin
         WindowSystem = new("Waitingway");
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new();
         IconManager = new();
+        Version = new();
         Hooks = new();
         QueueTracker = new();
         Api = new();

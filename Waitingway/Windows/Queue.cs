@@ -6,7 +6,7 @@ using Waitingway.Utils;
 
 namespace Waitingway.Windows;
 
-public unsafe sealed class Queue : Window, IDisposable
+public sealed unsafe class Queue : Window, IDisposable
 {
     private const ImGuiWindowFlags WindowFlags =
         ImGuiWindowFlags.NoFocusOnAppearing |

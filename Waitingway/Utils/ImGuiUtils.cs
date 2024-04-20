@@ -2,6 +2,9 @@ using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface;
 using ImGuiNET;
 using System.Numerics;
+using System.Diagnostics;
+using System;
+using Dalamud.Interface.ManagedFontAtlas;
 
 namespace Waitingway.Utils;
 
@@ -94,11 +97,80 @@ public static class ImGuiUtils
         ImGui.TextUnformatted(text);
     }
 
+    // https://gist.github.com/dougbinks/ef0962ef6ebe2cadae76c4e9f0586c69#file-imguiutils-h-L219
+    private static void UnderlineLastItem(Vector4 color)
+    {
+        var min = ImGui.GetItemRectMin();
+        var max = ImGui.GetItemRectMax();
+        min.Y = max.Y;
+        ImGui.GetWindowDrawList().AddLine(min, max, ImGui.ColorConvertFloat4ToU32(color), 1);
+    }
+
+    // https://gist.github.com/dougbinks/ef0962ef6ebe2cadae76c4e9f0586c69#file-imguiutils-h-L228
+    public static unsafe void Hyperlink(string text, string url, bool underline = true)
+    {
+        ImGui.TextUnformatted(text);
+        if (underline)
+            UnderlineLastItem(*ImGui.GetStyleColorVec4(ImGuiCol.Text));
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            var urlWithoutScheme = url;
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                urlWithoutScheme = uri.Host + (string.Equals(uri.PathAndQuery, "/", StringComparison.Ordinal) ? string.Empty : uri.PathAndQuery);
+            Tooltip(urlWithoutScheme);
+        }
+    }
+
+    public static void TextWrappedTo(string text, float wrapPosX = default, float basePosX = default)
+    {
+        var font = ImGui.GetFont();
+
+        var currentPos = ImGui.GetCursorPosX();
+
+        if (basePosX == default)
+            basePosX = ImGui.GetCursorStartPos().X;
+
+        float currentWrapWidth;
+        if (wrapPosX == default)
+            currentWrapWidth = ImGui.GetContentRegionAvail().X;
+        else
+            currentWrapWidth = wrapPosX - currentPos;
+
+        var textBuf = text.AsSpan();
+        var lineSize = font.CalcWordWrapPositionA(1, textBuf, currentWrapWidth) ?? textBuf.Length;
+        var lineBuf = textBuf[..lineSize];
+        ImGui.Text(lineBuf.ToString());
+        var remainingBuf = textBuf[lineSize..].TrimStart();
+
+        if (!remainingBuf.IsEmpty)
+        {
+            ImGui.SetCursorPosX(basePosX);
+            using (ImRaii2.TextWrapPos(wrapPosX))
+                ImGui.TextWrapped(remainingBuf.ToString());
+        }
+    }
+
+    public static void Tooltip(string text)
+    {
+        using var _font = ImRaii.PushFont(UiBuilder.DefaultFont);
+        using var _tooltip = ImRaii.Tooltip();
+        ImGui.TextUnformatted(text);
+    }
+
     public static void TooltipWrapped(string text, float width = 300)
     {
         using var _font = ImRaii.PushFont(UiBuilder.DefaultFont);
         using var _tooltip = ImRaii.Tooltip();
         using var _wrap = ImRaii2.TextWrapPos(width);
         ImGui.TextUnformatted(text);
+    }
+
+    public static float GetFontSize(this IFontHandle font)
+    {
+        using (font.Push())
+            return ImGui.GetFontSize();
     }
 }

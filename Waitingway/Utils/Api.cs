@@ -42,7 +42,7 @@ public sealed class Api : IDisposable
         });
         client.BaseAddress = Service.Configuration.ServerUri;
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Service.Configuration.ClientId}:{Password}")));
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Waitingway", "1.0"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Waitingway", $"{Service.Version.Version}-{Service.Version.BuildConfiguration}"));
         return client;
     }
 
@@ -54,7 +54,7 @@ public sealed class Api : IDisposable
         oldClient?.Dispose();
     }
 
-    public async Task OpenConnectionLinkInBrowserAsync()
+    public async Task OpenOAuthInBrowserAsync()
     {
         var resp = (await Client.GetAsync("api/v1/oauth/redirect").ConfigureAwait(false));
         if (resp.StatusCode != HttpStatusCode.Found)
@@ -79,9 +79,7 @@ public sealed class Api : IDisposable
 
     public async Task CreateRecapAsync(QueueTracker.Recap recap)
     {
-        var resp = (await Client.PostAsJsonAsync("api/v1/recap", recap, JsonOptions).ConfigureAwait(false));//.EnsureSuccessStatusCode();
-        if (!resp.IsSuccessStatusCode)
-            Log.Warn($"{await resp.Content.ReadAsStringAsync().ConfigureAwait(false)}");
+        var resp = (await Client.PostAsJsonAsync("api/v1/recap", recap, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
         if (resp.StatusCode != HttpStatusCode.Created)
             throw new ApiException("api/v1/recap", $"Unexpected status code {resp.StatusCode}");
     }
@@ -166,11 +164,8 @@ public sealed class Api : IDisposable
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
-            resp = (await Client.SendAsync(message).ConfigureAwait(false));//.EnsureSuccessStatusCode();
+            resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
         }
-        if (!resp.IsSuccessStatusCode)
-            Log.Warn($"{await resp.Content.ReadAsStringAsync().ConfigureAwait(false)}");
-
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException("api/v1/notifications", $"Unexpected status code {resp.StatusCode}");
     }
