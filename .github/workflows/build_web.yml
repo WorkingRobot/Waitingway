@@ -1,11 +1,11 @@
-name: Create and publish web Docker image
+name: Build Web
 
 on:
   push
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: waitingway-web
+  IMAGE_NAME: avafloww/waitingway-web
 
 jobs:
   build-and-push-image:
