@@ -35,8 +35,11 @@ pub enum ServerError {
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
-    dotenvy::dotenv()?;
-    dotenvy::from_filename(".secrets.env")?;
+    #[cfg(debug_assertions)]
+    {
+        dotenvy::dotenv()?;
+        dotenvy::from_filename(".secrets.env")?;
+    }
 
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
