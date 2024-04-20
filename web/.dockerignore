@@ -1,0 +1,4 @@
+postgres-data/
+target/
+.env
+.secrets.env
