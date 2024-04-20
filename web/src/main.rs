@@ -10,7 +10,11 @@ use std::io;
 
 use ::config::{Config, Environment};
 use actix_cors::Cors;
-use actix_web::{web::Data, App, HttpServer};
+use actix_web::{
+    middleware::{Logger, NormalizePath, TrailingSlash},
+    web::Data,
+    App, HttpServer,
+};
 use thiserror::Error;
 
 use crate::discord::DiscordClient;
@@ -34,7 +38,7 @@ async fn main() -> Result<(), ServerError> {
     dotenvy::dotenv()?;
     dotenvy::from_filename(".secrets.env")?;
 
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     let config: config::Config = Config::builder()
         .add_source(Environment::default())
@@ -58,6 +62,8 @@ async fn main() -> Result<(), ServerError> {
     let server = HttpServer::new(move || {
         App::new()
             .wrap(Cors::default())
+            .wrap(NormalizePath::new(TrailingSlash::Always))
+            .wrap(Logger::default())
             .app_data(Data::new(server_pool.clone()))
             .app_data(Data::new(server_config.clone()))
             .app_data(Data::new(server_discord.clone()))
@@ -69,7 +75,6 @@ async fn main() -> Result<(), ServerError> {
             ))
             .service(routes::redirects::service())
             .service(routes::api::service())
-            .service(routes::oauth::service())
     })
     .bind(config.server_addr.clone())?
     .run();

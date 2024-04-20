@@ -1,15 +1,17 @@
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{database::HasValueRef, error::BoxDynError, FromRow};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Recap {
     // Unique id of the recap
+    #[serde(skip)]
     pub id: Uuid,
     // User/player id that the recap was from
+    #[serde(skip)]
     pub user_id: Uuid,
     // World id that the recap was for
-    pub world_id: i16,
+    pub world_id: DatabaseU16,
     // Whether the queue was successful or not (false = manual disconnect, true = successful queue & login)
     pub successful: bool,
     // Time the queue was started
@@ -42,25 +44,82 @@ pub struct Connection {
     #[serde(with = "iso8601")]
     pub created_at: time::PrimitiveDateTime,
 
-    #[sqlx(try_from = "i64")]
-    pub conn_user_id: DiscordId,
+    pub conn_user_id: DatabaseU64,
     pub username: String,
     pub display_name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DiscordId(pub u64);
+macro_rules! define_unsigned_database_type {
+    ($wrapper:ident, $unsigned:ty, $signed:ty) => {
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct $wrapper(pub $unsigned);
 
-impl From<i64> for DiscordId {
-    fn from(value: i64) -> Self {
-        DiscordId(value as u64)
-    }
+        impl<D: sqlx::Database> sqlx::Type<D> for $wrapper
+        where
+            $signed: sqlx::Type<D>,
+        {
+            fn type_info() -> D::TypeInfo {
+                <$signed as sqlx::Type<D>>::type_info()
+            }
+        }
+
+        impl<'r, D: sqlx::Database> sqlx::Decode<'r, D> for $wrapper
+        where
+            $signed: sqlx::Decode<'r, D>,
+        {
+            fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
+                Ok($wrapper(<$signed>::decode(value)? as $unsigned))
+            }
+        }
+
+        impl<'q, D: sqlx::Database> sqlx::Encode<'q, D> for $wrapper
+        where
+            $signed: sqlx::Encode<'q, D>,
+        {
+            fn encode_by_ref(
+                &self,
+                buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+            ) -> sqlx::encode::IsNull {
+                (self.0 as $signed).encode_by_ref(buf)
+            }
+        }
+
+        impl $wrapper {
+            #[inline]
+            pub fn as_db(&self) -> $signed {
+                self.0 as $signed
+            }
+        }
+
+        impl From<$signed> for $wrapper {
+            #[inline]
+            fn from(value: $signed) -> Self {
+                Self(value as $unsigned)
+            }
+        }
+
+        impl From<$unsigned> for $wrapper {
+            #[inline]
+            fn from(value: $unsigned) -> Self {
+                Self(value)
+            }
+        }
+    };
 }
 
-impl DiscordId {
-    pub fn as_db(&self) -> i64 {
-        self.0 as i64
-    }
+define_unsigned_database_type!(DatabaseU16, u16, i16);
+// define_unsigned_database_type!(DatabaseU32, u32, i32);
+define_unsigned_database_type!(DatabaseU64, u64, i64);
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct QueueEstimate {
+    pub world_id: u16,
+    #[serde(with = "iso8601")]
+    pub created_at: time::PrimitiveDateTime,
+
+    pub conn_user_id: DatabaseU64,
+    pub username: String,
+    pub display_name: String,
 }
 
 pub mod iso8601 {

@@ -14,14 +14,14 @@ async fn root() -> Result<HttpResponse> {
         .finish())
 }
 
-#[get("/discord")]
+#[get("/discord/")]
 async fn discord() -> Result<HttpResponse> {
     Ok(HttpResponse::MovedPermanently()
         .insert_header((header::LOCATION, "https://discord.gg/3PGKKWYTGc"))
         .finish())
 }
 
-#[get("/funding")]
+#[get("/funding/")]
 async fn funding() -> Result<HttpResponse> {
     Ok(HttpResponse::MovedPermanently()
         .insert_header((header::LOCATION, "https://ko-fi.com/camora"))

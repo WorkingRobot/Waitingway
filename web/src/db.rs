@@ -3,7 +3,7 @@ use std::io;
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
 use uuid::Uuid;
 
-use crate::models::{Connection, Recap};
+use crate::models::{Connection, DatabaseU64, Recap};
 
 pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
     // Limit the number of positions to 1 week
@@ -22,7 +22,7 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
         VALUES ($1, $2, $3, $4, $5, $6)"#r,
         recap.id,
         recap.user_id,
-        recap.world_id,
+        recap.world_id.as_db(),
         recap.successful,
         recap.start_time,
         recap.end_time
@@ -30,14 +30,16 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
     .execute(&mut *tx)
     .await?;
 
-    let mut query_builder =
-        QueryBuilder::new("INSERT INTO recap_positions (recap_id, time, position) ");
-    query_builder.push_values(recap.positions, |mut b, position| {
-        b.push_bind(recap.id)
-            .push_bind(position.time)
-            .push_bind(position.position);
-    });
-    query_builder.build().execute(&mut *tx).await?;
+    if !recap.positions.is_empty() {
+        let mut query_builder =
+            QueryBuilder::new("INSERT INTO recap_positions (recap_id, time, position) ");
+        query_builder.push_values(recap.positions, |mut b, position| {
+            b.push_bind(recap.id)
+                .push_bind(position.time)
+                .push_bind(position.position);
+        });
+        query_builder.build().execute(&mut *tx).await?;
+    }
 
     tx.commit().await
 }
@@ -50,8 +52,8 @@ pub async fn create_connection(
     sqlx::query!(
         r#"INSERT INTO connections
         (user_id, conn_user_id, username, display_name)
-        SELECT $1, $2, $3, $4
-        WHERE (SELECT COUNT(*) FROM connections WHERE user_id = $1) < $5"#r,
+        SELECT $1, $2, $3, $4 WHERE (SELECT COUNT(*) FROM connections WHERE user_id = $1) < $5
+        ON CONFLICT (user_id, conn_user_id) DO UPDATE SET username = EXCLUDED.username, display_name = EXCLUDED.display_name"#r,
         connection.user_id,
         connection.conn_user_id.as_db(),
         connection.username,
@@ -65,13 +67,13 @@ pub async fn create_connection(
 pub async fn delete_connection(
     pool: &PgPool,
     user_id: Uuid,
-    conn_user_id: i64,
+    conn_user_id: u64,
 ) -> Result<PgQueryResult, Error> {
     sqlx::query!(
         r#"DELETE FROM connections
         WHERE user_id = $1 AND conn_user_id = $2"#,
         user_id,
-        conn_user_id
+        DatabaseU64(conn_user_id).as_db()
     )
     .execute(pool)
     .await
@@ -93,11 +95,14 @@ pub async fn get_connections_by_user_id(
 pub async fn get_connection_ids_by_user_id(
     pool: &PgPool,
     user_id: Uuid,
-) -> Result<Vec<i64>, Error> {
-    sqlx::query_scalar!(
+) -> Result<Vec<u64>, Error> {
+    Ok(sqlx::query_scalar!(
         r#"SELECT conn_user_id FROM connections WHERE user_id = $1"#,
         user_id
     )
     .fetch_all(pool)
-    .await
+    .await?
+    .into_iter()
+    .map(|id| DatabaseU64::from(id).0)
+    .collect())
 }

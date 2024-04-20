@@ -17,9 +17,9 @@ pub fn service() -> impl HttpServiceFactory {
     web::scope("/oauth").service(redirect).service(callback)
 }
 
-#[route("/redirect", method = "GET", wrap = "BasicAuthentication")]
+#[route("/redirect/", method = "GET", wrap = "BasicAuthentication")]
 async fn redirect(config: web::Data<Config>, username: web::ReqData<Uuid>) -> Result<HttpResponse> {
-    Ok(HttpResponse::TemporaryRedirect()
+    Ok(HttpResponse::Found()
         .insert_header((
             header::LOCATION,
             oauth::get_redirect_url(&config.discord, *username)
@@ -57,7 +57,7 @@ impl Drop for KillTokenGuard {
     }
 }
 
-#[get("/callback")]
+#[get("/callback/")]
 async fn callback(
     client: web::Data<Client>,
     config: web::Data<Config>,
@@ -82,7 +82,8 @@ async fn callback(
     }
     let _guard = KillTokenGuard::new(&client, &token.access_token);
 
-    if token.scope != "identify guilds.join" {
+    let scopes: Vec<&str> = token.scope.split_whitespace().collect();
+    if !scopes.contains(&"guilds.join") || !scopes.contains(&"identify") {
         return Err(ErrorBadRequest("Invalid scope"));
     }
     let identity = oauth::get_discord_identity(&client, &token.access_token)
@@ -96,7 +97,7 @@ async fn callback(
         models::Connection {
             user_id: username,
             created_at: PrimitiveDateTime::MIN,
-            conn_user_id: models::DiscordId(identity.id.get()),
+            conn_user_id: identity.id.get().into(),
             username: identity.username.clone(),
             display_name: identity
                 .global_name
@@ -104,28 +105,19 @@ async fn callback(
         },
         config.max_connections_per_user.into(),
     )
-    .await;
-    let mut is_unique = false;
-    if let Err(e) = &conn_result {
-        if let Some(e) = e.as_database_error() {
-            if e.is_unique_violation() {
-                is_unique = true;
-            }
-        }
-    }
-    if is_unique {
-        return Err(ErrorBadRequest("You've already made this connection"));
-    }
-    let conn_result = conn_result.map_err(|e| ErrorInternalServerError(e))?;
+    .await
+    .map_err(|e| ErrorInternalServerError(e))?;
 
     if conn_result.rows_affected() == 0 {
         return Err(ErrorBadRequest("You have too many connections already"));
     }
 
-    discord
+    let message = discord
         .onboard_user(identity.id, token.access_token)
         .await
         .map_err(|e| ErrorInternalServerError(e))?;
 
-    Ok(HttpResponse::NoContent().finish())
+    Ok(HttpResponse::Found()
+        .append_header((header::LOCATION, message.link()))
+        .finish())
 }
