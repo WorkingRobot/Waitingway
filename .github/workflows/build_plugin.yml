@@ -62,10 +62,10 @@ jobs:
         with:
           files: ${{env.PROJECT_PATH}}/bin/x64/Release/${{env.INTERNAL_NAME}}/*
 
-      # - name: Trigger Plugin Repo Update
-      #   uses: peter-evans/repository-dispatch@v2
-      #   if: ${{ steps.release.conclusion == 'success' }}
-      #   with:
-      #     token: ${{secrets.PAT}}
-      #     repository: ${{env.PLUGIN_REPO}}
-      #     event-type: new-release
+      - name: Trigger Plugin Repo Update
+        uses: peter-evans/repository-dispatch@v2
+        if: ${{ steps.release.conclusion == 'success' }}
+        with:
+          token: ${{secrets.PAT}}
+          repository: ${{env.PLUGIN_REPO}}
+          event-type: new-release
