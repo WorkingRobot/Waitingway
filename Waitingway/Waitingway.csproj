@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Authors>Asriel Camora</Authors>
     <Version>1.9.0.0</Version>
-    <PackageProjectUrl>https://github.com/avafloww/Waitingway</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/WorkingRobot/Waitingway</PackageProjectUrl>
     <Configurations>Debug;Release</Configurations>
     <AssemblyName>Waitingway.Dalamud</AssemblyName>
   </PropertyGroup>
