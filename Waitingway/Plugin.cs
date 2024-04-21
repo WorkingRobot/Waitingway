@@ -6,6 +6,7 @@ using Waitingway.Utils;
 using System.Text.Json;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Interface.Internal.Notifications;
+using Dalamud.Game.Command;
 
 namespace Waitingway;
 
@@ -42,7 +43,12 @@ public sealed class Plugin : IDalamudPlugin
         QueueWindow = new();
 
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
-        Service.PluginInterface.UiBuilder.OpenConfigUi += OpenSettingsWindow;
+        Service.PluginInterface.UiBuilder.OpenConfigUi += () => OpenSettingsWindow();
+
+        Service.CommandManager.AddHandler("/waitingway", new CommandInfo((_, _) => OpenSettingsWindow(true))
+        {
+            HelpMessage = "Open the Waitingway settings window."
+        });
 
         QueueTracker.OnBeginQueue += recap =>
             Log.Debug($"EVENT: BEGIN: {JsonSerializer.Serialize(recap, Api.JsonOptions)}");
@@ -68,9 +74,9 @@ public sealed class Plugin : IDalamudPlugin
         };
     }
 
-    public void OpenSettingsWindow()
+    public void OpenSettingsWindow(bool force = false)
     {
-        if (SettingsWindow.IsOpen ^= true)
+        if (SettingsWindow.IsOpen ^= force ? !SettingsWindow.IsOpen : true)
             SettingsWindow.BringToFront();
     }
 
@@ -82,6 +88,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        Service.CommandManager.RemoveHandler("/waitingway");
+
         Configuration.Save();
 
         QueueWindow.Dispose();
