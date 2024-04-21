@@ -22,5 +22,7 @@ services:
       - .secrets.env
     networks:
       - postgres
+    depends_on:
+      - db
     ports:
       - 3000:3000

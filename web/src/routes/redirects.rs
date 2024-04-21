@@ -9,7 +9,7 @@ async fn root() -> Result<HttpResponse> {
     Ok(HttpResponse::TemporaryRedirect()
         .insert_header((
             header::LOCATION,
-            "https://github.com/avafloww/Waitingway/tree/v2",
+            "https://github.com/WorkingRobot/Waitingway",
         ))
         .finish())
 }

@@ -37,7 +37,7 @@ pub enum ServerError {
 async fn main() -> Result<(), ServerError> {
     #[cfg(debug_assertions)]
     {
-        dotenvy::dotenv()?;
+        dotenvy::from_filename(".env")?;
         dotenvy::from_filename(".secrets.env")?;
     }
 
