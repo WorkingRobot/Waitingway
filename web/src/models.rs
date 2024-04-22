@@ -147,10 +147,15 @@ pub mod iso8601 {
         deserializer: D,
     ) -> Result<PrimitiveDateTime, D::Error> {
         my_format::deserialize(deserializer).and_then(|datetime| {
-            let datetime = datetime
-                .checked_to_offset(offset!(UTC))
-                .ok_or(D::Error::custom("Invalid datetime"))?;
-            Ok(PrimitiveDateTime::new(datetime.date(), datetime.time()))
+            to_utc_primitive(datetime).ok_or(D::Error::custom("Invalid datetime"))
+        })
+    }
+
+    pub const fn to_utc_primitive(
+        datetime: time::OffsetDateTime,
+    ) -> Option<time::PrimitiveDateTime> {
+        konst::option::map!(datetime.checked_to_offset(offset!(UTC)), |datetime| {
+            time::PrimitiveDateTime::new(datetime.date(), datetime.time())
         })
     }
 }
