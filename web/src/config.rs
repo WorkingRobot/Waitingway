@@ -15,6 +15,7 @@ pub struct DiscordConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub server_addr: String,
+    pub metrics_server_addr: String,
     pub database_url: String,
     pub max_connections_per_user: u32,
     pub discord: DiscordConfig,
