@@ -21,7 +21,10 @@ services:
   waitingway:
     image: ghcr.io/workingrobot/waitingway-web:latest
     restart: unless-stopped
-    env_file: web.env
+    volumes:
+      - ./docker-config.yml:/app/config.yml:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off 127.0.0.1:3000/api/v1 || exit 1']
     networks:
       - postgres
     depends_on:

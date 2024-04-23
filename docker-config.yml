@@ -1,0 +1,86 @@
+# Logging level: https://docs.rs/env_logger/latest/env_logger/#enabling-logging
+log_filter: info,tracing::span=warn,serenity::http::ratelimiting=warn
+
+# Address to bind the server to
+server_addr: 0.0.0.0:3000
+
+# Address to bind the prometheus metrics server to
+# Prometheus metrics are accessible at /metrics
+metrics_server_addr: 0.0.0.0:4000
+
+# Database connection string; currently only postgres is supported
+# In the format of postgresql://<username>:<password>@<host>:<port>/<database>
+database_url: postgresql://waitingway:waitingway_passwd@db:5432/waitingway
+
+# Number of Discord accounts that can be connected to a single user
+max_connections_per_user: 3
+
+# 256-bit key used to sign and encrypt update data. Insecure values will allow an attacker to send fake updates.
+updates_key: 7756BF80511B89041CA7DAB8335D1C6B8515F2A93167828EAD6351219C420869
+
+discord:
+  # Discord OAuth2 configuration
+  # Make sure your redirect URI maps to the right public user-facing URL of your server
+  redirect_uri: https://waiting.example.com/api/v1/oauth/callback
+  client_id: 123456789012345678
+  client_secret: client_secret
+
+  # Discord bot token
+  bot_token: bot_token_here
+
+  # The guild to invite all new users to
+  guild_id: 928743035372712019
+
+  # The channel to send basic logs to
+  log_channel_id: 12345678901234
+
+  # Queues sizes below this threshold will be considered insignificant and won't send updates
+  queue_size_dm_threshold: 50
+
+  # Interval in seconds between activity updates
+  activity_update_interval: 60
+
+  # A list of bot activites/statuses to choose from every once in a while
+  activities:
+    - type: watching
+      text: your queue
+    - type: playing
+      text: the piano
+    - type: listening
+      text: Spotify
+    - type: playing
+      text: Dawntrail
+    - type: playing
+      text: Endwalker
+    - type: listening
+      text: to music
+    - type: watching
+      text: the stars
+    - type: watching
+      text: the world go round
+    - type: watching
+      text: you
+    - type: playing
+      text: the critically acclaimed MMORPG Final Fantasy XIV
+    - type: playing
+      text: Final Fantasy XIV
+    - type: competing
+      text: Week 1 clears
+    - type: playing
+      text: roulettes
+    - type: watching
+      text: queue stats
+    - type: listening
+      text: queue pops
+    - type: custom
+      text: Waiting..?
+    - type: custom
+      text: If a fantasy is final, why are there sixteen of them?
+    - type: custom
+      text: Waiting for the queue to pop
+    - type: custom
+      text: Waiting for your queue to end
+    - type: custom
+      text: Waiting to notify you
+    - type: custom
+      text: Waiting for the heat death of the universe
