@@ -1,16 +1,19 @@
+use crate::config::DiscordConfig;
+use rand::seq::SliceRandom;
 use serenity::{
     all::{
-        AddMember, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
-        EditMessage, EventHandler, FormattedTimestamp, FormattedTimestampStyle, GatewayIntents,
-        Http, Message, MessageId, ShardManager, Timestamp, UserId,
+        ActivityData, AddMember, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter,
+        CreateMessage, EditMessage, EventHandler, FormattedTimestamp, FormattedTimestampStyle,
+        GatewayIntents, Http, Message, MessageId, OnlineStatus, ShardManager, Timestamp, UserId,
     },
     async_trait, Client,
 };
 use std::sync::{Arc, OnceLock};
 use time::{Duration, OffsetDateTime};
-use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-use crate::config::DiscordConfig;
+use tokio::{
+    sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    task::JoinHandle,
+};
 
 #[derive(Clone)]
 pub struct DiscordClient {
@@ -22,6 +25,8 @@ struct DiscordClientImp {
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
     shards: OnceLock<Arc<ShardManager>>,
+    current_activity: RwLock<Option<ActivityData>>,
+    activity_handle: Mutex<OnceLock<JoinHandle<()>>>,
 }
 
 impl DiscordClient {
@@ -34,6 +39,8 @@ impl DiscordClient {
                 client: OnceLock::new(),
                 http: OnceLock::new(),
                 shards: OnceLock::new(),
+                current_activity: RwLock::new(None),
+                activity_handle: Mutex::new(OnceLock::new()),
             }),
         };
 
@@ -61,12 +68,61 @@ impl DiscordClient {
     }
 
     pub async fn start(&self) -> Result<(), serenity::Error> {
-        self.client_mut().await.start_autosharded().await
+        let client = self.clone();
+        let activity_handle = tokio::task::spawn(async move {
+            let interval = std::time::Duration::from_secs(client.config().activity_update_interval);
+            loop {
+                let next_activity: ActivityData = client
+                    .imp
+                    .config
+                    .activities
+                    .choose(&mut rand::thread_rng())
+                    .expect("No activities")
+                    .clone()
+                    .into();
+
+                let mut current_activity = client.imp.current_activity.write().await;
+
+                let should_modify = if let Some(current_activity) = current_activity.as_ref() {
+                    current_activity.kind != next_activity.kind
+                        || current_activity.name != next_activity.name
+                } else {
+                    true
+                };
+
+                if should_modify {
+                    *current_activity = Some(next_activity.clone());
+                }
+                drop(current_activity);
+                if should_modify {
+                    client
+                        .set_presence(Some(next_activity), OnlineStatus::Online)
+                        .await;
+                }
+                tokio::time::sleep(interval).await;
+            }
+        });
+
+        self.imp
+            .activity_handle
+            .lock()
+            .await
+            .set(activity_handle)
+            .unwrap();
+
+        self.client_mut().await.start_autosharded().await?;
+
+        Ok(())
     }
 
     pub async fn stop(&self) {
         if let Err(e) = self.send_log_message("Shutting down!").await {
             log::error!("Error sending log message: {:?}", e);
+        }
+
+        if let Some(activity_handle) = self.imp.activity_handle.lock().await.take() {
+            activity_handle.abort();
+            activity_handle.await.unwrap_err();
         }
 
         self.imp.shards.get().unwrap().shutdown_all().await;
@@ -94,6 +150,14 @@ impl DiscordClient {
             .say(self.http(), message)
             .await?;
         Ok(())
+    }
+
+    async fn set_presence(&self, activity: Option<ActivityData>, status: OnlineStatus) {
+        let runners = self.imp.shards.get().unwrap().runners.lock().await;
+
+        runners.iter().for_each(|(_, runner)| {
+            runner.runner_tx.set_presence(activity.clone(), status);
+        });
     }
 
     pub async fn onboard_user(
@@ -284,13 +348,17 @@ impl DiscordClient {
 
 #[async_trait]
 impl EventHandler for DiscordClient {
-    async fn ready(&self, _ctx: Context, data_about_bot: serenity::model::gateway::Ready) {
+    async fn ready(&self, ctx: Context, data_about_bot: serenity::model::gateway::Ready) {
         let mut msg = "Started".to_string();
         if let Some(s) = data_about_bot.shard {
             msg = format!("Started shard {}", s.id);
         }
         if let Err(e) = self.send_log_message(msg).await {
             log::error!("Error sending log message: {:?}", e);
+        }
+
+        if let Some(activity) = self.imp.current_activity.read().await.as_ref() {
+            ctx.set_presence(Some(activity.clone()), OnlineStatus::Online);
         }
     }
 }

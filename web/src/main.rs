@@ -7,7 +7,7 @@ mod oauth;
 mod routes;
 
 use crate::discord::DiscordClient;
-use ::config::{Config, Environment};
+use ::config::{Config, Environment, File, FileFormat};
 use actix_cors::Cors;
 use actix_web::{
     middleware::{Logger, NormalizePath, TrailingSlash},
@@ -39,17 +39,21 @@ pub enum ServerError {
 async fn main() -> Result<(), ServerError> {
     #[cfg(debug_assertions)]
     {
-        dotenvy::from_filename(".env")?;
-        dotenvy::from_filename(".secrets.env")?;
+        _ = dotenvy::from_filename(".env");
+        _ = dotenvy::from_filename(".secrets.env")?;
     }
 
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
-
     let config: config::Config = Config::builder()
+        .add_source(File::new("config", FileFormat::Yaml))
         .add_source(Environment::default())
         .build()
         .and_then(|v| v.try_deserialize())
         .unwrap();
+
+    env_logger::init_from_env(
+        env_logger::Env::new()
+            .default_filter_or(config.clone().log_filter.unwrap_or("info".to_string())),
+    );
 
     sqlx::any::install_default_drivers();
     let db_pool = sqlx::postgres::PgPoolOptions::new()
