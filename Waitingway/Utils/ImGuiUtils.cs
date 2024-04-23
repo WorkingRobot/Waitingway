@@ -12,7 +12,7 @@ public static class ImGuiUtils
 {
     private static Vector2 GetIconSize(FontAwesomeIcon icon)
     {
-        using var font = Service.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push();
+        using var font = Service.PluginInterface.UiBuilder.IconFontHandle.Push();
         return ImGui.CalcTextSize(icon.ToIconString());
     }
 
@@ -25,12 +25,12 @@ public static class ImGuiUtils
         if (iconSize.X > iconSize.Y)
         {
             scale = size.X / iconSize.X;
-            iconOffset = new(0, (size.Y - (iconSize.Y * scale)) / 2f);
+            iconOffset = new(0, size.Y - (iconSize.Y * scale));
         }
         else if (iconSize.Y > iconSize.X)
         {
             scale = size.Y / iconSize.Y;
-            iconOffset = new((size.X - (iconSize.X * scale)) / 2f, 0);
+            iconOffset = new(size.X - (iconSize.X * scale), 0);
         }
         else
         {
@@ -38,7 +38,7 @@ public static class ImGuiUtils
             iconOffset = Vector2.Zero;
         }
 
-        using var font = Service.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Lock();
+        using var font = Service.PluginInterface.UiBuilder.IconFontHandle.Lock();
         ImGui.GetWindowDrawList().AddText(font.ImFont, font.ImFont.FontSize * scale, offset + iconOffset, ImGui.GetColorU32(!isDisabled ? ImGuiCol.Text : ImGuiCol.TextDisabled), icon.ToIconString());
     }
 
@@ -54,7 +54,7 @@ public static class ImGuiUtils
             ret = true;
 
         var isDisabled = ImGuiInternals.GetItemFlags().HasFlag(ImGuiItemFlags.Disabled);
-        DrawCenteredIcon(icon, pos + spacing, buttonSize - spacing * 2 + Vector2.One, isDisabled);
+        DrawCenteredIcon(icon, pos + spacing, buttonSize - spacing * 2, isDisabled);
 
         return ret;
     }
