@@ -95,9 +95,7 @@ impl DiscordClient {
                 }
                 drop(current_activity);
                 if should_modify {
-                    client
-                        .set_presence(Some(next_activity), OnlineStatus::Online)
-                        .await;
+                    client.set_activity(Some(next_activity)).await;
                 }
                 tokio::time::sleep(interval).await;
             }
@@ -152,11 +150,11 @@ impl DiscordClient {
         Ok(())
     }
 
-    async fn set_presence(&self, activity: Option<ActivityData>, status: OnlineStatus) {
+    async fn set_activity(&self, activity: Option<ActivityData>) {
         let runners = self.imp.shards.get().unwrap().runners.lock().await;
 
         runners.iter().for_each(|(_, runner)| {
-            runner.runner_tx.set_presence(activity.clone(), status);
+            runner.runner_tx.set_activity(activity.clone());
         });
     }
 
@@ -358,7 +356,7 @@ impl EventHandler for DiscordClient {
         }
 
         if let Some(activity) = self.imp.current_activity.read().await.as_ref() {
-            ctx.set_presence(Some(activity.clone()), OnlineStatus::Online);
+            ctx.set_activity(Some(activity.clone()));
         }
     }
 }
