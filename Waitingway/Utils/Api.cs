@@ -20,6 +20,9 @@ public sealed class Api : IDisposable
     private HappyEyeballsCallback HeCallback { get; }
     public JsonSerializerOptions JsonOptions { get; }
 
+    private Task<VersionInfo>? ServerVersionTask { get; set; }
+    public VersionInfo? ServerVersion => (ServerVersionTask?.IsCompletedSuccessfully ?? false) ? ServerVersionTask.Result : null;
+
     private const string Password = "🏳️‍⚧️";
 
     public Api()
@@ -42,7 +45,7 @@ public sealed class Api : IDisposable
         });
         client.BaseAddress = Service.Configuration.ServerUri;
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Service.Configuration.ClientId}:{Password}")));
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Waitingway", $"{Service.Version.Version}-{Service.Version.BuildConfiguration}"));
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Waitingway", $"{Service.Version.VersionString}-{Service.Version.BuildConfiguration}"));
         return client;
     }
 
@@ -52,6 +55,21 @@ public sealed class Api : IDisposable
         var oldClient = Client;
         Client = CreateClient();
         oldClient?.Dispose();
+        ServerVersionTask = Task.Run(GetVersionAsync);
+        _ = ServerVersionTask.ContinueWith(t =>
+        {
+            if (t != ServerVersionTask)
+                return;
+            if (t.Exception is { } e)
+                Log.ErrorNotify(e, "Waitingway server is unavailable", "Waitingway Server Unavailable");
+        }, TaskContinuationOptions.OnlyOnFaulted);
+        _ = ServerVersionTask.ContinueWith(t =>
+        {
+            if (t != ServerVersionTask)
+                return;
+            if (Service.Version.Version.Major != t.Result.VersionMajor || Service.Version.Version.Minor != t.Result.VersionMinor)
+                Log.WarnNotify("Waitingway is outdated and may not work correctly. Please update for the latest features and bug fixes.", "Waitingway Server Version Mismatch");
+        }, TaskContinuationOptions.OnlyOnRanToCompletion);
     }
 
     public async Task OpenOAuthInBrowserAsync()
@@ -62,6 +80,12 @@ public sealed class Api : IDisposable
         var location = resp.Headers.Location ?? throw new ApiException("oauth/redirect", "No Location header");
 
         Process.Start(new ProcessStartInfo { FileName = location.AbsoluteUri, UseShellExecute = true });
+    }
+
+    public async Task<VersionInfo> GetVersionAsync()
+    {
+        var resp = (await Client.GetAsync("api/v1/version").ConfigureAwait(false)).EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<VersionInfo>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException("api/v1/version", "Json returned null");
     }
 
     public async Task<Connection[]> GetConnectionsAsync()
@@ -174,6 +198,20 @@ public sealed class Api : IDisposable
     {
         Client.Dispose();
         HeCallback.Dispose();
+    }
+
+    public sealed record VersionInfo
+    {
+        public required string Name { get; init; }
+        public required string Authors { get; init; }
+        public required string Description { get; init; }
+        public required string Repository { get; init; }
+        public required string Profile { get; init; }
+        public required string Version { get; init; }
+        public required uint VersionMajor { get; init; }
+        public required uint VersionMinor { get; init; }
+        public required uint VersionPatch { get; init; }
+        public required DateTime BuildTime { get; init; }
     }
 
     public sealed record Connection

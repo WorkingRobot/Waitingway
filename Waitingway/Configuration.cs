@@ -44,7 +44,7 @@ public class Configuration : IPluginConfiguration
     public EstimatorType Estimator { get; set; } = EstimatorType.Geometric;
     public float DefaultRate { get; set; } = 75;
     public int MinimumPositionThreshold { get; set; } = 40;
-    public int NotificationThreshold { get; set; } = 100;
+    public int NotificationThreshold { get; set; } = 0;
 
     public void Save() =>
         Service.PluginInterface.SavePluginConfig(this);

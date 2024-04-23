@@ -12,7 +12,7 @@ public static class ImGuiUtils
 {
     private static Vector2 GetIconSize(FontAwesomeIcon icon)
     {
-        using var font = ImRaii.PushFont(UiBuilder.IconFont);
+        using var font = Service.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Push();
         return ImGui.CalcTextSize(icon.ToIconString());
     }
 
@@ -38,7 +38,8 @@ public static class ImGuiUtils
             iconOffset = Vector2.Zero;
         }
 
-        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, UiBuilder.IconFont.FontSize * scale, offset + iconOffset, ImGui.GetColorU32(!isDisabled ? ImGuiCol.Text : ImGuiCol.TextDisabled), icon.ToIconString());
+        using var font = Service.PluginInterface.UiBuilder.IconFontFixedWidthHandle.Lock();
+        ImGui.GetWindowDrawList().AddText(font.ImFont, font.ImFont.FontSize * scale, offset + iconOffset, ImGui.GetColorU32(!isDisabled ? ImGuiCol.Text : ImGuiCol.TextDisabled), icon.ToIconString());
     }
 
     public static bool IconButtonSquare(FontAwesomeIcon icon, float size = -1)
@@ -53,7 +54,7 @@ public static class ImGuiUtils
             ret = true;
 
         var isDisabled = ImGuiInternals.GetItemFlags().HasFlag(ImGuiItemFlags.Disabled);
-        DrawCenteredIcon(icon, pos + spacing, buttonSize - spacing * 2, isDisabled);
+        DrawCenteredIcon(icon, pos + spacing, buttonSize - spacing * 2 + Vector2.One, isDisabled);
 
         return ret;
     }

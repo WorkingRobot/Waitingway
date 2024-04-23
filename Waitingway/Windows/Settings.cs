@@ -1,3 +1,4 @@
+using Dalamud;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility;
@@ -7,6 +8,7 @@ using Dalamud.Utility.Numerics;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using System.Threading.Tasks;
 using Waitingway.Utils;
@@ -26,6 +28,7 @@ public sealed class Settings : Window, IDisposable
 
     private IFontHandle HeaderFont { get; }
     private IFontHandle SubheaderFont { get; }
+    private IFontHandle MonoFont { get; }
 
     private Task<Api.Connection[]>? ConnectionsTask { get; set; }
     private DateTime? ConnectionsLastRefresh { get; set; }
@@ -40,6 +43,7 @@ public sealed class Settings : Window, IDisposable
 
         HeaderFont = Service.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * 2f)));
         SubheaderFont = Service.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(UiBuilder.DefaultFontSizePx * 1.5f)));
+        MonoFont = Service.PluginInterface.UiBuilder.FontAtlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudAssetFont(DalamudAsset.InconsolataRegular, new SafeFontConfig { SizePt = UiBuilder.DefaultFontSizePt * 0.9f, GlyphOffset = new Vector2(0, 1f) })));
 
         SizeConstraints = new WindowSizeConstraints()
         {
@@ -94,7 +98,7 @@ public sealed class Settings : Window, IDisposable
     {
         ImGui.SetNextItemWidth(OptionWidth);
         var text = toString(value);
-        if (ImGui.InputText(label, ref text, 256, ImGuiInputTextFlags.AutoSelectAll))
+        if (ImGui.InputText(label, ref text, 256, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue))
         {
             if (fromString(text) is { } newValue)
             {
@@ -275,7 +279,7 @@ public sealed class Settings : Window, IDisposable
 
         DrawOption(
             "Notification Threshold",
-            "Queue positions above this level will trigger a notification. " +
+            "Only queue positions above this level will trigger a notification. " +
             "Keep in mind that the server also has its own threshold, so setting " +
             "this below a certain point won't have any effect.",
             Config.NotificationThreshold,
@@ -358,7 +362,7 @@ public sealed class Settings : Window, IDisposable
                 using (HeaderFont.Push())
                 {
                     ImGuiUtils.AlignCentered(ImGui.CalcTextSize("Waitingway").X);
-                    ImGuiUtils.Hyperlink("Waitingway", "https://github.com/avafloww/Waitingway", false);
+                    ImGuiUtils.Hyperlink("Waitingway", "https://github.com/WorkingRobot/Waitingway", false);
                 }
 
                 using (SubheaderFont.Push())
@@ -385,6 +389,33 @@ public sealed class Settings : Window, IDisposable
         ImGuiHelpers.ScaledDummy(5);
 
         using (SubheaderFont.Push())
+            ImGuiUtils.TextCentered("Server Information");
+
+        var serverVersion = Service.Api.ServerVersion;
+
+        ImGuiUtils.TextWrappedTo("Name: ");
+        ImGui.SameLine(0, 0);
+        using (MonoFont.Push())
+        {
+            if (serverVersion != null)
+                ImGuiUtils.Hyperlink(serverVersion.Name, serverVersion.Repository, false);
+            else
+                ImGuiUtils.TextWrappedTo("Unknown");
+        }
+
+        if (serverVersion != null)
+            ImGuiUtils.TextWrappedTo($"Version: v{serverVersion.Version} {CultureInfo.InvariantCulture.TextInfo.ToTitleCase(serverVersion.Profile)}");
+
+        if (!string.IsNullOrWhiteSpace(serverVersion?.Description))
+            ImGuiUtils.TextWrappedTo($"Description: {serverVersion.Description}");
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        ImGui.Separator();
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        using (SubheaderFont.Push())
             ImGuiUtils.TextCentered("Special Thanks");
 
         var startPosX = ImGui.GetCursorPosX();
@@ -403,5 +434,9 @@ public sealed class Settings : Window, IDisposable
     public void Dispose()
     {
         Service.WindowSystem.RemoveWindow(this);
+
+        HeaderFont.Dispose();
+        SubheaderFont.Dispose();
+        MonoFont.Dispose();
     }
 }
