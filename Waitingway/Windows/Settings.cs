@@ -366,7 +366,7 @@ public sealed class Settings : Window, IDisposable
                 }
 
                 using (SubheaderFont.Push())
-                    ImGuiUtils.TextCentered($"v{version.Version} {version.BuildConfiguration}");
+                    ImGuiUtils.TextCentered($"v{version.VersionString} {version.BuildConfiguration}");
 
                 ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"By {version.Author} (WorkingRobot)").X);
                 ImGui.Text($"By {version.Author} (");
