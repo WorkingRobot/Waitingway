@@ -16,7 +16,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine AS runtime
 RUN addgroup -S waiting && adduser -S waiting -G waiting
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/waitingway-web /usr/local/bin/
-COPY --from=builder /app/migrations /app/migrations
 USER waiting
-CMD ["/usr/local/bin/waitingway-web"]
+WORKDIR /app
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/waitingway-web .
+CMD ["./waitingway-web"]
