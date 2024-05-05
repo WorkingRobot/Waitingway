@@ -37,16 +37,26 @@ async fn delete_connection(
     let id = id.into_inner();
     let resp = db::delete_connection(&pool, *username, id)
         .await
-        .map_err(|e| ErrorInternalServerError(e))?;
+        .map_err(ErrorInternalServerError)?;
 
     if resp.rows_affected() == 0 {
         return Err(ErrorNotFound("Connection not found"));
     }
 
+
+    if !db::does_connection_id_exist(&pool, id)
+        .await
+        .map_err(ErrorInternalServerError)?
+    {
+        discord.mark_user_disconnected(UserId::new(id))
+            .await
+            .map_err(ErrorInternalServerError)?;
+    }
+
     discord
         .offboard_user(UserId::new(id))
         .await
-        .map_err(|e| ErrorInternalServerError(e))?;
+        .map_err(ErrorInternalServerError)?;
 
     Ok(HttpResponse::NoContent().finish())
 }

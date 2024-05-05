@@ -23,7 +23,7 @@ async fn redirect(config: web::Data<Config>, username: web::ReqData<Uuid>) -> Re
         .insert_header((
             header::LOCATION,
             oauth::get_redirect_url(&config.discord, *username)
-                .map_err(|e| ErrorInternalServerError(e))?
+                .map_err(ErrorInternalServerError)?
                 .to_string(),
         ))
         .finish())
@@ -73,9 +73,7 @@ async fn callback(
     .map_err(|_| ErrorBadRequest("Invalid state (uuid)"))?;
     let token = oauth::exchange_code_for_token(&client, &config.discord, &query.code)
         .await
-        .map_err(|e| match e {
-            _ => ErrorInternalServerError(e),
-        })?;
+        .map_err(ErrorInternalServerError)?;
     if !token.token_type.eq_ignore_ascii_case("Bearer") {
         // Can't kill the token if it's not a bearer token
         return Err(ErrorInternalServerError("Invalid token type"));
@@ -88,9 +86,7 @@ async fn callback(
     }
     let identity = oauth::get_discord_identity(&client, &token.access_token)
         .await
-        .map_err(|e| match e {
-            _ => ErrorInternalServerError(e),
-        })?;
+        .map_err(ErrorInternalServerError)?;
 
     let conn_result = db::create_connection(
         &pool,
@@ -106,16 +102,20 @@ async fn callback(
         config.max_connections_per_user.into(),
     )
     .await
-    .map_err(|e| ErrorInternalServerError(e))?;
+    .map_err(ErrorInternalServerError)?;
 
     if conn_result.rows_affected() == 0 {
         return Err(ErrorBadRequest("You have too many connections already"));
     }
 
+    discord.mark_user_connected(identity.id.get().into())
+        .await
+        .map_err(ErrorInternalServerError)?;
+
     let message = discord
         .onboard_user(identity.id, token.access_token)
         .await
-        .map_err(|e| ErrorInternalServerError(e))?;
+        .map_err(ErrorInternalServerError)?;
 
     Ok(HttpResponse::Found()
         .append_header((header::LOCATION, message.link()))

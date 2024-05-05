@@ -151,7 +151,7 @@ async fn create(
 
     let connections = db::get_connection_ids_by_user_id(&pool, *username)
         .await
-        .map_err(|e| ErrorInternalServerError(e))?;
+        .map_err(ErrorInternalServerError)?;
 
     let discord = discord.into_inner();
     let data = data.into_inner();

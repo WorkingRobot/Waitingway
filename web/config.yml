@@ -6,6 +6,7 @@ max_connections_per_user: 3
 discord:
   redirect_uri: http://localhost:3000/api/v1/oauth/callback
   queue_size_dm_threshold: 0
+  connected_role_id: 1236758675385749534
   activity_update_interval: 60
   activities:
     - type: watching

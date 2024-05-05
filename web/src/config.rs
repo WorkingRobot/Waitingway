@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use serenity::all::{ActivityData, ActivityType, ChannelId, GuildId};
+use serenity::all::{ActivityData, ActivityType, ChannelId, GuildId, RoleId};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize)]
 pub enum DiscordActivityType {
@@ -25,6 +25,7 @@ pub struct DiscordConfig {
     pub bot_token: String,
     pub guild_id: GuildId,
     pub log_channel_id: ChannelId,
+    pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,
     pub activities: Vec<DiscordActivity>,
     pub activity_update_interval: u64,

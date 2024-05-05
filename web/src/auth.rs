@@ -77,7 +77,7 @@ where
 
             req.extensions_mut().insert(username);
 
-            Ok(srv.call(req).await?)
+            srv.call(req).await
         }
         .boxed_local()
     }

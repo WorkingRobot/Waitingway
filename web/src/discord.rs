@@ -16,6 +16,10 @@ use tokio::{
     task::JoinHandle,
 };
 
+const COLOR_SUCCESS: Color = Color::from_rgb(16, 240, 12);
+const COLOR_ERROR: Color = Color::from_rgb(235, 96, 94);
+const COLOR_IN_QUEUE: Color = Color::BLITZ_BLUE;
+
 #[derive(Clone)]
 pub struct DiscordClient {
     imp: Arc<DiscordClientImp>,
@@ -136,7 +140,7 @@ impl DiscordClient {
     }
 
     fn http(&self) -> &Http {
-        &self.imp.http.get().unwrap()
+        self.imp.http.get().unwrap()
     }
 
     fn config(&self) -> &DiscordConfig {
@@ -194,7 +198,7 @@ impl DiscordClient {
                 }))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
-            .color(Color::from_rgb(16, 240, 12));
+            .color(COLOR_SUCCESS);
 
         channel
             .send_message(self.http(), CreateMessage::new().embed(embed))
@@ -208,13 +212,35 @@ impl DiscordClient {
             .description("This discord account will now no longer receive queue notifications from me!\n\nNote: You'll still receive notifications for queues from other computers.")
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
-            .color(Color::from_rgb(235, 96, 94));
+            .color(COLOR_ERROR);
 
         channel
             .send_message(self.http(), CreateMessage::new().embed(embed))
             .await?;
 
         Ok(())
+    }
+
+    pub async fn mark_user_connected(&self, user_id: UserId) -> Result<(), serenity::Error> {
+        self.http()
+            .add_member_role(
+                self.config().guild_id,
+                user_id,
+                self.config().connected_role_id,
+                Some("User is Connected"),
+            )
+            .await
+    }
+
+    pub async fn mark_user_disconnected(&self, user_id: UserId) -> Result<(), serenity::Error> {
+        self.http()
+            .remove_member_role(
+                self.config().guild_id,
+                user_id,
+                self.config().connected_role_id,
+                Some("User is Disconnected"),
+            )
+            .await
     }
 
     pub async fn send_queue_position(
@@ -299,7 +325,7 @@ impl DiscordClient {
             .description(format!("You've been logged in successfully! Thanks for using Waitingway!\n\nYour queue size was {}, which was completed in {}.", queue_start_size, format_duration(duration)))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
-            .color(Color::from_rgb(16, 240, 12));
+            .color(COLOR_SUCCESS);
 
         channel
             .send_message(self.http(), CreateMessage::new().embed(embed))
@@ -326,7 +352,7 @@ impl DiscordClient {
             )
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
-            .color(Color::from_rgb(235, 96, 94));
+            .color(COLOR_ERROR);
 
         channel
             .send_message(self.http(), CreateMessage::new().embed(embed))
@@ -350,7 +376,7 @@ impl DiscordClient {
             ))
             .footer(CreateEmbedFooter::new("Last updated"))
             .timestamp(now.assume_utc())
-            .color(Color::BLITZ_BLUE)
+            .color(COLOR_IN_QUEUE)
     }
 }
 
@@ -381,10 +407,10 @@ fn format_duration(duration: time::Duration) -> String {
     let hours = hours % 24;
 
     if days > 0 {
-        return format!("{}d {:02}:{:02}:{:02}", days, hours, minutes, seconds);
+        format!("{}d {:02}:{:02}:{:02}", days, hours, minutes, seconds)
     } else if hours > 0 {
-        return format!("{:02}:{:02}:{:02}", hours, minutes, seconds);
+        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
     } else {
-        return format!("{:02}:{:02}", minutes, seconds);
+        format!("{:02}:{:02}", minutes, seconds)
     }
 }

@@ -106,3 +106,13 @@ pub async fn get_connection_ids_by_user_id(
     .map(|id| DatabaseU64::from(id).0)
     .collect())
 }
+
+pub async fn does_connection_id_exist(pool: &PgPool, connection_id: u64) -> Result<bool, Error> {
+    Ok(sqlx::query_scalar!(
+        r#"SELECT EXISTS(SELECT 1 FROM connections WHERE conn_user_id = $1)"#,
+        DatabaseU64(connection_id).as_db()
+    )
+    .fetch_one(pool)
+    .await?
+    .unwrap_or(false))
+}
