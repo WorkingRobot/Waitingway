@@ -3,8 +3,9 @@ use rand::seq::SliceRandom;
 use serenity::{
     all::{
         ActivityData, AddMember, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter,
-        CreateMessage, EditMessage, EventHandler, FormattedTimestamp, FormattedTimestampStyle,
-        GatewayIntents, Http, Message, MessageId, OnlineStatus, ShardManager, Timestamp, UserId,
+        CreateMessage, DiscordJsonError, EditMessage, ErrorResponse, EventHandler,
+        FormattedTimestamp, FormattedTimestampStyle, GatewayIntents, Http, HttpError, Message,
+        MessageId, ShardManager, Timestamp, UserId,
     },
     async_trait, Client,
 };
@@ -163,20 +164,29 @@ impl DiscordClient {
         user_id: UserId,
         access_token: String,
     ) -> Result<Message, serenity::Error> {
-        let member = self
-            .config()
-            .guild_id
-            .add_member(self.http(), user_id, AddMember::new(access_token))
-            .await?;
+        let already_in_guild = match self.config().guild_id.member(self.http(), user_id).await {
+            Ok(_) => true,
+            Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(ErrorResponse {
+                error: DiscordJsonError { code: 10007, .. }, // Unknown Member
+                ..
+            }))) => false,
+            Err(e) => return Err(e),
+        };
 
-        let has_already_joined = member.is_none();
+        if !already_in_guild {
+            self.config()
+                .guild_id
+                .add_member(self.http(), user_id, AddMember::new(access_token))
+                .await?
+                .ok_or(serenity::Error::Other("Member already exists"))?;
+        }
 
         let channel = user_id.create_dm_channel(self.http()).await?;
 
         let embed = CreateEmbed::new().title("You're linked up!")
             .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}\n*Make sure you stay in the server to get notifications and enable DMs from server members.*",
                 self.config().queue_size_dm_threshold,
-                if has_already_joined {
+                if already_in_guild {
                     "You've already joined the server, so you're all set!"
                 }
                 else {
