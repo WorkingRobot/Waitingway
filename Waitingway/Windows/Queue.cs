@@ -18,15 +18,6 @@ public sealed unsafe class Queue : Window, IDisposable
 
     public Queue() : base("Waitingway Queue", WindowFlags)
     {
-        Size = new(600, -1);
-        SizeCondition = ImGuiCond.FirstUseEver;
-
-        SizeConstraints = new WindowSizeConstraints()
-        {
-            MinimumSize = new(600, -1),
-            MaximumSize = new(float.PositiveInfinity)
-        };
-
         IsOpen = true;
 
         Service.WindowSystem.AddWindow(this);
