@@ -4,7 +4,7 @@ metrics_server_addr: 0.0.0.0:4000
 database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway
 max_connections_per_user: 3
 discord:
-  redirect_uri: http://localhost:3000/discord/callback
+  redirect_uri: http://localhost:3000/api/v1/oauth/callback
   queue_size_dm_threshold: 0
   activity_update_interval: 60
   activities:
@@ -19,7 +19,7 @@ discord:
     - type: playing
       text: Endwalker
     - type: listening
-      text: to music
+      text: music
     - type: watching
       text: the stars
     - type: watching
@@ -29,7 +29,7 @@ discord:
     - type: playing
       text: the critically acclaimed MMORPG Final Fantasy XIV
     - type: playing
-      text: Final Fantasy XIV
+      text: FINAL FANTASY XIV
     - type: competing
       text: Week 1 clears
     - type: playing
@@ -37,11 +37,11 @@ discord:
     - type: watching
       text: queue stats
     - type: listening
-      text: queue pops
+      text: your queue pop
     - type: custom
       text: Waiting..?
     - type: custom
-      text: If a fantasy is final, why are there sixteen of them?
+      text: If the fantasy is final, why are there sixteen of them?
     - type: custom
       text: Waiting for the queue to pop
     - type: custom
