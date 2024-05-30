@@ -1,0 +1,1 @@
+ALTER TABLE recaps ADD IF NOT EXISTS error_code SMALLINT NULL;

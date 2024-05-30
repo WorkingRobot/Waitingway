@@ -1,9 +1,7 @@
-use std::io;
-
+use crate::models::{Connection, DatabaseU16, DatabaseU64, QueueSize, Recap};
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
+use std::io;
 use uuid::Uuid;
-
-use crate::models::{Connection, DatabaseU64, Recap};
 
 pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
     // Limit the number of positions to 1 week
@@ -18,12 +16,13 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
 
     sqlx::query!(
         r#"INSERT INTO recaps
-        (id, user_id, world_id, successful, start_time, end_time)
-        VALUES ($1, $2, $3, $4, $5, $6)"#r,
+        (id, user_id, world_id, successful, error_code, start_time, end_time)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)"#r,
         recap.id,
         recap.user_id,
         recap.world_id.as_db(),
         recap.successful,
+        recap.error_code.map(DatabaseU16::as_db),
         recap.start_time,
         recap.end_time
     )
@@ -42,6 +41,23 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
     }
 
     tx.commit().await
+}
+
+pub async fn create_queue_size(
+    pool: &PgPool,
+    size_info: QueueSize,
+) -> Result<PgQueryResult, Error> {
+    sqlx::query!(
+        r#"INSERT INTO queue_sizes
+        (user_id, world_id, time, size)
+        VALUES ($1, $2, $3, $4)"#r,
+        size_info.user_id,
+        size_info.world_id.as_db(),
+        size_info.time,
+        size_info.size
+    )
+    .execute(pool)
+    .await
 }
 
 pub async fn create_connection(

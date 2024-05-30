@@ -14,6 +14,8 @@ pub struct Recap {
     pub world_id: DatabaseU16,
     // Whether the queue was successful or not (false = manual disconnect, true = successful queue & login)
     pub successful: bool,
+    // Error code if the queue was not successful. May indicate a server error. Will be used for viewing error rates.
+    pub error_code: Option<DatabaseU16>,
     // Time the queue was started
     #[serde(with = "iso8601")]
     pub start_time: time::PrimitiveDateTime,
@@ -35,6 +37,20 @@ pub struct RecapPosition {
     pub time: time::PrimitiveDateTime,
     // Position of the player in the queue
     pub position: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct QueueSize {
+    // User/player id that the size update was from
+    #[serde(skip)]
+    pub user_id: Uuid,
+    // World id that the queue size is for
+    pub world_id: DatabaseU16,
+    // Time the queue size was updated
+    #[serde(with = "iso8601")]
+    pub time: time::PrimitiveDateTime,
+    // Size of the queue
+    pub size: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -86,7 +102,7 @@ macro_rules! define_unsigned_database_type {
 
         impl $wrapper {
             #[inline]
-            pub fn as_db(&self) -> $signed {
+            pub fn as_db(self) -> $signed {
                 self.0 as $signed
             }
         }

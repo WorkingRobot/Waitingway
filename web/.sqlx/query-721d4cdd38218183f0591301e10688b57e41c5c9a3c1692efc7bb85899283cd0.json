@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO recaps\n        (id, user_id, world_id, successful, error_code, start_time, end_time)\n        VALUES ($1, $2, $3, $4, $5, $6, $7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int2",
+        "Bool",
+        "Int2",
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "721d4cdd38218183f0591301e10688b57e41c5c9a3c1692efc7bb85899283cd0"
+}

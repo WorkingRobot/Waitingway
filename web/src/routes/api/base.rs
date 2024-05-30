@@ -1,4 +1,8 @@
-use crate::{auth::BasicAuthentication, db, models::Recap};
+use crate::{
+    auth::BasicAuthentication,
+    db,
+    models::{QueueSize, Recap},
+};
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
 };
@@ -55,6 +59,22 @@ const VERSION_DATA: VersionData = VersionData {
 #[get("/version/")]
 async fn version() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().json(&VERSION_DATA))
+}
+
+#[route("/queue/", method = "POST", wrap = "BasicAuthentication")]
+async fn create_queue_size(
+    pool: web::Data<PgPool>,
+    username: web::ReqData<Uuid>,
+    size_info: web::Json<QueueSize>,
+) -> Result<HttpResponse> {
+    let mut size_info = size_info.into_inner();
+    size_info.user_id = *username;
+
+    let resp = db::create_queue_size(&pool, size_info).await;
+    match resp {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => Err(ErrorInternalServerError(e)),
+    }
 }
 
 #[route("/recap/", method = "POST", wrap = "BasicAuthentication")]
