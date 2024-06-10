@@ -25,7 +25,7 @@ public sealed unsafe class Queue : Window, IDisposable
 
     public override bool DrawConditions()
     {
-        if (!Service.QueueTracker.InQueue)
+        if (Service.QueueTracker.CurrentState == QueueTracker.QueueState.NotQueued)
             return false;
 
         var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectOk");
@@ -63,6 +63,21 @@ public sealed unsafe class Queue : Window, IDisposable
             ImGui.TextUnformatted($"Estimated time remaining: {eta.ToString(Log.GetTimeSpanFormat(eta))}");
         else
             ImGui.TextUnformatted("Estimated time remaining: Less than a minute");
+        switch (Service.QueueTracker.CurrentState)
+        {
+            case QueueTracker.QueueState.SentIdentify:
+                ImGui.TextUnformatted("Status: Updating position");
+                break;
+            case QueueTracker.QueueState.WaitingForNextIdentify:
+                if (Service.QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
+                    ImGui.TextUnformatted($"Next update in: {ttu.ToString(Log.GetTimeSpanFormat(ttu))}");
+                else
+                    ImGui.TextUnformatted("Next update in: Unknown");
+                break;
+            default:
+                ImGui.TextUnformatted($"Status: {Service.QueueTracker.CurrentState}");
+                break;
+        }
     }
 
     public void Dispose()

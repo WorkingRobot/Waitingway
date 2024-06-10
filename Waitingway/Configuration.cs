@@ -42,7 +42,7 @@ public class Configuration : IPluginConfiguration
     public string ClientId { get; init; } = Guid.NewGuid().ToString("N").ToUpperInvariant();
 
     public EstimatorType Estimator { get; set; } = EstimatorType.Geometric;
-    public float DefaultRate { get; set; } = 75;
+    public float DefaultRate { get; set; } = 100;
     public int MinimumPositionThreshold { get; set; } = 40;
     public int NotificationThreshold { get; set; }
 

@@ -14,6 +14,15 @@ public sealed class QueueTracker : IDisposable
             [JsonPropertyName("position")]
             public required int PositionNumber { get; init; }
             public required DateTime Time { get; init; }
+            public required DateTime? IdentifyTime { get; init; }
+        }
+
+        public sealed record ErrorInfo
+        {
+            public required uint Type { get; init; }
+            public required int Code { get; init; }
+            public required string Info { get; init; }
+            public required ushort ErrorRow { get; init; }
         }
 
         [JsonIgnore]
@@ -23,8 +32,10 @@ public sealed class QueueTracker : IDisposable
 
         public ushort WorldId { get; }
         public bool Successful { get; private set; }
+        public ErrorInfo? Error { get; private set; }
         public DateTime StartTime { get; }
         public DateTime EndTime { get; private set; }
+        public DateTime? EndIdentifyTime { get; private set; }
 
         private List<Position> _positions { get; }
         public IReadOnlyList<Position> Positions => _positions;
@@ -44,15 +55,31 @@ public sealed class QueueTracker : IDisposable
             _positions = [];
         }
 
-        public void AddPosition(int positionNumber)
+        public void AddPosition(Position position)
         {
-            _positions.Add(new Position { PositionNumber = positionNumber, Time = DateTime.UtcNow });
+            _positions.Add(position);
         }
 
-        public void Complete(bool successful)
+        public void MarkComplete(DateTime endTime, DateTime? endIdentifyTime)
         {
-            EndTime = DateTime.UtcNow;
-            Successful = successful;
+            Successful = true;
+            EndTime = endTime;
+            EndIdentifyTime = endIdentifyTime;
+        }
+
+        public void MarkCancelled(DateTime endTime, DateTime? endIdentifyTime)
+        {
+            Successful = false;
+            EndTime = endTime;
+            EndIdentifyTime = endIdentifyTime;
+        }
+
+        public void MarkFailed(ErrorInfo error, DateTime endTime, DateTime? endIdentifyTime)
+        {
+            Successful = false;
+            Error = error;
+            EndTime = endTime;
+            EndIdentifyTime = endIdentifyTime;
         }
 
         public DateTime EstimateEndTime(DateTime now)
@@ -75,48 +102,121 @@ public sealed class QueueTracker : IDisposable
         }
     }
 
-    public bool InQueue => CurrentRecap != null;
+    public enum QueueState
+    {
+        NotQueued,
+        Entered,
+        SentIdentify,
+        WaitingForNextIdentify
+    }
 
-    public event Action<Recap>? OnBeginQueue;
+    public QueueState CurrentState { get; private set; }
 
-    public event Action<Recap>? OnUpdateQueue;
+    // New recap
+    public event Action? OnBeginQueue;
 
-    public event Action<Recap>? OnCompleteQueue;
+    // New position
+    public event Action? OnUpdateQueue;
+
+    // Recap ended
+    public event Action? OnCompleteQueue;
 
     public Recap? CurrentRecap { get; private set; }
+
+    public TimeSpan? NextIdentifyTime =>
+        Hooks.AgentLobbyGetTimeSinceLastIdentify() is { } lastTime ?
+            TimeSpan.FromSeconds(30) - TimeSpan.FromMilliseconds(lastTime) :
+            null;
+
+    private DateTime? LastIdentifyTime { get; set; }
 
     public QueueTracker()
     {
         Service.Hooks.OnEnterQueue += OnEnterQueue;
+        Service.Hooks.OnCancelQueue += OnCancelQueue;
+        Service.Hooks.OnFailedQueue += OnFailedQueue;
         Service.Hooks.OnExitQueue += OnExitQueue;
+        Service.Hooks.OnSendIdentify += OnSendIdentify;
         Service.Hooks.OnNewQueuePosition += OnNewQueuePosition;
+        CurrentState = QueueState.NotQueued;
     }
 
     private void OnEnterQueue(string characterName, ushort homeWorldId, ushort worldId)
     {
         CurrentRecap = new(characterName, homeWorldId, worldId, DateTime.UtcNow);
-        OnBeginQueue?.Invoke(CurrentRecap);
+        CurrentState = QueueState.Entered;
+        OnBeginQueue?.Invoke();
     }
 
-    private void OnExitQueue(bool isSuccessful)
+    private void OnCancelQueue()
     {
-        if (CurrentRecap is { } recap)
+        if (CurrentRecap is not { } recap)
         {
-            recap.Complete(isSuccessful);
-            OnCompleteQueue?.Invoke(recap);
-            CurrentRecap = null;
+            Log.ErrorNotify($"Cancelled queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            return;
         }
+
+        CurrentState = QueueState.NotQueued;
+        CurrentRecap!.MarkCancelled(DateTime.UtcNow, LastIdentifyTime);
+        LastIdentifyTime = null;
+        OnCompleteQueue?.Invoke();
+        CurrentRecap = null;
+    }
+
+    private void OnFailedQueue(uint type, int code, string info, ushort errorRow)
+    {
+        if (CurrentRecap is not { } recap)
+        {
+            Log.ErrorNotify($"Failed queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            return;
+        }
+
+        CurrentState = QueueState.NotQueued;
+        CurrentRecap!.MarkFailed(new()
+        {
+            Type = type,
+            Code = code,
+            Info = info,
+            ErrorRow = errorRow
+        }, DateTime.UtcNow, LastIdentifyTime);
+        LastIdentifyTime = null;
+        OnCompleteQueue?.Invoke();
+        CurrentRecap = null;
+    }
+
+    private void OnExitQueue()
+    {
+        if (CurrentRecap is not { } recap)
+        {
+            Log.ErrorNotify($"Exited queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            return;
+        }
+
+        CurrentState = QueueState.NotQueued;
+        CurrentRecap!.MarkComplete(DateTime.UtcNow, LastIdentifyTime);
+        LastIdentifyTime = null;
+        OnCompleteQueue?.Invoke();
+        CurrentRecap = null;
+    }
+
+    private void OnSendIdentify()
+    {
+        CurrentState = QueueState.SentIdentify;
+        LastIdentifyTime = DateTime.UtcNow;
     }
 
     private void OnNewQueuePosition(int newPosition)
     {
-        if (CurrentRecap is { } recap)
+        if (CurrentRecap is not { } recap)
         {
-            recap.AddPosition(newPosition);
-            OnUpdateQueue?.Invoke(recap);
+            Log.ErrorNotify($"Received new queue position ({newPosition}) without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            return;
         }
-        else
-            Log.ErrorNotify($"Received new queue position ({newPosition}) while prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+
+        CurrentState = QueueState.WaitingForNextIdentify;
+        recap.AddPosition(new() { PositionNumber = newPosition, Time = DateTime.UtcNow, IdentifyTime = LastIdentifyTime });
+        LastIdentifyTime = null;
+        OnUpdateQueue?.Invoke();
     }
 
     public void Dispose()

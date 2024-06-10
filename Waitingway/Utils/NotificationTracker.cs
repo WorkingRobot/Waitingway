@@ -1,3 +1,4 @@
+using Dalamud.Utility;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -25,21 +26,23 @@ public sealed class NotificationTracker : IDisposable
         if (CurrentNotification != null)
         {
             Log.WarnNotify("Currently in queue. Considering this queue unsuccessful.", "Unsuccessful Queue");
-            DeleteNotificationFnf(new DeleteNotificationData { Successful = false, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 }).Wait();
+            DeleteNotificationFnf(new DeleteNotificationData { Successful = false, ErrorCode = null, ErrorMessage = null, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 }).Wait();
         }
     }
 
-    private void OnBeginQueue(QueueTracker.Recap obj)
+    private void OnBeginQueue()
     {
         if (CurrentNotification != null)
         {
             Log.ErrorNotify("Queue notification already exists, deleting", "Unexpected Notification");
-            _ = DeleteNotificationFnf(new DeleteNotificationData { Successful = false, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 });
+            _ = DeleteNotificationFnf(new DeleteNotificationData { Successful = false, ErrorCode = null, ErrorMessage = null, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 });
         }
     }
 
-    private void OnUpdateQueue(QueueTracker.Recap obj)
+    private void OnUpdateQueue()
     {
+        var obj = Service.QueueTracker.CurrentRecap ?? throw new UnreachableException("No recap available");
+
         var position = obj.CurrentPosition ?? throw new UnreachableException("No positions available");
         if (obj.Positions.Count == 1)
         {
@@ -69,12 +72,22 @@ public sealed class NotificationTracker : IDisposable
         }
     }
 
-    private void OnCompleteQueue(QueueTracker.Recap obj)
+    private void OnCompleteQueue()
     {
+        var obj = Service.QueueTracker.CurrentRecap ?? throw new UnreachableException("No recap available");
+
         _ = CreateRecapFnf(obj);
 
         if (CurrentNotification != null)
-            _ = DeleteNotificationFnf(new DeleteNotificationData { Successful = obj.Successful, QueueStartSize = (uint)obj.Positions[0].PositionNumber, QueueEndSize = (uint)obj.Positions[^1].PositionNumber, Duration = (uint)(obj.EndTime - obj.StartTime).TotalSeconds });
+            _ = DeleteNotificationFnf(
+                new DeleteNotificationData {
+                    Successful = obj.Successful,
+                    ErrorCode = obj.Error?.Code,
+                    ErrorMessage = obj.Error?.ErrorRow is { } errorRow ? LuminaSheets.Error.GetRow(errorRow)?.Unknown0.ToDalamudString().TextValue : null,
+                    QueueStartSize = (uint)obj.Positions[0].PositionNumber,
+                    QueueEndSize = (uint)obj.Positions[^1].PositionNumber,
+                    Duration = (uint)(obj.EndTime - obj.StartTime).TotalSeconds
+                });
     }
 
     private Task CreateRecapFnf(QueueTracker.Recap recap)
@@ -94,7 +107,7 @@ public sealed class NotificationTracker : IDisposable
     {
         if (CurrentNotification != null)
             throw new InvalidOperationException("Notifications cannot exist");
-
+        
         var task = Api.CreateNotificationAsync(data);
         _ = task.ContinueWith(t =>
         {

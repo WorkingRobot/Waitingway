@@ -50,17 +50,18 @@ public sealed class Plugin : IDalamudPlugin
             HelpMessage = "Open the Waitingway settings window."
         });
 
-        QueueTracker.OnBeginQueue += recap =>
-            Log.Debug($"EVENT: BEGIN: {JsonSerializer.Serialize(recap, Api.JsonOptions)}");
+        QueueTracker.OnBeginQueue += () =>
+            Log.Debug($"EVENT: BEGIN: {JsonSerializer.Serialize(QueueTracker.CurrentRecap!, Api.JsonOptions)}");
 
-        QueueTracker.OnUpdateQueue += recap =>
-            Log.Debug($"EVENT: UPDATE: {recap.CurrentPosition!.PositionNumber}");
+        QueueTracker.OnUpdateQueue += () =>
+            Log.Debug($"EVENT: UPDATE: {QueueTracker.CurrentRecap!.CurrentPosition!.PositionNumber}");
 
-        QueueTracker.OnCompleteQueue += recap =>
-            Log.Debug($"EVENT: FINISH: {JsonSerializer.Serialize(recap, Api.JsonOptions)}");
+        QueueTracker.OnCompleteQueue += () =>
+            Log.Debug($"EVENT: FINISH: {JsonSerializer.Serialize(QueueTracker.CurrentRecap!, Api.JsonOptions)}");
 
-        QueueTracker.OnCompleteQueue += recap =>
+        QueueTracker.OnCompleteQueue += () =>
         {
+            var recap = QueueTracker.CurrentRecap!;
             var elapsed = recap.EndTime - recap.StartTime;
             var world = World.GetWorld(recap.WorldId);
             Log.Notify(new Notification
@@ -72,6 +73,8 @@ public sealed class Plugin : IDalamudPlugin
                 Minimized = false
             });
         };
+
+        // Log.Debug(JsonSerializer.Serialize(World.GetWorlds()));
     }
 
     public void OpenSettingsWindow(bool force = false)
