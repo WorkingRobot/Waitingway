@@ -53,7 +53,10 @@ public sealed class QueueTracker : IDisposable
         public DateTime? LastIdentifyTime => EndIdentifyTime ?? CurrentPosition?.IdentifyTime;
 
         [JsonIgnore]
-        public bool IsIdentifyExpired => !(LastIdentifyTime is { } identifyTime) || ((DateTime.UtcNow - identifyTime) > TimeSpan.FromSeconds(220));
+        public DateTime? IdentifyTimeout => LastIdentifyTime?.AddSeconds(220);
+
+        [JsonIgnore]
+        public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
 
         public Recap(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId, DateTime startTime)
         {

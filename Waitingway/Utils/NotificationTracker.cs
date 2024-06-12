@@ -26,7 +26,7 @@ public sealed class NotificationTracker : IDisposable
         if (CurrentNotification != null)
         {
             Log.WarnNotify("Currently in queue. Considering this queue unsuccessful.", "Unsuccessful Queue");
-            DeleteNotificationFnf(new DeleteNotificationData { Successful = false, ErrorCode = null, ErrorMessage = null, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 }).Wait();
+            DeleteNotificationFnf(new DeleteNotificationData { Successful = false, QueueStartSize = 0, QueueEndSize = 0, Duration = 0, ErrorCode = null, ErrorMessage = null, IdentifyTimeout = null }).Wait();
         }
     }
 
@@ -35,7 +35,7 @@ public sealed class NotificationTracker : IDisposable
         if (CurrentNotification != null)
         {
             Log.ErrorNotify("Queue notification already exists, deleting", "Unexpected Notification");
-            _ = DeleteNotificationFnf(new DeleteNotificationData { Successful = false, ErrorCode = null, ErrorMessage = null, QueueStartSize = 0, QueueEndSize = 0, Duration = 0 });
+            _ = DeleteNotificationFnf(new DeleteNotificationData { Successful = false, QueueStartSize = 0, QueueEndSize = 0, Duration = 0, ErrorCode = null, ErrorMessage = null, IdentifyTimeout = null });
         }
     }
 
@@ -83,11 +83,12 @@ public sealed class NotificationTracker : IDisposable
             _ = DeleteNotificationFnf(
                 new DeleteNotificationData {
                     Successful = obj.Successful,
-                    ErrorCode = obj.Error?.Code,
-                    ErrorMessage = obj.Error?.ErrorRow is { } errorRow ? LuminaSheets.Error.GetRow(errorRow)?.Unknown0.ToDalamudString().TextValue : null,
                     QueueStartSize = (uint)obj.Positions[0].PositionNumber,
                     QueueEndSize = (uint)obj.Positions[^1].PositionNumber,
-                    Duration = (uint)(obj.EndTime - obj.StartTime).TotalSeconds
+                    Duration = (uint)(obj.EndTime - obj.StartTime).TotalSeconds,
+                    ErrorCode = obj.Error?.Code,
+                    ErrorMessage = obj.Error?.ErrorRow is { } errorRow ? LuminaSheets.Error.GetRow(errorRow)?.Unknown0.ToDalamudString().TextValue : null,
+                    IdentifyTimeout = !obj.IsIdentifyExpired ? obj.IdentifyTimeout : null
                 });
     }
 
