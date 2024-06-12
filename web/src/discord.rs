@@ -298,6 +298,8 @@ impl DiscordClient {
         queue_start_size: u32,
         queue_end_size: u32,
         duration: Duration,
+        error_message: Option<String>,
+        error_code: Option<i32>,
         identify_timeout: Option<time::OffsetDateTime>,
         successful: bool,
     ) -> Result<(), serenity::Error> {
@@ -323,6 +325,8 @@ impl DiscordClient {
                 queue_start_size,
                 queue_end_size,
                 duration,
+                error_message,
+                error_code,
                 identify_timeout,
             )
             .await?;
@@ -362,22 +366,31 @@ impl DiscordClient {
         queue_start_size: u32,
         queue_end_size: u32,
         duration: Duration,
+        error_message: Option<String>,
+        error_code: Option<i32>,
         identify_timeout: Option<time::OffsetDateTime>,
     ) -> Result<(), serenity::Error> {
         let mut description = if let Some(identify_timeout) = identify_timeout {
             let identify_timeout: Timestamp = identify_timeout.into();
             format!(
-                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}).\n\n",
+                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}) to not lose your spot.\n\n",
                     character_name,
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::LongTime)),
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::RelativeTime)),
                 )
         } else {
             format!(
-                "{} left the queue prematurely. If you didn't mean to, try queueing again.\n\n",
+                "{} left the queue prematurely. If you didn't mean to, try queueing again.\n",
                 character_name
             )
         };
+        if let Some(error_message) = error_message {
+            if let Some(error_code) = error_code {
+                description
+                    .push_str(format!("Error: {} ({})\n", error_message, error_code).as_str());
+            }
+        }
+        description.push('\n');
         description.push_str(
             if queue_start_size == queue_end_size {
                 format!(

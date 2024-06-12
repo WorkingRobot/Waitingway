@@ -48,6 +48,8 @@ struct DeleteData {
     pub queue_end_size: u32,
     #[serde(rename = "duration")]
     pub duration_secs: u32,
+    pub error_message: Option<String>,
+    pub error_code: Option<i32>,
     #[serde(with = "time::serde::rfc3339::option")]
     pub identify_timeout: Option<time::OffsetDateTime>,
 }
@@ -265,6 +267,8 @@ async fn delete(
                     data.queue_start_size,
                     data.queue_end_size,
                     time::Duration::new(data.duration_secs.into(), 0),
+                    data.error_message,
+                    data.error_code,
                     data.identify_timeout,
                     data.successful,
                 )
