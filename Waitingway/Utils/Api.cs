@@ -101,6 +101,13 @@ public sealed class Api : IDisposable
             throw new ApiException($"api/v1/connections/{connUserId}", $"Unexpected status code {resp.StatusCode}");
     }
 
+    public async Task SendQueueSizeAsync(ushort worldId, int size)
+    {
+        var resp = (await Client.PostAsJsonAsync("api/v1/queue_size", new QueueSize { WorldId = worldId, Size = size }, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        if (resp.StatusCode != HttpStatusCode.OK)
+            throw new ApiException("api/v1/queue_size", $"Unexpected status code {resp.StatusCode}");
+    }
+
     public async Task CreateRecapAsync(QueueTracker.Recap recap)
     {
         var resp = (await Client.PostAsJsonAsync("api/v1/recap", recap, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
@@ -212,6 +219,12 @@ public sealed class Api : IDisposable
         public required uint VersionMinor { get; init; }
         public required uint VersionPatch { get; init; }
         public required DateTime BuildTime { get; init; }
+    }
+
+    public sealed record QueueSize
+    {
+        public required ushort WorldId { get; init; }
+        public required int Size { get; init; }
     }
 
     public sealed record Connection

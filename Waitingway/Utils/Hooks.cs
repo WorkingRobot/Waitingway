@@ -21,7 +21,7 @@ public sealed unsafe class Hooks : IDisposable
     public unsafe struct LobbyStatusCode
     {
         [FieldOffset(0x00)] public int Code;
-        [FieldOffset(0x08)] public uint CodeType;
+        [FieldOffset(0x08)] public int CodeType;
         [FieldOffset(0x10)] public Utf8String String;
         [FieldOffset(0x78)] public ushort ErrorSheetRow;
     }
@@ -34,9 +34,9 @@ public sealed unsafe class Hooks : IDisposable
         [FieldOffset(0x1120)] public ulong QueueTimeSinceLastUpdate;
     }
 
-    public event Action<string, ushort, ushort>? OnEnterQueue; // characterName, homeWorldId, worldId
+    public event Action<string, ulong, ushort, ushort>? OnEnterQueue; // characterName, contentId, homeWorldId, worldId
     public event Action? OnCancelQueue; // Manually cancelled
-    public event Action<uint, int, string, ushort>? OnFailedQueue; // Error code for queue: codeType, code, codeString, errorSheetRow
+    public event Action<int, int, string, ushort>? OnFailedQueue; // Error code for queue: codeType, code, codeString, errorSheetRow
     public event Action? OnExitQueue; // Exited queue (logged in)
     public event Action? OnSendIdentify; // Identify sent
     public event Action<int>? OnNewQueuePosition; // New position
@@ -115,7 +115,7 @@ public sealed unsafe class Hooks : IDisposable
                     if (values[0].Int == 0)
                     {
                         var entry = agent->LobbyData.CharaSelectEntries.Get((ulong)agent->HoveredCharacterIndex).Value;
-                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->HomeWorldId, agent->WorldId);
+                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->ContentId, entry->HomeWorldId, agent->WorldId);
                     }
                     break;
                 case 0x1C:

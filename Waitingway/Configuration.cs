@@ -1,6 +1,8 @@
 using Dalamud.Configuration;
 using Newtonsoft.Json;
 using System;
+using static Waitingway.Utils.QueueTracker;
+using System.Collections.Generic;
 
 namespace Waitingway;
 
@@ -41,10 +43,29 @@ public class Configuration : IPluginConfiguration
     [JsonProperty("ClientId_DoNotShareThisWithAnyone_TreatItLikeAPassword")]
     public string ClientId { get; init; } = Guid.NewGuid().ToString("N").ToUpperInvariant();
 
+    [JsonProperty("LastFailedRecaps_ProbablyDoNotShareThisWithAnyoneEither")]
+    private Dictionary<ulong, Recap> LastFailedRecaps { get; init; } = [];
+
     public EstimatorType Estimator { get; set; } = EstimatorType.Geometric;
     public float DefaultRate { get; set; } = 100;
     public int MinimumPositionThreshold { get; set; } = 40;
     public int NotificationThreshold { get; set; }
+
+    public void AddFailedRecap(Recap recap)
+    {
+        LastFailedRecaps[recap.CharacterContentId] = recap;
+        Save();
+    }
+
+    public Recap? TakeFailedRecap(ulong contentId)
+    {
+        if (LastFailedRecaps.Remove(contentId, out var recap))
+        {
+            Save();
+            return recap;
+        }
+        return null;
+    }
 
     public void Save() =>
         Service.PluginInterface.SavePluginConfig(this);

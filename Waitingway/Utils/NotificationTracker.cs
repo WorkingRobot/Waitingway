@@ -49,6 +49,7 @@ public sealed class NotificationTracker : IDisposable
             if (Service.Configuration.NotificationThreshold > position.PositionNumber)
                 return;
 
+            _ = SendQueueSizeFnf(obj.WorldId, position.PositionNumber);
             _ = CreateNotificationFnf(new CreateNotificationData
             {
                 CharacterName = obj.CharacterName,
@@ -99,6 +100,19 @@ public sealed class NotificationTracker : IDisposable
                 Log.ErrorNotify(e, "Failed to publish queue recap", "Couldn't Publish Recap");
             else
                 Log.Debug("Created recap");
+        });
+        return task;
+    }
+
+    private Task SendQueueSizeFnf(ushort worldId, int size)
+    {
+        var task = Api.SendQueueSizeAsync(worldId, size);
+        _ = task.ContinueWith(t =>
+        {
+            if (t.Exception is { } e)
+                Log.ErrorNotify(e, "Failed to send queue size", "Couldn't Send Queue Size");
+            else
+                Log.Debug("Sent queue size");
         });
         return task;
     }

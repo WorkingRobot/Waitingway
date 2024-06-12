@@ -19,7 +19,7 @@ public sealed class QueueTracker : IDisposable
 
         public sealed record ErrorInfo
         {
-            public required uint Type { get; init; }
+            public required int Type { get; init; }
             public required int Code { get; init; }
             public required string Info { get; init; }
             public required ushort ErrorRow { get; init; }
@@ -28,10 +28,13 @@ public sealed class QueueTracker : IDisposable
         [JsonIgnore]
         public string CharacterName { get; }
         [JsonIgnore]
+        public ulong CharacterContentId { get; }
+        [JsonIgnore]
         public ushort HomeWorldId { get; }
 
         public ushort WorldId { get; }
         public bool Successful { get; private set; }
+        public bool Reentered { get; private set; }
         public ErrorInfo? Error { get; private set; }
         public DateTime StartTime { get; }
         public DateTime EndTime { get; private set; }
@@ -46,13 +49,21 @@ public sealed class QueueTracker : IDisposable
         [JsonIgnore]
         public Position? CurrentPosition => Positions.Count == 0 ? null : Positions[^1];
 
-        public Recap(string characterName, ushort homeWorldId, ushort worldId, DateTime startTime)
+        [JsonIgnore]
+        public DateTime? LastIdentifyTime => EndIdentifyTime ?? CurrentPosition?.IdentifyTime;
+
+        [JsonIgnore]
+        public bool IsIdentifyExpired => !(LastIdentifyTime is { } identifyTime) || ((DateTime.UtcNow - identifyTime) > TimeSpan.FromSeconds(220));
+
+        public Recap(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId, DateTime startTime)
         {
             CharacterName = characterName;
+            CharacterContentId = characterContentId;
             HomeWorldId = homeWorldId;
             WorldId = worldId;
             StartTime = startTime;
             _positions = [];
+            Reentered = false;
         }
 
         public void AddPosition(Position position)
@@ -80,6 +91,20 @@ public sealed class QueueTracker : IDisposable
             Error = error;
             EndTime = endTime;
             EndIdentifyTime = endIdentifyTime;
+        }
+
+        public void ReEnterQueue()
+        {
+            if (Successful)
+                throw new InvalidOperationException("Cannot re-enter a successful queue.");
+            if (EndTime == default)
+                throw new InvalidOperationException("Cannot re-enter a queue that has not ended.");
+
+            Successful = false;
+            Reentered = true;
+            Error = null;
+            EndTime = default;
+            EndIdentifyTime = null;
         }
 
         public DateTime EstimateEndTime(DateTime now)
@@ -141,9 +166,15 @@ public sealed class QueueTracker : IDisposable
         CurrentState = QueueState.NotQueued;
     }
 
-    private void OnEnterQueue(string characterName, ushort homeWorldId, ushort worldId)
+    private void OnEnterQueue(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId)
     {
-        CurrentRecap = new(characterName, homeWorldId, worldId, DateTime.UtcNow);
+        if (Service.Configuration.TakeFailedRecap(characterContentId) is { } failedRecap && !failedRecap.IsIdentifyExpired)
+        {
+            failedRecap.ReEnterQueue();
+            CurrentRecap = failedRecap;
+        }
+        else
+            CurrentRecap = new(characterName, characterContentId, homeWorldId, worldId, DateTime.UtcNow);
         CurrentState = QueueState.Entered;
         OnBeginQueue?.Invoke();
     }
@@ -157,13 +188,14 @@ public sealed class QueueTracker : IDisposable
         }
 
         CurrentState = QueueState.NotQueued;
-        CurrentRecap!.MarkCancelled(DateTime.UtcNow, LastIdentifyTime);
+        CurrentRecap.MarkCancelled(DateTime.UtcNow, LastIdentifyTime);
         LastIdentifyTime = null;
         OnCompleteQueue?.Invoke();
         CurrentRecap = null;
+        Service.Configuration.AddFailedRecap(recap);
     }
 
-    private void OnFailedQueue(uint type, int code, string info, ushort errorRow)
+    private void OnFailedQueue(int type, int code, string info, ushort errorRow)
     {
         if (CurrentRecap is not { } recap)
         {
@@ -182,6 +214,7 @@ public sealed class QueueTracker : IDisposable
         LastIdentifyTime = null;
         OnCompleteQueue?.Invoke();
         CurrentRecap = null;
+        Service.Configuration.AddFailedRecap(recap);
     }
 
     private void OnExitQueue()
