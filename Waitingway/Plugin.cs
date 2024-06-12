@@ -42,6 +42,8 @@ public sealed class Plugin : IDalamudPlugin
         LobbyButtonWindow = new();
         QueueWindow = new();
 
+        Service.TitleScreenMenu.AddEntry("Waitingway Settings", Service.IconManager.GetAssemblyTexture("Graphics.settings.png"), () => OpenSettingsWindow(true));
+
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += () => OpenSettingsWindow();
 
