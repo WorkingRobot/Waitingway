@@ -6,6 +6,17 @@ namespace Waitingway.Utils;
 
 public static class Estimator
 {
+    public static DateTime RoundEstimate(DateTime estimate, DateTime? nextPlannedIdentify, TimeSpan identifyLatency, TimeSpan loginLatency)
+    {
+        nextPlannedIdentify ??= estimate.AddSeconds(15);
+
+        DateTime nextLoginTime = nextPlannedIdentify.Value + identifyLatency + loginLatency;
+        while (nextLoginTime < estimate)
+            nextLoginTime += TimeSpan.FromSeconds(30) + identifyLatency;
+
+        return nextLoginTime;
+    }
+
     public static DateTime EstimateRate(IEnumerable<(DateTime Time, int Position)> history, DateTime now, float defaultPositionsPerMinute, Func<int, double> weightFunction)
     {
         // position / second

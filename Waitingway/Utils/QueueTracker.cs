@@ -56,6 +56,9 @@ public sealed class QueueTracker : IDisposable
         public DateTime? IdentifyTimeout => LastIdentifyTime?.AddSeconds(220);
 
         [JsonIgnore]
+        public DateTime? NextPlannedIdentifyTime => NextIdentifyTime is { } nextTime ? DateTime.UtcNow + nextTime : LastIdentifyTime?.AddSeconds(30);
+
+        [JsonIgnore]
         public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
 
         public Recap(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId, DateTime startTime)
@@ -113,7 +116,7 @@ public sealed class QueueTracker : IDisposable
         public DateTime EstimateEndTime(DateTime now)
         {
             var config = Service.Configuration;
-            return EstimateEndTime(now, config.DefaultRate, config.Estimator switch
+            var endTime = EstimateEndTime(now, config.DefaultRate, config.Estimator switch
             {
                 EstimatorType.Geometric => Estimator.GeometricWeight,
                 EstimatorType.MinorGeometric => Estimator.MinorGeometricWeight,
@@ -121,6 +124,7 @@ public sealed class QueueTracker : IDisposable
                 EstimatorType.ShiftedInverse => Estimator.ShiftedInverseWeight,
                 _ => throw new NotSupportedException()
             });
+            return Estimator.RoundEstimate(endTime, NextPlannedIdentifyTime, TimeSpan.FromSeconds(config.IdentifyLatency), TimeSpan.FromSeconds(config.LoginLatency));
         }
 
         private DateTime EstimateEndTime(DateTime now, float defaultPositionsPerMinute, Func<int, double> weightFunction)
@@ -151,7 +155,7 @@ public sealed class QueueTracker : IDisposable
 
     public Recap? CurrentRecap { get; private set; }
 
-    public TimeSpan? NextIdentifyTime =>
+    public static TimeSpan? NextIdentifyTime =>
         Hooks.AgentLobbyGetTimeSinceLastIdentify() is { } lastTime ?
             TimeSpan.FromSeconds(30) - TimeSpan.FromMilliseconds(lastTime) :
             null;

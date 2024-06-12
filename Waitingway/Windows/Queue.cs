@@ -69,7 +69,7 @@ public sealed unsafe class Queue : Window, IDisposable
                 ImGui.TextUnformatted("Status: Updating position");
                 break;
             case QueueTracker.QueueState.WaitingForNextIdentify:
-                if (Service.QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
+                if (QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
                     ImGui.TextUnformatted($"Next update in: {ttu.ToString(Log.GetTimeSpanFormat(ttu))}");
                 else
                     ImGui.TextUnformatted("Next update in: Unknown");

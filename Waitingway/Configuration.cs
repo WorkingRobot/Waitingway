@@ -47,6 +47,8 @@ public class Configuration : IPluginConfiguration
     private Dictionary<ulong, Recap> LastFailedRecaps { get; init; } = [];
 
     public EstimatorType Estimator { get; set; } = EstimatorType.Geometric;
+    public float IdentifyLatency { get; set; } = 0.6f;
+    public float LoginLatency { get; set; } = 1f;
     public float DefaultRate { get; set; } = 100;
     public int MinimumPositionThreshold { get; set; } = 40;
     public int NotificationThreshold { get; set; }
