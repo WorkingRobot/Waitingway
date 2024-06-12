@@ -10,7 +10,7 @@ use base64::{engine::general_purpose::URL_SAFE, Engine};
 use reqwest::Client;
 use serde::Deserialize;
 use sqlx::PgPool;
-use time::PrimitiveDateTime;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
@@ -92,7 +92,7 @@ async fn callback(
         &pool,
         models::Connection {
             user_id: username,
-            created_at: PrimitiveDateTime::MIN,
+            created_at: OffsetDateTime::UNIX_EPOCH.into(),
             conn_user_id: identity.id.get().into(),
             username: identity.username.clone(),
             display_name: identity
@@ -108,7 +108,8 @@ async fn callback(
         return Err(ErrorBadRequest("You have too many connections already"));
     }
 
-    discord.mark_user_connected(identity.id.get().into())
+    discord
+        .mark_user_connected(identity.id.get().into())
         .await
         .map_err(ErrorInternalServerError)?;
 

@@ -246,16 +246,22 @@ impl DiscordClient {
     pub async fn send_queue_position(
         &self,
         user_id: UserId,
+        character_name: &str,
         position: u32,
-        now: time::PrimitiveDateTime,
-        estimated: time::PrimitiveDateTime,
+        now: time::OffsetDateTime,
+        estimated: time::OffsetDateTime,
     ) -> Result<Message, serenity::Error> {
         let channel = user_id.create_dm_channel(self.http()).await?;
 
         channel
             .send_message(
                 self.http(),
-                CreateMessage::new().embed(Self::create_queue_embed(position, now, estimated)),
+                CreateMessage::new().embed(Self::create_queue_embed(
+                    character_name,
+                    position,
+                    now,
+                    estimated,
+                )),
             )
             .await
     }
@@ -264,15 +270,21 @@ impl DiscordClient {
         &self,
         message_id: MessageId,
         channel_id: ChannelId,
+        character_name: &str,
         position: u32,
-        now: time::PrimitiveDateTime,
-        estimated: time::PrimitiveDateTime,
+        now: time::OffsetDateTime,
+        estimated: time::OffsetDateTime,
     ) -> Result<(), serenity::Error> {
         channel_id
             .edit_message(
                 self.http(),
                 message_id,
-                EditMessage::new().embed(Self::create_queue_embed(position, now, estimated)),
+                EditMessage::new().embed(Self::create_queue_embed(
+                    character_name,
+                    position,
+                    now,
+                    estimated,
+                )),
             )
             .await?;
         Ok(())
@@ -282,9 +294,11 @@ impl DiscordClient {
         &self,
         message_id: MessageId,
         channel_id: ChannelId,
+        character_name: &str,
         queue_start_size: u32,
         queue_end_size: u32,
         duration: Duration,
+        identify_timeout: Option<time::OffsetDateTime>,
         successful: bool,
     ) -> Result<(), serenity::Error> {
         let delete_client = self.clone();
@@ -295,14 +309,21 @@ impl DiscordClient {
         });
 
         if successful {
-            self.send_queue_completion_successful(channel_id, queue_start_size, duration)
-                .await?;
+            self.send_queue_completion_successful(
+                channel_id,
+                character_name,
+                queue_start_size,
+                duration,
+            )
+            .await?;
         } else {
             self.send_queue_completion_unsuccessful(
                 channel_id,
+                character_name,
                 queue_start_size,
                 queue_end_size,
                 duration,
+                identify_timeout,
             )
             .await?;
         }
@@ -317,12 +338,13 @@ impl DiscordClient {
     async fn send_queue_completion_successful(
         &self,
         channel: ChannelId,
+        character_name: &str,
         queue_start_size: u32,
         duration: Duration,
     ) -> Result<(), serenity::Error> {
         let embed = CreateEmbed::new()
             .title("Queue completed!")
-            .description(format!("You've been logged in successfully! Thanks for using Waitingway!\n\nYour queue size was {}, which was completed in {}.", queue_start_size, format_duration(duration)))
+            .description(format!("{} has been logged in successfully! Thanks for using Waitingway!\n\nYour queue size was {}, which was completed in {}.", character_name, queue_start_size, format_duration(duration)))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
             .color(COLOR_SUCCESS);
@@ -336,20 +358,46 @@ impl DiscordClient {
     async fn send_queue_completion_unsuccessful(
         &self,
         channel: ChannelId,
+        character_name: &str,
         queue_start_size: u32,
         queue_end_size: u32,
         duration: Duration,
+        identify_timeout: Option<time::OffsetDateTime>,
     ) -> Result<(), serenity::Error> {
+        let mut description = if let Some(identify_timeout) = identify_timeout {
+            let identify_timeout: Timestamp = identify_timeout.into();
+            format!(
+                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}).\n\n",
+                    character_name,
+                    FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::LongTime)),
+                    FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::RelativeTime)),
+                )
+        } else {
+            format!(
+                "{} left the queue prematurely. If you didn't mean to, try queueing again.\n\n",
+                character_name
+            )
+        };
+        description.push_str(
+            if queue_start_size == queue_end_size {
+                format!(
+                    "Your queue size was {}, and you were in queue for {}.",
+                    queue_start_size,
+                    format_duration(duration)
+                )
+            } else {
+                format!(
+                    "Your queue size started at {} and ended at {}, and you were in queue for {}.",
+                    queue_start_size,
+                    queue_end_size,
+                    format_duration(duration)
+                )
+            }
+            .as_str(),
+        );
         let embed = CreateEmbed::new()
             .title("Unsuccessful Queue")
-            .description(
-                if queue_start_size == queue_end_size {
-                    format!("You left the queue prematurely. If you didn't mean to, try queueing again.\n\nYour queue size was {}, and you were in queue for {}.", queue_start_size, format_duration(duration))
-                }
-                else {
-                    format!("You left the queue prematurely. If you didn't mean to, try queueing again.\n\nYour queue size started at {} and ended at {}, and you were in queue for {}.", queue_start_size, queue_end_size, format_duration(duration))
-                }
-            )
+            .description(description)
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
             .color(COLOR_ERROR);
@@ -361,13 +409,14 @@ impl DiscordClient {
     }
 
     fn create_queue_embed(
+        character_name: &str,
         position: u32,
-        now: time::PrimitiveDateTime,
-        estimated: time::PrimitiveDateTime,
+        now: time::OffsetDateTime,
+        estimated: time::OffsetDateTime,
     ) -> CreateEmbed {
-        let estimated: Timestamp = estimated.assume_utc().into();
+        let estimated: Timestamp = estimated.into();
         CreateEmbed::new()
-            .title("Login Queue")
+            .title(format!("{}'s Queue", character_name))
             .description(format!(
                 "You're in position {}. You'll login {} (at {})\n\nYou'll receive a DM from me when your queue completes.",
                 position,
@@ -375,7 +424,7 @@ impl DiscordClient {
                 FormattedTimestamp::new(estimated, Some(FormattedTimestampStyle::LongTime)),
             ))
             .footer(CreateEmbedFooter::new("Last updated"))
-            .timestamp(now.assume_utc())
+            .timestamp(now)
             .color(COLOR_IN_QUEUE)
     }
 }

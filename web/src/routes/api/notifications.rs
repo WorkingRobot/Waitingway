@@ -35,10 +35,10 @@ struct CreateData {
 #[derive(Clone, Debug, Deserialize)]
 struct UpdateData {
     pub position: u32,
-    #[serde(with = "crate::models::iso8601")]
-    pub updated_at: time::PrimitiveDateTime,
-    #[serde(with = "crate::models::iso8601")]
-    pub estimated_time: time::PrimitiveDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub updated_at: time::OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub estimated_time: time::OffsetDateTime,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -48,6 +48,8 @@ struct DeleteData {
     pub queue_end_size: u32,
     #[serde(rename = "duration")]
     pub duration_secs: u32,
+    #[serde(with = "time::serde::rfc3339::option")]
+    pub identify_timeout: Option<time::OffsetDateTime>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -159,11 +161,13 @@ async fn create(
     let mut joinset = JoinSet::new();
     for user_id in connections {
         let discord = discord.clone();
+        let character_name = data.character_name.clone();
         let data = data.update_data.clone();
         joinset.spawn(async move {
             discord
                 .send_queue_position(
                     UserId::new(user_id),
+                    &character_name,
                     data.position,
                     data.updated_at,
                     data.estimated_time,
@@ -211,12 +215,14 @@ async fn update(
     let mut joinset = JoinSet::new();
     for (message_id, channel_id) in instance_data.messages {
         let discord = discord.clone();
+        let character_name = instance_data.character_name.clone();
         let data = data.clone();
         joinset.spawn(async move {
             discord
                 .update_queue_position(
                     message_id,
                     channel_id,
+                    &character_name,
                     data.position,
                     data.updated_at,
                     data.estimated_time,
@@ -248,15 +254,18 @@ async fn delete(
     let mut joinset = JoinSet::new();
     for (message_id, channel_id) in instance_data.messages {
         let discord = discord.clone();
+        let character_name = instance_data.character_name.clone();
         let data = data.clone();
         joinset.spawn(async move {
             discord
                 .send_queue_completion(
                     message_id,
                     channel_id,
+                    &character_name,
                     data.queue_start_size,
                     data.queue_end_size,
                     time::Duration::new(data.duration_secs.into(), 0),
+                    data.identify_timeout,
                     data.successful,
                 )
                 .await

@@ -14,14 +14,18 @@ pub struct Recap {
     pub world_id: DatabaseU16,
     // Whether the queue was successful or not (false = manual disconnect, true = successful queue & login)
     pub successful: bool,
-    // Error code if the queue was not successful. May indicate a server error. Will be used for viewing error rates.
-    pub error_code: Option<DatabaseU16>,
+    // Whether the player reentered the queue after a disconnect/cancellation
+    #[sqlx(skip)]
+    pub reentered: bool,
+    // Error info if the queue was not successful. May indicate a server error. Will be used for viewing error rates.
+    #[sqlx(flatten)]
+    pub error: Option<RecapError>,
     // Time the queue was started
-    #[serde(with = "iso8601")]
-    pub start_time: time::PrimitiveDateTime,
+    pub start_time: DatabaseDateTime,
     // Time the queue was left
-    #[serde(with = "iso8601")]
-    pub end_time: time::PrimitiveDateTime,
+    pub end_time: DatabaseDateTime,
+    // Time the client sent an identify request for the end of the queue
+    pub end_identify_time: Option<DatabaseDateTime>,
     #[sqlx(skip)]
     pub positions: Vec<RecapPosition>,
 }
@@ -33,10 +37,22 @@ pub struct RecapPosition {
     pub recap_id: Uuid,
 
     // Time the position was updated
-    #[serde(with = "iso8601")]
-    pub time: time::PrimitiveDateTime,
+    pub time: DatabaseDateTime,
+    // Time the client sent an identify request for this update
+    pub identify_time: Option<DatabaseDateTime>,
     // Position of the player in the queue
     pub position: i32,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct RecapError {
+    #[sqlx(rename = "error_type")]
+    pub r#type: i32,
+    #[sqlx(rename = "error_code")]
+    pub code: i32,
+    #[sqlx(rename = "error_info")]
+    pub info: String,
+    pub error_row: DatabaseU16,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -46,9 +62,6 @@ pub struct QueueSize {
     pub user_id: Uuid,
     // World id that the queue size is for
     pub world_id: DatabaseU16,
-    // Time the queue size was updated
-    #[serde(with = "iso8601")]
-    pub time: time::PrimitiveDateTime,
     // Size of the queue
     pub size: i32,
 }
@@ -57,8 +70,7 @@ pub struct QueueSize {
 pub struct Connection {
     #[serde(skip)]
     pub user_id: Uuid,
-    #[serde(with = "iso8601")]
-    pub created_at: time::PrimitiveDateTime,
+    pub created_at: DatabaseDateTime,
 
     pub conn_user_id: DatabaseU64,
     pub username: String,
@@ -67,7 +79,7 @@ pub struct Connection {
 
 macro_rules! define_unsigned_database_type {
     ($wrapper:ident, $unsigned:ty, $signed:ty) => {
-        #[derive(Debug, Serialize, Deserialize)]
+        #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
         pub struct $wrapper(pub $unsigned);
 
         impl<D: sqlx::Database> sqlx::Type<D> for $wrapper
@@ -127,51 +139,71 @@ define_unsigned_database_type!(DatabaseU16, u16, i16);
 // define_unsigned_database_type!(DatabaseU32, u32, i32);
 define_unsigned_database_type!(DatabaseU64, u64, i64);
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct DatabaseDateTime(#[serde(with = "time::serde::rfc3339")] pub time::OffsetDateTime);
+
+impl<D: sqlx::Database> sqlx::Type<D> for DatabaseDateTime
+where
+    time::PrimitiveDateTime: sqlx::Type<D>,
+{
+    fn type_info() -> D::TypeInfo {
+        <time::PrimitiveDateTime as sqlx::Type<D>>::type_info()
+    }
+}
+
+impl<'r, D: sqlx::Database> sqlx::Decode<'r, D> for DatabaseDateTime
+where
+    time::PrimitiveDateTime: sqlx::Decode<'r, D>,
+{
+    fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
+        Ok(Self(time::PrimitiveDateTime::decode(value)?.assume_utc()))
+    }
+}
+
+impl<'q, D: sqlx::Database> sqlx::Encode<'q, D> for DatabaseDateTime
+where
+    time::PrimitiveDateTime: sqlx::Encode<'q, D>,
+{
+    fn encode_by_ref(
+        &self,
+        buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
+    ) -> sqlx::encode::IsNull {
+        self.as_db().encode_by_ref(buf)
+    }
+}
+
+impl DatabaseDateTime {
+    #[inline]
+    pub fn as_db(self) -> time::PrimitiveDateTime {
+        let time = self
+            .0
+            .checked_to_offset(time::UtcOffset::UTC)
+            .unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
+        time::PrimitiveDateTime::new(time.date(), time.time())
+    }
+}
+
+impl From<time::PrimitiveDateTime> for DatabaseDateTime {
+    #[inline]
+    fn from(value: time::PrimitiveDateTime) -> Self {
+        Self(value.assume_utc())
+    }
+}
+
+impl From<time::OffsetDateTime> for DatabaseDateTime {
+    #[inline]
+    fn from(value: time::OffsetDateTime) -> Self {
+        Self(value)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueueEstimate {
     pub world_id: u16,
-    #[serde(with = "iso8601")]
-    pub created_at: time::PrimitiveDateTime,
+    #[serde(with = "time::serde::rfc3339")]
+    pub created_at: time::OffsetDateTime,
 
     pub conn_user_id: DatabaseU64,
     pub username: String,
     pub display_name: String,
-}
-
-pub mod iso8601 {
-    use serde::de::Error as _;
-    use serde::{Deserializer, Serializer};
-    use time::{format_description::well_known::iso8601::Config, PrimitiveDateTime};
-    use time::{
-        format_description::well_known::{iso8601, Iso8601},
-        macros::offset,
-    };
-
-    const CONFIG: iso8601::EncodedConfig = Config::DEFAULT.encode();
-    const FORMAT: Iso8601<CONFIG> = Iso8601::<CONFIG>;
-
-    time::serde::format_description!(my_format, OffsetDateTime, FORMAT);
-
-    pub fn serialize<S: Serializer>(
-        datetime: &PrimitiveDateTime,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        my_format::serialize(&datetime.assume_utc(), serializer)
-    }
-
-    pub fn deserialize<'a, D: Deserializer<'a>>(
-        deserializer: D,
-    ) -> Result<PrimitiveDateTime, D::Error> {
-        my_format::deserialize(deserializer).and_then(|datetime| {
-            to_utc_primitive(datetime).ok_or(D::Error::custom("Invalid datetime"))
-        })
-    }
-
-    pub const fn to_utc_primitive(
-        datetime: time::OffsetDateTime,
-    ) -> Option<time::PrimitiveDateTime> {
-        konst::option::map!(datetime.checked_to_offset(offset!(UTC)), |datetime| {
-            time::PrimitiveDateTime::new(datetime.date(), datetime.time())
-        })
-    }
 }

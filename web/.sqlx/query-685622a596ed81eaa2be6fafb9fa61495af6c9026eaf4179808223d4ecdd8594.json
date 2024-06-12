@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM recaps WHERE user_id = $1 AND start_time = $2 AND successful IS NOT TRUE",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "685622a596ed81eaa2be6fafb9fa61495af6c9026eaf4179808223d4ecdd8594"
+}
