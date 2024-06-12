@@ -373,7 +373,7 @@ impl DiscordClient {
         let mut description = if let Some(identify_timeout) = identify_timeout {
             let identify_timeout: Timestamp = identify_timeout.into();
             format!(
-                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}) to not lose your spot.\n\n",
+                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}) to not lose your spot.\n",
                     character_name,
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::LongTime)),
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::RelativeTime)),

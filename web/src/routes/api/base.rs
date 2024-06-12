@@ -16,7 +16,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
-    (health, version, create_recap, get_queue)
+    (health, version, create_queue_size, create_recap, get_queue)
 }
 
 #[derive(Debug, Serialize)]
