@@ -16,6 +16,7 @@ pub struct Recap {
     pub successful: bool,
     // Whether the player reentered the queue after a disconnect/cancellation
     #[sqlx(skip)]
+    #[serde(default)]
     pub reentered: bool,
     // Error info if the queue was not successful. May indicate a server error. Will be used for viewing error rates.
     #[sqlx(flatten)]
