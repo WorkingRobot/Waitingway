@@ -278,6 +278,16 @@ public sealed class Settings : Window, IDisposable
         var isDirty = false;
 
         DrawOption(
+            "Hide Position Update Timer",
+            "Hides the timer that shows what the game is doing under the " +
+            "hood. Lets you know if the client is waiting to send an update " +
+            "or is waiting on the server to respond.",
+            Config.HideIdentifyTimer,
+            v => Config.HideIdentifyTimer = v,
+            ref isDirty
+        );
+
+        DrawOption(
             "Notification Threshold",
             "Only queue positions above this level will trigger a notification. " +
             "Keep in mind that the server also has its own threshold, so setting " +
@@ -319,6 +329,26 @@ public sealed class Settings : Window, IDisposable
             Config.DefaultRate,
             1, 200,
             v => Config.DefaultRate = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Position Update Latency",
+            "The time it takes for the server to provide an update about " +
+            "your queue positon.",
+            Config.IdentifyLatency,
+            0f, 3f,
+            v => Config.IdentifyLatency = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Login Latency",
+            "The additional amount of time it takes for the server to " +
+            "let you into the login process.",
+            Config.LoginLatency,
+            0f, 3f,
+            v => Config.LoginLatency = v,
             ref isDirty
         );
 

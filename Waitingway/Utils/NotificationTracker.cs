@@ -44,25 +44,41 @@ public sealed class NotificationTracker : IDisposable
         var obj = Service.QueueTracker.CurrentRecap ?? throw new UnreachableException("No recap available");
 
         var position = obj.CurrentPosition ?? throw new UnreachableException("No positions available");
+
+        if (obj.Positions.Count == 1)
+            _ = SendQueueSizeFnf(obj.WorldId, position.PositionNumber);
+
         if (obj.Positions.Count == 1)
         {
-            if (Service.Configuration.NotificationThreshold > position.PositionNumber)
-                return;
-
-            _ = SendQueueSizeFnf(obj.WorldId, position.PositionNumber);
-            _ = CreateNotificationFnf(new CreateNotificationData
+            if (Service.Configuration.NotificationThreshold <= position.PositionNumber)
             {
-                CharacterName = obj.CharacterName,
-                HomeWorldId = obj.HomeWorldId,
-                WorldId = obj.WorldId,
-                Position = (uint)position.PositionNumber,
-                UpdatedAt = position.Time,
-                EstimatedTime = obj.EstimateEndTime(position.Time)
-            });
-            return;
+                _ = CreateNotificationFnf(new CreateNotificationData
+                {
+                    CharacterName = obj.CharacterName,
+                    HomeWorldId = obj.HomeWorldId,
+                    WorldId = obj.WorldId,
+                    Position = (uint)position.PositionNumber,
+                    UpdatedAt = position.Time,
+                    EstimatedTime = obj.EstimateEndTime(position.Time)
+                });
+            }
         }
-
-        if (CurrentNotification != null)
+        else if (CurrentNotification == null && obj.Positions.Count > 1)
+        {
+            if (Service.Configuration.NotificationThreshold <= obj.Positions[0].PositionNumber)
+            {
+                _ = CreateNotificationFnf(new CreateNotificationData
+                {
+                    CharacterName = obj.CharacterName,
+                    HomeWorldId = obj.HomeWorldId,
+                    WorldId = obj.WorldId,
+                    Position = (uint)position.PositionNumber,
+                    UpdatedAt = position.Time,
+                    EstimatedTime = obj.EstimateEndTime(position.Time)
+                });
+            }
+        }
+        else if (CurrentNotification != null)
         {
             _ = UpdateNotificationFnf(new UpdateNotificationData
             {
