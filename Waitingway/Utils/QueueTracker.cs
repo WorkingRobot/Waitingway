@@ -261,9 +261,14 @@ public sealed class QueueTracker : IDisposable
         }
 
         CurrentState = QueueState.WaitingForNextIdentify;
-        recap.AddPosition(new() { PositionNumber = newPosition, Time = DateTime.UtcNow, IdentifyTime = LastIdentifyTime });
-        LastIdentifyTime = null;
-        OnUpdateQueue?.Invoke();
+        if (newPosition > 0)
+        {
+            recap.AddPosition(new() { PositionNumber = newPosition, Time = DateTime.UtcNow, IdentifyTime = LastIdentifyTime });
+            LastIdentifyTime = null;
+            OnUpdateQueue?.Invoke();
+        }
+        else
+            LastIdentifyTime = null;
     }
 
     public void Dispose()

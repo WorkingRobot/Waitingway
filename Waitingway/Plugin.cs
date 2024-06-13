@@ -24,6 +24,7 @@ public sealed class Plugin : IDalamudPlugin
     public QueueTracker QueueTracker { get; }
     public Api Api { get; }
     public NotificationTracker NotificationTracker { get; }
+    public IPCProvider IPCProvider { get; }
 
     public Plugin([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
     {
@@ -37,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
         QueueTracker = new();
         Api = new();
         NotificationTracker = new();
+        IPCProvider = new();
 
         SettingsWindow = new();
         LobbyButtonWindow = new();
@@ -101,6 +103,7 @@ public sealed class Plugin : IDalamudPlugin
         LobbyButtonWindow.Dispose();
         SettingsWindow.Dispose();
 
+        IPCProvider.Dispose();
         NotificationTracker.Dispose();
         Api.Dispose();
         QueueTracker.Dispose();
