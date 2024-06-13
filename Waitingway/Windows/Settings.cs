@@ -322,17 +322,6 @@ public sealed class Settings : Window, IDisposable
             ref isDirty
         );
 
-        DrawOption(
-            "Minimum Position Threshold",
-            "Queue positions below this level will be considered too small " +
-            "to give a good estimate. If this is too low, you may see the " +
-            "ETA drop into the negatives. Set to 0 to disable.",
-            Config.MinimumPositionThreshold,
-            0, 100,
-            v => Config.MinimumPositionThreshold = v,
-            ref isDirty
-        );
-
         if (isDirty)
             Config.Save();
     }

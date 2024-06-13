@@ -1,3 +1,4 @@
+using Newton = Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,21 +45,27 @@ public sealed class QueueTracker : IDisposable
         public IReadOnlyList<Position> Positions => _positions;
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public DateTime EstimatedEndTime => EstimateEndTime(DateTime.UtcNow);
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public Position? CurrentPosition => Positions.Count == 0 ? null : Positions[^1];
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public DateTime? LastIdentifyTime => EndIdentifyTime ?? CurrentPosition?.IdentifyTime;
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public DateTime? IdentifyTimeout => LastIdentifyTime?.AddSeconds(220);
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public DateTime? NextPlannedIdentifyTime => NextIdentifyTime is { } nextTime ? DateTime.UtcNow + nextTime : LastIdentifyTime?.AddSeconds(30);
 
         [JsonIgnore]
+        [Newton.JsonIgnore]
         public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
 
         public Recap(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId, DateTime startTime)

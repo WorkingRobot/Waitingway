@@ -59,24 +59,29 @@ public sealed unsafe class Queue : Window, IDisposable
 
         ImGui.TextUnformatted($"Your position: {position.PositionNumber}");
         ImGui.TextUnformatted($"Elapsed: {elapsed.ToString(Log.GetTimeSpanFormat(elapsed))}");
-        if (eta.Ticks > 0 && position.PositionNumber > Config.MinimumPositionThreshold)
+
+        if (eta.Ticks > 0)
             ImGui.TextUnformatted($"Estimated time remaining: {eta.ToString(Log.GetTimeSpanFormat(eta))}");
         else
-            ImGui.TextUnformatted("Estimated time remaining: Less than a minute");
-        switch (Service.QueueTracker.CurrentState)
+            ImGui.TextUnformatted("Estimated time remaining: Soon");
+
+        if (!Service.Configuration.HideIdentifyTimer)
         {
-            case QueueTracker.QueueState.SentIdentify:
-                ImGui.TextUnformatted("Status: Updating position");
-                break;
-            case QueueTracker.QueueState.WaitingForNextIdentify:
-                if (QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
-                    ImGui.TextUnformatted($"Next update in: {ttu.ToString(Log.GetTimeSpanFormat(ttu))}");
-                else
-                    ImGui.TextUnformatted("Next update in: Unknown");
-                break;
-            default:
-                ImGui.TextUnformatted($"Status: {Service.QueueTracker.CurrentState}");
-                break;
+            switch (Service.QueueTracker.CurrentState)
+            {
+                case QueueTracker.QueueState.SentIdentify:
+                    ImGui.TextUnformatted("Status: Updating position");
+                    break;
+                case QueueTracker.QueueState.WaitingForNextIdentify:
+                    if (QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
+                        ImGui.TextUnformatted($"Next update in: {ttu.ToString(Log.GetTimeSpanFormat(ttu))}");
+                    else
+                        ImGui.TextUnformatted("Next update in: Unknown");
+                    break;
+                default:
+                    ImGui.TextUnformatted($"Status: {Service.QueueTracker.CurrentState}");
+                    break;
+            }
         }
     }
 

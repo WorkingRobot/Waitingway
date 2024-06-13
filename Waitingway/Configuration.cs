@@ -48,9 +48,9 @@ public class Configuration : IPluginConfiguration
 
     public EstimatorType Estimator { get; set; } = EstimatorType.Geometric;
     public float IdentifyLatency { get; set; } = 0.6f;
-    public float LoginLatency { get; set; } = 1f;
+    public float LoginLatency { get; set; } = 1.25f;
     public float DefaultRate { get; set; } = 100;
-    public int MinimumPositionThreshold { get; set; } = 40;
+    public bool HideIdentifyTimer { get; set; }
     public int NotificationThreshold { get; set; }
 
     public void AddFailedRecap(Recap recap)

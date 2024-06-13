@@ -42,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
         LobbyButtonWindow = new();
         QueueWindow = new();
 
-        Service.TitleScreenMenu.AddEntry(1, "Waitingway Settings", Service.IconManager.GetAssemblyTexture("Graphics.menu_icon.png"), () => OpenSettingsWindow(true));
+        Service.TitleScreenMenu.AddEntry("Waitingway Settings", Service.IconManager.GetAssemblyTexture("Graphics.menu_icon.png"), () => OpenSettingsWindow(true));
 
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += () => OpenSettingsWindow();
@@ -87,7 +87,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void OpenSettingsTab(string selectedTabLabel)
     {
-        OpenSettingsWindow();
+        OpenSettingsWindow(true);
         SettingsWindow.SelectTab(selectedTabLabel);
     }
 
