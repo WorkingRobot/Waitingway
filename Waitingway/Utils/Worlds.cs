@@ -40,8 +40,8 @@ public sealed record World
             if (world == null)
                 continue;
 
-            if (!world.IsPublic)
-                continue;
+            //if (!world.IsPublic)
+            //    continue;
 
             if (world.DataCenter.Value is not { } datacenter)
                 continue;
@@ -53,12 +53,12 @@ public sealed record World
 
             var regionName = region switch
             {
-                RegionType.Japan => "Japan",
-                RegionType.NorthAmerica => "North America",
-                RegionType.Europe => "Europe",
-                RegionType.Oceania => "Oceania",
-                RegionType.China => "China",
-                RegionType.Korea => "Korea",
+                RegionType.Japan => "JP",
+                RegionType.NorthAmerica => "NA",
+                RegionType.Europe => "EU",
+                RegionType.Oceania => "OC",
+                RegionType.China => "CN",
+                RegionType.Korea => "KR",
                 RegionType.Cloud => "Cloud",
                 _ => "Unknown"
             };
