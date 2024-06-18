@@ -1,6 +1,6 @@
 use crate::{
-    auth::BasicAuthentication,
     db,
+    middleware::{auth::BasicAuthentication, version::UserAgentVersion},
     models::{QueueSize, Recap},
 };
 use actix_web::{
@@ -79,9 +79,11 @@ async fn create_queue_size(
 async fn create_recap(
     pool: web::Data<PgPool>,
     username: web::ReqData<Uuid>,
+    ua_version: UserAgentVersion,
     recap: web::Json<Recap>,
 ) -> Result<HttpResponse> {
     let mut recap = recap.into_inner();
+    recap.version = ua_version;
     recap.user_id = *username;
     recap.id = Uuid::now_v7();
 

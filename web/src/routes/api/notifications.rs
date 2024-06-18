@@ -1,4 +1,4 @@
-use crate::{auth::BasicAuthentication, config::Config, db, discord::DiscordClient};
+use crate::{config::Config, db, discord::DiscordClient, middleware::auth::BasicAuthentication};
 use actix_web::{
     dev::{HttpServiceFactory, Payload},
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized, JsonPayloadError},

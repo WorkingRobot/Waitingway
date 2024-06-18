@@ -1,3 +1,4 @@
+use crate::middleware::version::UserAgentVersion;
 use serde::{Deserialize, Serialize};
 use sqlx::{database::HasValueRef, error::BoxDynError, FromRow};
 use uuid::Uuid;
@@ -29,6 +30,9 @@ pub struct Recap {
     pub end_identify_time: Option<DatabaseDateTime>,
     #[sqlx(skip)]
     pub positions: Vec<RecapPosition>,
+    #[sqlx(skip)]
+    #[serde(skip)]
+    pub version: UserAgentVersion,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]

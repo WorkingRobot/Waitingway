@@ -1,4 +1,4 @@
-use crate::{auth::BasicAuthentication, db, discord::DiscordClient};
+use crate::{db, discord::DiscordClient, middleware::auth::BasicAuthentication};
 use actix_web::{
     dev::HttpServiceFactory,
     error::{ErrorInternalServerError, ErrorNotFound},
@@ -43,12 +43,12 @@ async fn delete_connection(
         return Err(ErrorNotFound("Connection not found"));
     }
 
-
     if !db::does_connection_id_exist(&pool, id)
         .await
         .map_err(ErrorInternalServerError)?
     {
-        discord.mark_user_disconnected(UserId::new(id))
+        discord
+            .mark_user_disconnected(UserId::new(id))
             .await
             .map_err(ErrorInternalServerError)?;
     }
