@@ -365,18 +365,19 @@ public sealed class Settings : Window, IDisposable
         ImGuiHelpers.ScaledDummy(5);
 
         var version = Service.Version;
+        var iconDim = version.Icon.Dimensions ?? new(128);
 
         using (var table = ImRaii.Table("settingsAboutTable", 2))
         {
             if (table)
             {
-                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, version.Icon.Width);
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, iconDim.X);
 
                 ImGui.TableNextColumn();
-                ImGui.Image(version.Icon.ImGuiHandle, new(version.Icon.Width, version.Icon.Height));
+                ImGui.Image(version.Icon.ImGuiHandle, iconDim);
 
                 ImGui.TableNextColumn();
-                ImGuiUtils.AlignMiddle(new(float.PositiveInfinity, HeaderFont.GetFontSize() + SubheaderFont.GetFontSize() + ImGui.GetFontSize() * 3 + ImGui.GetStyle().ItemSpacing.Y * 4), new(0, version.Icon.Height));
+                ImGuiUtils.AlignMiddle(new(float.PositiveInfinity, HeaderFont.GetFontSize() + SubheaderFont.GetFontSize() + ImGui.GetFontSize() * 3 + ImGui.GetStyle().ItemSpacing.Y * 4), new(0, iconDim.Y));
 
                 using (HeaderFont.Push())
                 {

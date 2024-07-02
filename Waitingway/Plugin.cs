@@ -1,11 +1,9 @@
-using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
 using Waitingway.Windows;
 using Waitingway.Utils;
 using System.Text.Json;
 using Dalamud.Interface.ImGuiNotification;
-using Dalamud.Interface.Internal.Notifications;
 using Dalamud.Game.Command;
 
 namespace Waitingway;
@@ -26,7 +24,7 @@ public sealed class Plugin : IDalamudPlugin
     public NotificationTracker NotificationTracker { get; }
     public IPCProvider IPCProvider { get; }
 
-    public Plugin([RequiredVersion("1.0")] DalamudPluginInterface pluginInterface)
+    public Plugin(IDalamudPluginInterface pluginInterface)
     {
         Service.Initialize(this, pluginInterface);
 
@@ -44,7 +42,7 @@ public sealed class Plugin : IDalamudPlugin
         LobbyButtonWindow = new();
         QueueWindow = new();
 
-        Service.TitleScreenMenu.AddEntry("Waitingway Settings", Service.IconManager.GetAssemblyTexture("Graphics.menu_icon.png"), () => OpenSettingsWindow(true));
+        Service.TitleScreenMenu.AddEntry("Waitingway Settings", IconManager.GetAssemblyTextureCached("Graphics.menu_icon.png").GetWrap(), () => OpenSettingsWindow(true));
 
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += () => OpenSettingsWindow();
@@ -78,7 +76,7 @@ public sealed class Plugin : IDalamudPlugin
             });
         };
 
-        // Log.Debug(JsonSerializer.Serialize(World.GetWorlds()));
+        Log.Debug(JsonSerializer.Serialize(World.GetWorlds()));
     }
 
     public void OpenSettingsWindow(bool force = false)

@@ -4,6 +4,7 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
 using System;
 using System.Numerics;
+using Waitingway.Utils;
 using Bounds = FFXIVClientStructs.FFXIV.Common.Math.Bounds;
 
 namespace Waitingway.Windows;
@@ -19,7 +20,7 @@ public sealed unsafe class SettingsButton : Window, IDisposable
 
     private AtkUnitBase* Addon { get; set; }
 
-    private IDalamudTextureWrap SettingsImage { get; }
+    private ILoadedTextureIcon SettingsImage { get; }
 
     private Vector2 ButtonSize { get; set; }
 
@@ -29,7 +30,7 @@ public sealed unsafe class SettingsButton : Window, IDisposable
 
     public SettingsButton() : base("###Waitingway Settings Button", WindowFlags)
     {
-        SettingsImage = Service.IconManager.GetAssemblyTexture("Graphics.settings.png");
+        SettingsImage = IconManager.GetAssemblyTexture("Graphics.settings.png");
 
         ForceMainWindow = true;
 
@@ -140,13 +141,13 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         if (button != null)
         {
             button->ButtonBGNode->SetWidth((ushort)(button->ButtonBGNode->Width + delta));
-            button->ButtonTextNode->AtkResNode.SetX(button->ButtonTextNode->AtkResNode.X + delta / 2f);
+            button->ButtonTextNode->AtkResNode.SetXFloat(button->ButtonTextNode->AtkResNode.X + delta / 2f);
         }
     }
 
     private void AdjustX(AtkResNode* node, float delta)
     {
-        node->SetX(node->X + delta);
+        node->SetXFloat(node->X + delta);
     }
 
     public override void Draw()
@@ -165,5 +166,7 @@ public sealed unsafe class SettingsButton : Window, IDisposable
         Service.WindowSystem.RemoveWindow(this);
 
         RevertNativeUi();
+
+        SettingsImage.Dispose();
     }
 }

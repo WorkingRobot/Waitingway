@@ -1,4 +1,3 @@
-using Dalamud.Interface.Internal;
 using System;
 using System.Reflection;
 
@@ -10,7 +9,7 @@ public sealed class Versioning
     public string VersionString { get; }
     public string Author { get; }
     public string BuildConfiguration { get; }
-    public IDalamudTextureWrap Icon { get; }
+    public ITextureIcon Icon { get; }
 
     public Versioning()
     {
@@ -19,6 +18,6 @@ public sealed class Versioning
         VersionString = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
         Author = assembly.GetCustomAttribute<AssemblyCompanyAttribute>()!.Company;
         BuildConfiguration = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
-        Icon = Service.IconManager.GetAssemblyTexture("icon.png");
+        Icon = Service.IconManager.GetAssemblyTextureCached("icon.png");
     }
 }

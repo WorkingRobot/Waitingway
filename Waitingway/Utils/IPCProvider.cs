@@ -14,7 +14,7 @@ public sealed class IPCProvider : IDisposable
 
     public IPCProvider()
     {
-        var propProviderMethod = typeof(DalamudPluginInterface).GetMethod("GetIpcProvider", 1, [typeof(string)]);
+        var propProviderMethod = typeof(IDalamudPluginInterface).GetMethod("GetIpcProvider", 1, [typeof(string)]);
         if (propProviderMethod is null)
             throw new InvalidOperationException("GetIpcProvider method not found");
 
