@@ -33,8 +33,8 @@ public sealed class QueueTracker : IDisposable
         [JsonIgnore]
         public ushort HomeWorldId { get; }
 
-        public bool IsFreeTrial { get; }
         public ushort WorldId { get; }
+        public bool FreeTrial { get; }
         public bool Successful { get; private set; }
         public bool Reentered { get; private set; }
         public ErrorInfo? Error { get; private set; }
@@ -69,11 +69,11 @@ public sealed class QueueTracker : IDisposable
         [Newton.JsonIgnore]
         public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
 
-        public Recap(string characterName, ulong characterContentId, bool isFreeTrial, ushort homeWorldId, ushort worldId, DateTime startTime)
+        public Recap(string characterName, ulong characterContentId, bool freeTrial, ushort homeWorldId, ushort worldId, DateTime startTime)
         {
             CharacterName = characterName;
             CharacterContentId = characterContentId;
-            IsFreeTrial = isFreeTrial;
+            FreeTrial = freeTrial;
             HomeWorldId = homeWorldId;
             WorldId = worldId;
             StartTime = startTime;
