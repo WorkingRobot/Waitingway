@@ -1,7 +1,7 @@
-mod auth;
 mod config;
 mod db;
 mod discord;
+mod middleware;
 mod models;
 mod oauth;
 mod routes;

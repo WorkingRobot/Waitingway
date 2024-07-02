@@ -24,6 +24,34 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
         .await?;
     }
 
+    let queue_size = recap.positions.last().map(|p| p.position).unwrap_or(0);
+
+    if queue_size == 0 || (recap.version.major == 2 && recap.version.minor < 1) {
+        let queue_size_time = recap
+            .positions
+            .last()
+            .map(|p| p.time)
+            .or(recap.end_identify_time)
+            .unwrap_or(recap.start_time);
+
+        sqlx::query!(
+            r#"INSERT INTO queue_sizes
+            (user_id, world_id, time, size)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (world_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                time = EXCLUDED.time,
+                size = EXCLUDED.size
+            WHERE queue_sizes.time < EXCLUDED.time"#r,
+            recap.user_id,
+            recap.world_id.as_db(),
+            queue_size_time.as_db(),
+            queue_size
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+
     sqlx::query!(
         r#"INSERT INTO recaps
         (id, user_id, world_id, successful, error_type, error_code, error_info, error_row, start_time, end_time, end_identify_time)
@@ -67,7 +95,10 @@ pub async fn create_queue_size(
         r#"INSERT INTO queue_sizes
         (user_id, world_id, time, size)
         VALUES ($1, $2, NOW() AT TIME ZONE 'UTC', $3)
-        ON CONFLICT (world_id) DO UPDATE SET user_id = EXCLUDED.user_id, time = EXCLUDED.time, size = EXCLUDED.size"#r,
+        ON CONFLICT (world_id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            time = EXCLUDED.time,
+            size = EXCLUDED.size"#r,
         size_info.user_id,
         size_info.world_id.as_db(),
         size_info.size

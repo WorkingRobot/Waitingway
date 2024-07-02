@@ -1,4 +1,7 @@
-use crate::{auth::BasicAuthentication, config::Config, db, discord::DiscordClient, models, oauth};
+use crate::{
+    config::Config, db, discord::DiscordClient, middleware::auth::BasicAuthentication, models,
+    oauth,
+};
 use actix_web::{
     dev::HttpServiceFactory,
     error::{ErrorBadRequest, ErrorInternalServerError},

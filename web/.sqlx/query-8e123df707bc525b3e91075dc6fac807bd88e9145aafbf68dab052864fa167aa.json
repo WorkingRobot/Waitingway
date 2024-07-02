@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO queue_sizes\n        (user_id, world_id, time, size)\n        VALUES ($1, $2, NOW() AT TIME ZONE 'UTC', $3)\n        ON CONFLICT (world_id) DO UPDATE SET\n            user_id = EXCLUDED.user_id,\n            time = EXCLUDED.time,\n            size = EXCLUDED.size",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int2",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e123df707bc525b3e91075dc6fac807bd88e9145aafbf68dab052864fa167aa"
+}
