@@ -33,6 +33,7 @@ public sealed class QueueTracker : IDisposable
         [JsonIgnore]
         public ushort HomeWorldId { get; }
 
+        public bool IsFreeTrial { get; }
         public ushort WorldId { get; }
         public bool Successful { get; private set; }
         public bool Reentered { get; private set; }
@@ -68,10 +69,11 @@ public sealed class QueueTracker : IDisposable
         [Newton.JsonIgnore]
         public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
 
-        public Recap(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId, DateTime startTime)
+        public Recap(string characterName, ulong characterContentId, bool isFreeTrial, ushort homeWorldId, ushort worldId, DateTime startTime)
         {
             CharacterName = characterName;
             CharacterContentId = characterContentId;
+            IsFreeTrial = isFreeTrial;
             HomeWorldId = homeWorldId;
             WorldId = worldId;
             StartTime = startTime;
@@ -180,15 +182,17 @@ public sealed class QueueTracker : IDisposable
         CurrentState = QueueState.NotQueued;
     }
 
-    private void OnEnterQueue(string characterName, ulong characterContentId, ushort homeWorldId, ushort worldId)
+    private void OnEnterQueue(string characterName, ulong characterContentId, bool isFreeTrial, ushort homeWorldId, ushort worldId)
     {
-        if (Service.Configuration.TakeFailedRecap(characterContentId) is { } failedRecap && !failedRecap.IsIdentifyExpired)
+        if (Service.Configuration.TakeFailedRecap(characterContentId) is { } failedRecap &&
+            !failedRecap.IsIdentifyExpired &&
+            failedRecap.WorldId == worldId)
         {
             failedRecap.ReEnterQueue();
             CurrentRecap = failedRecap;
         }
         else
-            CurrentRecap = new(characterName, characterContentId, homeWorldId, worldId, DateTime.UtcNow);
+            CurrentRecap = new(characterName, characterContentId, isFreeTrial, homeWorldId, worldId, DateTime.UtcNow);
         CurrentState = QueueState.Entered;
         OnBeginQueue?.Invoke();
     }
