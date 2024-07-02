@@ -41,6 +41,7 @@ pub struct Config {
     #[serde(with = "hex::serde")]
     pub updates_key: [u8; 32],
     pub log_filter: Option<String>,
+    pub log_access_format: Option<String>,
 }
 
 impl From<DiscordActivityType> for ActivityType {

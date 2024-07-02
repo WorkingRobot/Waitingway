@@ -109,9 +109,12 @@ async fn main() -> Result<(), ServerError> {
                 .expect("Unknown error from prometheus builder")
         })?;
     let prometheus_server = HttpServer::new(move || {
-        App::new()
-            .wrap(private_prometheus.clone())
-            .wrap(Logger::default())
+        App::new().wrap(private_prometheus.clone()).wrap(
+            config
+                .log_access_format
+                .as_deref()
+                .map_or_else(Logger::default, Logger::new),
+        )
     })
     .workers(1)
     .bind(config.metrics_server_addr.clone())?
