@@ -1,5 +1,4 @@
 using Dalamud.Hooking;
-using Dalamud.Memory;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
@@ -29,12 +28,16 @@ public sealed unsafe class Hooks : IDisposable
     [StructLayout(LayoutKind.Explicit, Size = 0x1DF8)]
     public unsafe partial struct AgentLobby2
     {
-        [FieldOffset(0x1104)] public byte LobbyUpdateStage;
+        [FieldOffset(0x48)] public LobbySubscriptionInfo* SubscriptionInfo;
 
-        [FieldOffset(0x1120)] public ulong QueueTimeSinceLastUpdate;
+        [FieldOffset(0x1164)] public byte LobbyUpdateStage;
+
+        [FieldOffset(0x1111)] public byte SelectedCharacterIndex;
+
+        [FieldOffset(0x1180)] public ulong QueueTimeSinceLastUpdate;
     }
 
-    public event Action<string, ulong, ushort, ushort>? OnEnterQueue; // characterName, contentId, homeWorldId, worldId
+    public event Action<string, ulong, bool, ushort, ushort>? OnEnterQueue; // characterName, contentId, isFreeTrial, homeWorldId, worldId
     public event Action? OnCancelQueue; // Manually cancelled
     public event Action<int, int, string, ushort>? OnFailedQueue; // Error code for queue: codeType, code, codeString, errorSheetRow
     public event Action? OnExitQueue; // Exited queue (logged in)
@@ -49,13 +52,13 @@ public sealed unsafe class Hooks : IDisposable
 
     private readonly Hook<AgentLobbyReceiveEventDelegate> agentLobbyReceiveEventHook = null!;
 
-    [Signature("40 53 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
+    [Signature("40 57 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
     private readonly Hook<StatusCodeHandlerLoginDelegate> statusCodeHandlerLoginHook = null!;
 
-    [Signature("48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC 20 0F B6 81 ?? ?? ?? ?? 40 32 FF", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
+    [Signature("40 55 53 56 57 41 54 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 8B B1", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
     private readonly Hook<AgentLobbyUpdatePositionDelegate> agentLobbyUpdatePositionHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 83 7F 20 00 48 8B B4 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
+    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
     private readonly Hook<AgentLobbySendIdentify6Delegate> agentLobbySendIdentify6Hook = null!;
 
     private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;
@@ -63,11 +66,11 @@ public sealed unsafe class Hooks : IDisposable
     public Hooks()
     {
         agentLobbyReceiveEventHook = Service.GameInteropProvider.HookFromAddress<AgentLobbyReceiveEventDelegate>(
-            (nint)((AgentInterface.AgentInterfaceVTable*)AgentLobby.StaticAddressPointers.VTable)->ReceiveEvent,
+            (nint)(AgentLobby.StaticVirtualTablePointer->ReceiveEvent),
             AgentLobbyReceiveEventDetour);
 
         lobbyUIClientReportErrorHook = Service.GameInteropProvider.HookFromAddress<LobbyUIClientReportErrorDelegate>(
-            ((nint*)LobbyUIClient.StaticAddressPointers.VTable)[4],
+            ((nint*)LobbyUIClient.StaticVirtualTablePointer)[4],
             LobbyUIClientReportErrorDetour);
 
         Service.GameInteropProvider.InitializeFromAttributes(this);
@@ -105,6 +108,7 @@ public sealed unsafe class Hooks : IDisposable
 
     private void* AgentLobbyReceiveEventDetour(AgentLobby* agent, void* eventData, AtkValue* values, uint valueCount, ulong eventKind)
     {
+        var agent2 = (AgentLobby2*)agent;
         if (valueCount > 0)
         {
             switch (eventKind)
@@ -114,8 +118,13 @@ public sealed unsafe class Hooks : IDisposable
                     // 1 = Cancel
                     if (values[0].Int == 0)
                     {
-                        var entry = agent->LobbyData.CharaSelectEntries.Get((ulong)agent->HoveredCharacterIndex).Value;
-                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->ContentId, entry->HomeWorldId, entry->CurrentWorldId);
+                        var entry = agent->LobbyData.CharaSelectEntries[agent2->SelectedCharacterIndex].Value;
+                        OnEnterQueue?.Invoke(
+                            entry->NameString,
+                            entry->ContentId,
+                            (agent2->SubscriptionInfo->Flags & 0x10000000) != 0,
+                            entry->HomeWorldId,
+                            entry->CurrentWorldId);
                     }
                     break;
                 case 0x1C:
