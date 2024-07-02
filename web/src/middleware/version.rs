@@ -40,6 +40,16 @@ impl UserAgentVersion {
             configuration,
         })
     }
+
+    pub fn to_string(&self) -> String {
+        format!(
+            "{major}.{minor}.{patch}-{configuration}",
+            major = self.major,
+            minor = self.minor,
+            patch = self.patch,
+            configuration = self.configuration
+        )
+    }
 }
 
 impl TryFrom<&str> for UserAgentVersion {

@@ -26,7 +26,7 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
 
     let queue_size = recap.positions.last().map(|p| p.position).unwrap_or(0);
 
-    if queue_size == 0 || (recap.version.major == 2 && recap.version.minor < 1) {
+    if queue_size == 0 {
         let queue_size_time = recap
             .positions
             .last()
@@ -54,8 +54,8 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
 
     sqlx::query!(
         r#"INSERT INTO recaps
-        (id, user_id, world_id, free_trial, successful, error_type, error_code, error_info, error_row, start_time, end_time, end_identify_time)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"#r,
+        (id, user_id, world_id, free_trial, successful, error_type, error_code, error_info, error_row, start_time, end_time, end_identify_time, client_version)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#r,
         recap.id,
         recap.user_id,
         recap.world_id.as_db(),
@@ -68,6 +68,7 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
         recap.start_time.as_db(),
         recap.end_time.as_db(),
         recap.end_identify_time.map(|t| t.as_db()),
+        recap.client_version.to_string()
     )
     .execute(&mut *tx)
     .await?;

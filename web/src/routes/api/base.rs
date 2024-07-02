@@ -83,7 +83,7 @@ async fn create_recap(
     recap: web::Json<Recap>,
 ) -> Result<HttpResponse> {
     let mut recap = recap.into_inner();
-    recap.version = ua_version;
+    recap.client_version = ua_version;
     recap.user_id = *username;
     recap.id = Uuid::now_v7();
 
