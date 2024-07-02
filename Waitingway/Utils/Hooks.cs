@@ -115,7 +115,7 @@ public sealed unsafe class Hooks : IDisposable
                     if (values[0].Int == 0)
                     {
                         var entry = agent->LobbyData.CharaSelectEntries.Get((ulong)agent->HoveredCharacterIndex).Value;
-                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->ContentId, entry->HomeWorldId, agent->WorldId);
+                        OnEnterQueue?.Invoke(MemoryHelper.ReadString((nint)entry->Name, 32), entry->ContentId, entry->HomeWorldId, entry->CurrentWorldId);
                     }
                     break;
                 case 0x1C:
