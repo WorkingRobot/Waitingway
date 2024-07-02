@@ -13,6 +13,8 @@ pub struct Recap {
     pub user_id: Uuid,
     // World id that the recap was for
     pub world_id: DatabaseU16,
+    // Whether the user has a free trial and may be deprioritized (Can they even join a queue?)
+    pub free_trial: bool,
     // Whether the queue was successful or not (false = manual disconnect, true = successful queue & login)
     pub successful: bool,
     // Whether the player reentered the queue after a disconnect/cancellation

@@ -54,11 +54,12 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
 
     sqlx::query!(
         r#"INSERT INTO recaps
-        (id, user_id, world_id, successful, error_type, error_code, error_info, error_row, start_time, end_time, end_identify_time)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"#r,
+        (id, user_id, world_id, free_trial, successful, error_type, error_code, error_info, error_row, start_time, end_time, end_identify_time)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"#r,
         recap.id,
         recap.user_id,
         recap.world_id.as_db(),
+        recap.free_trial,
         recap.successful,
         recap.error.as_ref().map(|r| r.r#type),
         recap.error.as_ref().map(|r| r.code),
