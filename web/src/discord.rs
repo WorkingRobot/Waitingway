@@ -168,7 +168,7 @@ impl DiscordClient {
         user_id: UserId,
         access_token: String,
     ) -> Result<Message, serenity::Error> {
-        let already_in_guild = match self.config().guild_id.member(self.http(), user_id).await {
+        log::info!("Onboarding user {}", user_id);
             Ok(_) => true,
             Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(ErrorResponse {
                 error: DiscordJsonError { code: 10007, .. }, // Unknown Member

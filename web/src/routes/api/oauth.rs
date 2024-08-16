@@ -111,13 +111,13 @@ async fn callback(
         return Err(ErrorBadRequest("You have too many connections already"));
     }
 
-    discord
-        .mark_user_connected(identity.id.get().into())
+    let message = discord
+        .onboard_user(identity.id, token.access_token)
         .await
         .map_err(ErrorInternalServerError)?;
 
-    let message = discord
-        .onboard_user(identity.id, token.access_token)
+    discord
+        .mark_user_connected(identity.id.get().into())
         .await
         .map_err(ErrorInternalServerError)?;
 
