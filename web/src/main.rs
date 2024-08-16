@@ -82,7 +82,12 @@ async fn main() -> Result<(), ServerError> {
             .wrap(Cors::default())
             .wrap(NormalizePath::new(TrailingSlash::Always))
             .wrap(server_prometheus.clone())
-            .wrap(Logger::default())
+            .wrap(
+                server_config
+                    .log_access_format
+                    .as_deref()
+                    .map_or_else(Logger::default, Logger::new),
+            )
             .app_data(Data::new(server_pool.clone()))
             .app_data(Data::new(server_config.clone()))
             .app_data(Data::new(server_discord.clone()))
