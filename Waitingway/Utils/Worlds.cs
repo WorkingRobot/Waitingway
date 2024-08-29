@@ -36,13 +36,10 @@ public sealed record World
 
         foreach (var world in LuminaSheets.World)
         {
-            if (world == null)
-                continue;
-
             //if (!world.IsPublic)
             //    continue;
 
-            if (world.DataCenter.Value is not { } datacenter)
+            if (world.DataCenter.ValueNullable is not { } datacenter)
                 continue;
 
             var region = (RegionType)datacenter.Region;
@@ -65,9 +62,9 @@ public sealed record World
             worlds.Add((ushort)world.RowId, new World
             {
                 WorldId = (ushort)world.RowId,
-                WorldName = world.Name,
+                WorldName = world.Name.ExtractText(),
                 DatacenterId = (ushort)datacenter.RowId,
-                DatacenterName = datacenter.Name,
+                DatacenterName = datacenter.Name.ExtractText(),
                 RegionId = (ushort)region,
                 RegionName = regionName,
                 IsCloud = datacenter.Unknown0

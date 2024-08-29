@@ -10,24 +10,33 @@
       },
       "ExdSheets": {
         "type": "Direct",
-        "requested": "[1.1.0, )",
-        "resolved": "1.1.0",
-        "contentHash": "Je/kV/jpZoIEmJVi1ICRnl1/ENB+nyFHX1KZUu3rkxMO8H9uJJ6CA1MdRiOD6OE6If1eGXAL1bLwEupC2Ikraw==",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "SfvLFyL8LYsW4AzPLFVfFwtKPl9xegGraIe9oFar3IlWW8Z4kf5dkM+1CiSr/J+PQt4xt2QZc/ydZ4ibs3RosA==",
         "dependencies": {
-          "Lumina": "3.15.2"
+          "Lumina": "4.1.1"
         }
       },
       "Lumina": {
         "type": "Direct",
-        "requested": "[3.15.2, )",
-        "resolved": "3.15.2",
-        "contentHash": "EnoxYEYMepcvAoXdZhaFJiv2aiDBIPjgkgzxR/+ArOxlrALzCgheTsb5yD39a9sxNIi2tNECT93ulZvYjx8fZg=="
+        "requested": "[4.1.1, )",
+        "resolved": "4.1.1",
+        "contentHash": "Hd+iTtdaPACTpViXaJ/+sQ3ZQ8MEpApCSD+mxTXnUTYDSZOAipuC4LsZqhAkLMeQHSK/R/jiXEXaXS7e0mTXyA==",
+        "dependencies": {
+          "Microsoft.Extensions.ObjectPool": "9.0.0-preview.1.24081.5"
+        }
       },
       "Meziantou.Analyzer": {
         "type": "Direct",
-        "requested": "[2.0.159, )",
-        "resolved": "2.0.159",
-        "contentHash": "+Lu4NktCK98/PkPCluTA+uRHS7uvMXa/Z2WLPE8TDsS/ybYtaOhfq8Wi745fO26wI8rNGaJlKsfFskcKWC5eDQ=="
+        "requested": "[2.0.163, )",
+        "resolved": "2.0.163",
+        "contentHash": "vN0YmOkuvPLukMsefLHYCWYaLPzpc6SfoR74aPwuLeK8QdxgxkavywQ1q/II0shLEEaN1RhlMjmL1RxMPW853w=="
+      },
+      "Microsoft.Extensions.ObjectPool": {
+        "type": "Direct",
+        "requested": "[9.0.0-preview.1.24081.5, )",
+        "resolved": "9.0.0-preview.1.24081.5",
+        "contentHash": "aAR7YW+pUUdvHk3vj7GtAi71dWGDIuY9270lsmQ6lKw23zzY+r8pLP3cGNbJdlnA9VWl+S+gnIVkBCqj2ROlEg=="
       }
     }
   }
