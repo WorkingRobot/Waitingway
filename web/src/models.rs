@@ -18,7 +18,6 @@ pub struct Recap {
     // Whether the queue was successful or not (false = manual disconnect, true = successful queue & login)
     pub successful: bool,
     // Whether the player reentered the queue after a disconnect/cancellation
-    #[sqlx(skip)]
     pub reentered: bool,
     // Error info if the queue was not successful. May indicate a server error. Will be used for viewing error rates.
     #[sqlx(flatten)]
