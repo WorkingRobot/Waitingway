@@ -67,7 +67,7 @@ public sealed class QueueTracker : IDisposable
 
         [JsonIgnore]
         [Newton.JsonIgnore]
-        public bool IsIdentifyExpired => LastIdentifyTime is not { } || DateTime.UtcNow >= IdentifyTimeout;
+        public bool IsIdentifyExpired => !LastIdentifyTime.HasValue || DateTime.UtcNow >= IdentifyTimeout;
 
         public Recap(string characterName, ulong characterContentId, bool freeTrial, ushort homeWorldId, ushort worldId, DateTime startTime)
         {
@@ -206,7 +206,7 @@ public sealed class QueueTracker : IDisposable
         }
 
         CurrentState = QueueState.NotQueued;
-        CurrentRecap.MarkCancelled(DateTime.UtcNow, LastIdentifyTime);
+        recap.MarkCancelled(DateTime.UtcNow, LastIdentifyTime);
         LastIdentifyTime = null;
         OnCompleteQueue?.Invoke();
         CurrentRecap = null;
@@ -216,13 +216,10 @@ public sealed class QueueTracker : IDisposable
     private void OnFailedQueue(int type, int code, string info, ushort errorRow)
     {
         if (CurrentRecap is not { } recap)
-        {
-            Log.ErrorNotify($"Failed queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
             return;
-        }
 
         CurrentState = QueueState.NotQueued;
-        CurrentRecap!.MarkFailed(new()
+        recap.MarkFailed(new()
         {
             Type = type,
             Code = code,
@@ -239,12 +236,13 @@ public sealed class QueueTracker : IDisposable
     {
         if (CurrentRecap is not { } recap)
         {
+            LastIdentifyTime = null;
             Log.ErrorNotify($"Exited queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
             return;
         }
 
         CurrentState = QueueState.NotQueued;
-        CurrentRecap!.MarkComplete(DateTime.UtcNow, LastIdentifyTime);
+        recap.MarkComplete(DateTime.UtcNow, LastIdentifyTime);
         LastIdentifyTime = null;
         OnCompleteQueue?.Invoke();
         CurrentRecap = null;
@@ -260,6 +258,7 @@ public sealed class QueueTracker : IDisposable
     {
         if (CurrentRecap is not { } recap)
         {
+            LastIdentifyTime = null;
             Log.ErrorNotify($"Received new queue position ({newPosition}) without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
             return;
         }

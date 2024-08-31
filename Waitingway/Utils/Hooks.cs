@@ -29,20 +29,24 @@ public sealed unsafe class Hooks : IDisposable
     public unsafe partial struct AgentLobby2
     {
         [FieldOffset(0x48)] public LobbySubscriptionInfo* SubscriptionInfo;
-
         [FieldOffset(0x1164)] public byte LobbyUpdateStage;
-
         [FieldOffset(0x1111)] public byte SelectedCharacterIndex;
-
         [FieldOffset(0x1180)] public ulong QueueTimeSinceLastUpdate;
     }
 
-    public event Action<string, ulong, bool, ushort, ushort>? OnEnterQueue; // characterName, contentId, isFreeTrial, homeWorldId, worldId
-    public event Action? OnCancelQueue; // Manually cancelled
-    public event Action<int, int, string, ushort>? OnFailedQueue; // Error code for queue: codeType, code, codeString, errorSheetRow
-    public event Action? OnExitQueue; // Exited queue (logged in)
-    public event Action? OnSendIdentify; // Identify sent
-    public event Action<int>? OnNewQueuePosition; // New position
+    public delegate void EnterQueueDelegate(string characterName, ulong contentId, bool isFreeTrial, ushort homeWorldId, ushort worldId);
+    public delegate void CancelQueueDelegate();
+    public delegate void FailedQueueDelegate(int codeType, int code, string codeString, ushort errorSheetRow);
+    public delegate void ExitQueueDelegate();
+    public delegate void SendIdentifyDelegate();
+    public delegate void NewQueuePositionDelegate(int newPosition);
+
+    public event EnterQueueDelegate? OnEnterQueue;
+    public event CancelQueueDelegate? OnCancelQueue; // Manually cancelled
+    public event FailedQueueDelegate? OnFailedQueue;
+    public event ExitQueueDelegate? OnExitQueue; // Exited queue (logged in)
+    public event SendIdentifyDelegate? OnSendIdentify; // Identify sent
+    public event NewQueuePositionDelegate? OnNewQueuePosition; // New position
 
     private delegate void* AgentLobbyReceiveEventDelegate(AgentLobby* agent, void* eventData, AtkValue* values, uint valueCount, ulong eventKind);
     private delegate bool StatusCodeHandlerLoginDelegate(StatusCodeHandler* handler, nint packetData);
