@@ -29,8 +29,9 @@
 
     <ItemGroup>
         <EmbeddedResource Include="../icon.png" />
-        <EmbeddedResource Include="Graphics/settings.png" />
         <EmbeddedResource Include="Graphics/menu_icon.png" />
+        <EmbeddedResource Include="Graphics/settings.png" />
+        <EmbeddedResource Include="Graphics/settings_hr1.png" />
     </ItemGroup>
 
   <ItemGroup>

@@ -13,6 +13,7 @@ public sealed class Service
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     [PluginService] public static IDalamudPluginInterface PluginInterface { get; private set; }
     [PluginService] public static ICommandManager CommandManager { get; private set; }
+    [PluginService] public static IAddonEventManager AddonEventManager { get; private set; }
     [PluginService] public static IObjectTable Objects { get; private set; }
     [PluginService] public static IAddonLifecycle AddonLifecycle { get; private set; }
     [PluginService] public static INotificationManager NotificationManager { get; private set; }

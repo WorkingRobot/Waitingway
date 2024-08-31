@@ -48,13 +48,14 @@ public sealed unsafe class Hooks : IDisposable
     public event SendIdentifyDelegate? OnSendIdentify; // Identify sent
     public event NewQueuePositionDelegate? OnNewQueuePosition; // New position
 
-    private delegate void* AgentLobbyReceiveEventDelegate(AgentLobby* agent, void* eventData, AtkValue* values, uint valueCount, ulong eventKind);
     private delegate bool StatusCodeHandlerLoginDelegate(StatusCodeHandler* handler, nint packetData);
     private delegate void AgentLobbyUpdatePositionDelegate(AgentLobby* agent, int newPosition);
     private delegate bool AgentLobbySendIdentify6Delegate(AgentLobby* agent, int characterEntryIdx);
     private delegate void LobbyUIClientReportErrorDelegate(LobbyUIClient* client, LobbyStatusCode* status);
+    public delegate void DuplicateComponentNodeDelegate(AtkUldManager* manager, int componentNodeId, int duplicateCount, int nodeIdOffset);
+    public delegate AtkResNode* GetDuplicatedNodeDelegate(AtkUldManager* manager, int nodeId, int idx, int offset);
 
-    private readonly Hook<AgentLobbyReceiveEventDelegate> agentLobbyReceiveEventHook = null!;
+    private readonly Hook<AgentLobby.Delegates.ReceiveEvent> agentLobbyReceiveEventHook = null!;
 
     [Signature("40 57 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
     private readonly Hook<StatusCodeHandlerLoginDelegate> statusCodeHandlerLoginHook = null!;
@@ -67,10 +68,16 @@ public sealed unsafe class Hooks : IDisposable
 
     private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;
 
+    [Signature("E8 ?? ?? ?? ?? 40 38 7D 2C")]
+    public readonly DuplicateComponentNodeDelegate duplicateComponentNode = null!;
+
+    [Signature("E8 ?? ?? ?? ?? 45 8B DD")]
+    public readonly GetDuplicatedNodeDelegate getDuplicatedNode = null!;
+
     public Hooks()
     {
-        agentLobbyReceiveEventHook = Service.GameInteropProvider.HookFromAddress<AgentLobbyReceiveEventDelegate>(
-            (nint)(AgentLobby.StaticVirtualTablePointer->ReceiveEvent),
+        agentLobbyReceiveEventHook = Service.GameInteropProvider.HookFromAddress<AgentLobby.Delegates.ReceiveEvent>(
+            (nint)AgentLobby.StaticVirtualTablePointer->ReceiveEvent,
             AgentLobbyReceiveEventDetour);
 
         lobbyUIClientReportErrorHook = Service.GameInteropProvider.HookFromAddress<LobbyUIClientReportErrorDelegate>(
@@ -110,9 +117,9 @@ public sealed unsafe class Hooks : IDisposable
         return statusCodeHandlerLoginHook.Original(handler, packetData);
     }
 
-    private void* AgentLobbyReceiveEventDetour(AgentLobby* agent, void* eventData, AtkValue* values, uint valueCount, ulong eventKind)
+    private AtkValue* AgentLobbyReceiveEventDetour(AgentLobby* @this, AtkValue* returnValue, AtkValue* values, uint valueCount, ulong eventKind)
     {
-        var agent2 = (AgentLobby2*)agent;
+        var agent2 = (AgentLobby2*)@this;
         if (valueCount > 0)
         {
             switch (eventKind)
@@ -122,7 +129,7 @@ public sealed unsafe class Hooks : IDisposable
                     // 1 = Cancel
                     if (values[0].Int == 0)
                     {
-                        var entry = agent->LobbyData.CharaSelectEntries[agent2->SelectedCharacterIndex].Value;
+                        var entry = @this->LobbyData.CharaSelectEntries[agent2->SelectedCharacterIndex].Value;
                         OnEnterQueue?.Invoke(
                             entry->NameString,
                             entry->ContentId,
@@ -140,7 +147,7 @@ public sealed unsafe class Hooks : IDisposable
             }
         }
 
-        return agentLobbyReceiveEventHook.Original(agent, eventData, values, valueCount, eventKind);
+        return agentLobbyReceiveEventHook.Original(@this, returnValue, values, valueCount, eventKind);
     }
 
     public static ulong? AgentLobbyGetTimeSinceLastIdentify()
