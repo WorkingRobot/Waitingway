@@ -1,4 +1,7 @@
-use crate::models::{Connection, DatabaseU64, QueueSize, Recap};
+use crate::{
+    db_wrappers::{DatabaseU16, DatabaseU64},
+    models::{Connection, DbQueueEstimate, QueueEstimate, QueueSize, Recap},
+};
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
 use std::io;
 use uuid::Uuid;
@@ -181,4 +184,59 @@ pub async fn does_connection_id_exist(pool: &PgPool, connection_id: u64) -> Resu
     .fetch_one(pool)
     .await?
     .unwrap_or(false))
+}
+
+pub async fn refresh_queue_estimates(pool: &PgPool) -> Result<PgQueryResult, Error> {
+    sqlx::query!(r#"REFRESH MATERIALIZED VIEW CONCURRENTLY queue_estimates"#)
+        .execute(pool)
+        .await
+}
+
+pub async fn get_queue_estimate(pool: &PgPool) -> Result<Vec<QueueEstimate>, Error> {
+    sqlx::query_as!(DbQueueEstimate, r#"SELECT * FROM queue_estimates"#)
+        .fetch_all(pool)
+        .await
+        .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
+}
+
+pub async fn get_queue_estimate_by_world_id(
+    pool: &PgPool,
+    world_id: u16,
+) -> Result<Vec<QueueEstimate>, Error> {
+    sqlx::query_as!(
+        DbQueueEstimate,
+        r#"SELECT * FROM queue_estimates WHERE world_id = $1"#,
+        DatabaseU16(world_id).as_db()
+    )
+    .fetch_all(pool)
+    .await
+    .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
+}
+
+pub async fn get_queue_estimate_by_datacenter_id(
+    pool: &PgPool,
+    datacenter_id: u16,
+) -> Result<Vec<QueueEstimate>, Error> {
+    sqlx::query_as!(
+        DbQueueEstimate,
+        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where datacenter_id = $1)"#,
+        DatabaseU16(datacenter_id).as_db()
+    )
+    .fetch_all(pool)
+    .await
+    .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
+}
+
+pub async fn get_queue_estimate_by_region_id(
+    pool: &PgPool,
+    region_id: u16,
+) -> Result<Vec<QueueEstimate>, Error> {
+    sqlx::query_as!(
+        DbQueueEstimate,
+        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where region_id = $1)"#,
+        DatabaseU16(region_id).as_db()
+    )
+    .fetch_all(pool)
+    .await
+    .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
 }

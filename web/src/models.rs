@@ -1,6 +1,9 @@
-use crate::middleware::version::UserAgentVersion;
+use crate::{
+    db_wrappers::{DatabaseDateTime, DatabaseU16, DatabaseU64},
+    middleware::version::UserAgentVersion,
+};
 use serde::{Deserialize, Serialize};
-use sqlx::{database::HasValueRef, error::BoxDynError, FromRow};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -82,133 +85,39 @@ pub struct Connection {
     pub display_name: String,
 }
 
-macro_rules! define_unsigned_database_type {
-    ($wrapper:ident, $unsigned:ty, $signed:ty) => {
-        #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-        pub struct $wrapper(pub $unsigned);
-
-        impl<D: sqlx::Database> sqlx::Type<D> for $wrapper
-        where
-            $signed: sqlx::Type<D>,
-        {
-            fn type_info() -> D::TypeInfo {
-                <$signed as sqlx::Type<D>>::type_info()
-            }
-        }
-
-        impl<'r, D: sqlx::Database> sqlx::Decode<'r, D> for $wrapper
-        where
-            $signed: sqlx::Decode<'r, D>,
-        {
-            fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
-                Ok($wrapper(<$signed>::decode(value)? as $unsigned))
-            }
-        }
-
-        impl<'q, D: sqlx::Database> sqlx::Encode<'q, D> for $wrapper
-        where
-            $signed: sqlx::Encode<'q, D>,
-        {
-            fn encode_by_ref(
-                &self,
-                buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-            ) -> sqlx::encode::IsNull {
-                (self.0 as $signed).encode_by_ref(buf)
-            }
-        }
-
-        impl $wrapper {
-            #[inline]
-            pub fn as_db(self) -> $signed {
-                self.0 as $signed
-            }
-        }
-
-        impl From<$signed> for $wrapper {
-            #[inline]
-            fn from(value: $signed) -> Self {
-                Self(value as $unsigned)
-            }
-        }
-
-        impl From<$unsigned> for $wrapper {
-            #[inline]
-            fn from(value: $unsigned) -> Self {
-                Self(value)
-            }
-        }
-    };
+#[derive(Debug, Deserialize)]
+pub struct QueueQueryFilter {
+    pub world_id: Option<u16>,
+    pub datacenter_id: Option<u16>,
+    pub region_id: Option<u16>,
 }
 
-define_unsigned_database_type!(DatabaseU16, u16, i16);
-// define_unsigned_database_type!(DatabaseU32, u32, i32);
-define_unsigned_database_type!(DatabaseU64, u64, i64);
+// sqlx throws a fit and doesn't accept sqlx(rename = "") nor Option<DatabaseU16>
+#[derive(Debug, sqlx::FromRow)]
+pub struct DbQueueEstimate {
+    pub world_id: Option<i16>,
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct DatabaseDateTime(#[serde(with = "time::serde::rfc3339")] pub time::OffsetDateTime);
-
-impl<D: sqlx::Database> sqlx::Type<D> for DatabaseDateTime
-where
-    time::PrimitiveDateTime: sqlx::Type<D>,
-{
-    fn type_info() -> D::TypeInfo {
-        <time::PrimitiveDateTime as sqlx::Type<D>>::type_info()
-    }
-}
-
-impl<'r, D: sqlx::Database> sqlx::Decode<'r, D> for DatabaseDateTime
-where
-    time::PrimitiveDateTime: sqlx::Decode<'r, D>,
-{
-    fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
-        Ok(Self(time::PrimitiveDateTime::decode(value)?.assume_utc()))
-    }
-}
-
-impl<'q, D: sqlx::Database> sqlx::Encode<'q, D> for DatabaseDateTime
-where
-    time::PrimitiveDateTime: sqlx::Encode<'q, D>,
-{
-    fn encode_by_ref(
-        &self,
-        buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
-        self.as_db().encode_by_ref(buf)
-    }
-}
-
-impl DatabaseDateTime {
-    #[inline]
-    pub fn as_db(self) -> time::PrimitiveDateTime {
-        let time = self
-            .0
-            .checked_to_offset(time::UtcOffset::UTC)
-            .unwrap_or(time::OffsetDateTime::UNIX_EPOCH);
-        time::PrimitiveDateTime::new(time.date(), time.time())
-    }
-}
-
-impl From<time::PrimitiveDateTime> for DatabaseDateTime {
-    #[inline]
-    fn from(value: time::PrimitiveDateTime) -> Self {
-        Self(value.assume_utc())
-    }
-}
-
-impl From<time::OffsetDateTime> for DatabaseDateTime {
-    #[inline]
-    fn from(value: time::OffsetDateTime) -> Self {
-        Self(value)
-    }
+    pub time: Option<time::PrimitiveDateTime>,
+    pub size: Option<i32>,
+    pub duration: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueueEstimate {
     pub world_id: u16,
-    #[serde(with = "time::serde::rfc3339")]
-    pub created_at: time::OffsetDateTime,
 
-    pub conn_user_id: DatabaseU64,
-    pub username: String,
-    pub display_name: String,
+    pub last_update: DatabaseDateTime,
+    pub last_size: i32,
+    pub last_duration: f64,
+}
+
+impl From<DbQueueEstimate> for QueueEstimate {
+    fn from(db: DbQueueEstimate) -> Self {
+        Self {
+            world_id: db.world_id.unwrap_or_default() as u16,
+            last_update: DatabaseDateTime::from(db.time.unwrap_or(time::PrimitiveDateTime::MIN)),
+            last_size: db.size.unwrap_or_default(),
+            last_duration: db.duration.unwrap_or_default(),
+        }
+    }
 }

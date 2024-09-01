@@ -1,5 +1,7 @@
 mod config;
+mod crons;
 mod db;
+mod db_wrappers;
 mod discord;
 mod middleware;
 mod models;
@@ -62,6 +64,9 @@ async fn main() -> Result<(), ServerError> {
         .unwrap();
 
     sqlx::migrate!().run(&db_pool).await.unwrap();
+
+    let refresh_queue_estimates_token =
+        crons::create_cron_job(crons::RefreshQueueEstimates::new(db_pool.clone()));
 
     let discord_bot = DiscordClient::new(config.discord.clone()).await;
 
@@ -136,6 +141,8 @@ async fn main() -> Result<(), ServerError> {
     let prometheus_server_task = tokio::task::spawn(prometheus_server);
 
     let server_ret = server_task.await;
+
+    refresh_queue_estimates_token.cancel();
     discord_bot.stop().await;
     let prometheus_server_ret = prometheus_server_task.await;
     let discord_ret = discord_task.await;

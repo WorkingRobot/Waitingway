@@ -1,7 +1,7 @@
 use crate::{
     db,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
-    models::{QueueSize, Recap},
+    models::{QueueQueryFilter, QueueSize, Recap},
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
@@ -71,6 +71,28 @@ async fn create_queue_size(
     let resp = db::create_queue_size(&pool, size_info).await;
     match resp {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => Err(ErrorInternalServerError(e)),
+    }
+}
+
+#[get("/queue/")]
+async fn get_queue_estimate(
+    pool: web::Data<PgPool>,
+    filter: web::Query<QueueQueryFilter>,
+) -> Result<HttpResponse> {
+    let filter = filter.into_inner();
+    let resp = if let Some(region_id) = filter.region_id {
+        db::get_queue_estimate_by_region_id(&pool, region_id).await
+    } else if let Some(datacenter_id) = filter.datacenter_id {
+        db::get_queue_estimate_by_datacenter_id(&pool, datacenter_id).await
+    } else if let Some(world_id) = filter.world_id {
+        db::get_queue_estimate_by_world_id(&pool, world_id).await
+    } else {
+        db::get_queue_estimate(&pool).await
+    };
+
+    match resp {
+        Ok(estimate) => Ok(HttpResponse::Ok().json(estimate)),
         Err(e) => Err(ErrorInternalServerError(e)),
     }
 }

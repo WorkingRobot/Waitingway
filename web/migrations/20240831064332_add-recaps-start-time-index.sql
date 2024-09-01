@@ -1,1 +1,1 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS recaps_start_time_index ON recaps (start_time ASC);
+CREATE INDEX IF NOT EXISTS recaps_start_time_index ON recaps (start_time ASC);
