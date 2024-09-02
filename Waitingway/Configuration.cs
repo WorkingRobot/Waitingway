@@ -52,6 +52,7 @@ public class Configuration : IPluginConfiguration
     public float DefaultRate { get; set; } = 100;
     public bool HideIdentifyTimer { get; set; }
     public int NotificationThreshold { get; set; }
+    public bool ShowDurationInWorldSelector { get; set; }
 
     public void AddFailedRecap(Recap recap)
     {

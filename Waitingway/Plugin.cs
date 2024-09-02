@@ -5,6 +5,7 @@ using Waitingway.Utils;
 using System.Text.Json;
 using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Game.Command;
+using Waitingway.Natives;
 
 namespace Waitingway;
 
@@ -12,8 +13,10 @@ public sealed class Plugin : IDalamudPlugin
 {
     public WindowSystem WindowSystem { get; }
     public Settings SettingsWindow { get; }
-    public SettingsButton LobbyButtonWindow { get; }
     public Queue QueueWindow { get; }
+
+    public CharaListMenu SettingsButton { get; }
+    public WorldSelector WorldSelector { get; }
 
     public Configuration Configuration { get; }
     public IconManager IconManager { get; }
@@ -39,8 +42,10 @@ public sealed class Plugin : IDalamudPlugin
         IPCProvider = new();
 
         SettingsWindow = new();
-        LobbyButtonWindow = new();
         QueueWindow = new();
+
+        SettingsButton = new();
+        WorldSelector = new();
 
         Service.TitleScreenMenu.AddEntry("Waitingway Settings", IconManager.GetAssemblyTextureCached("Graphics.menu_icon.png").GetWrap(), () => OpenSettingsWindow(true));
 
@@ -97,8 +102,10 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration.Save();
 
+        SettingsButton.Dispose();
+        WorldSelector.Dispose();
+
         QueueWindow.Dispose();
-        LobbyButtonWindow.Dispose();
         SettingsWindow.Dispose();
 
         IPCProvider.Dispose();

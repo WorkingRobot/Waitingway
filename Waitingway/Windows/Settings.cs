@@ -352,6 +352,17 @@ public sealed class Settings : Window, IDisposable
             ref isDirty
         );
 
+        ImGui.Separator();
+
+        DrawOption(
+            "Show Queue Time in World Selector",
+            "Displays the last queue time in the world select popup " +
+            "instead of the last queue size.",
+            Config.ShowDurationInWorldSelector,
+            v => Config.ShowDurationInWorldSelector = v,
+            ref isDirty
+        );
+
         if (isDirty)
             Config.Save();
     }

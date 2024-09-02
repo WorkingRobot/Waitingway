@@ -1,5 +1,6 @@
 using Dalamud.Networking.Http;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Web;
 
@@ -23,6 +25,8 @@ public sealed class Api : IDisposable
     private Task<VersionInfo>? ServerVersionTask { get; set; }
     public VersionInfo? ServerVersion => (ServerVersionTask?.IsCompletedSuccessfully ?? false) ? ServerVersionTask.Result : null;
 
+    private Dictionary<ushort, Task<QueueEstimate?>> CachedQueueEstimates { get; set; }
+
     private const string Password = "🏳️‍⚧️";
 
     public Api()
@@ -30,8 +34,9 @@ public sealed class Api : IDisposable
         HeCallback = new();
         JsonOptions = new JsonSerializerOptions()
         {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         };
+        JsonOptions.Converters.Add(new TimeSpanConverter());
         RefreshHttpConfiguration();
     }
     
@@ -49,7 +54,7 @@ public sealed class Api : IDisposable
         return client;
     }
 
-    [MemberNotNull(nameof(Client))]
+    [MemberNotNull(nameof(Client), nameof(CachedQueueEstimates))]
     public void RefreshHttpConfiguration()
     {
         var oldClient = Client;
@@ -70,6 +75,8 @@ public sealed class Api : IDisposable
             if (Service.Version.Version.Major != t.Result.VersionMajor || Service.Version.Version.Minor != t.Result.VersionMinor)
                 Log.WarnNotify("Waitingway is outdated and may not work correctly. Please update for the latest features and bug fixes.", "Waitingway Server Version Mismatch");
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
+
+        CachedQueueEstimates = [];
     }
 
     public async Task OpenOAuthInBrowserAsync()
@@ -118,36 +125,39 @@ public sealed class Api : IDisposable
     public async Task<QueueEstimate[]> GetAllQueuesAsync()
     {
         var resp = (await Client.GetAsync("api/v1/queue").ConfigureAwait(false)).EnsureSuccessStatusCode();
-        return (await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException("api/v1/queues", "Json returned null");
+        return (await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException("api/v1/queue", "Json returned null");
     }
 
-    public async Task<QueueEstimate?> GetWorldQueueAsync(ushort worldId)
+    public async Task<QueueEstimate[]> GetWorldQueuesAsync(IEnumerable<ushort> worldIds)
     {
-        var uri = new UriBuilder("api/v1/queue");
+        var uri = new UriBuilder(Client.BaseAddress + "api/v1/queue");
         var qs = HttpUtility.ParseQueryString(string.Empty);
-        qs["world_id"] = worldId.ToString();
-        uri.Query = qs.ToString();
-
-        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
-        return ((await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException(uri.ToString(), "Json returned null")).FirstOrDefault();
-    }
-
-    public async Task<QueueEstimate[]> GetDatacenterQueuesAsync(ushort datacenterId)
-    {
-        var uri = new UriBuilder("api/v1/queue");
-        var qs = HttpUtility.ParseQueryString(string.Empty);
-        qs["datacenter_id"] = datacenterId.ToString();
+        foreach (var worldId in worldIds)
+            qs.Add("world_id", worldId.ToString());
         uri.Query = qs.ToString();
 
         var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
         return (await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException(uri.ToString(), "Json returned null");
     }
 
-    public async Task<QueueEstimate[]> GetRegionQueuesAsync(ushort regionId)
+    public async Task<QueueEstimate[]> GetDatacenterQueuesAsync(IEnumerable<ushort> datacenterIds)
     {
-        var uri = new UriBuilder("api/v1/queue");
+        var uri = new UriBuilder(Client.BaseAddress + "api/v1/queue");
         var qs = HttpUtility.ParseQueryString(string.Empty);
-        qs["region_id"] = regionId.ToString();
+        foreach (var datacenterId in datacenterIds)
+            qs["datacenter_id"] = datacenterId.ToString();
+        uri.Query = qs.ToString();
+
+        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        return (await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false)) ?? throw new ApiException(uri.ToString(), "Json returned null");
+    }
+
+    public async Task<QueueEstimate[]> GetRegionQueuesAsync(IEnumerable<ushort> regionIds)
+    {
+        var uri = new UriBuilder(Client.BaseAddress + "api/v1/queue");
+        var qs = HttpUtility.ParseQueryString(string.Empty);
+        foreach (var regionId in regionIds)
+            qs["region_id"] = regionId.ToString();
         uri.Query = qs.ToString();
 
         var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
@@ -201,6 +211,68 @@ public sealed class Api : IDisposable
             throw new ApiException("api/v1/notifications", $"Unexpected status code {resp.StatusCode}");
     }
 
+    public void ClearWorldQueueCache() =>
+        CachedQueueEstimates.Clear();
+
+    public CachedQueueEstimate[] GetWorldQueuesCached(params ushort[] worldIds)
+    {
+        var estimates = new Task<QueueEstimate?>[worldIds.Length];
+        List<ushort> estimatesToRetrieve = [];
+
+        for (var i = 0; i < worldIds.Length; ++i)
+        {
+            if (CachedQueueEstimates.TryGetValue(worldIds[i], out var estimate))
+                estimates[i] = estimate;
+            else
+                estimatesToRetrieve.Add(worldIds[i]);
+        }
+        if (estimatesToRetrieve.Count > 0)
+        {
+        Log.Debug($"Getting world queues {worldIds.Length}");
+            var ret = GetWorldQueuesAsync(estimatesToRetrieve);
+            ret.ContinueWith(t =>
+            {
+                if (t.Exception is { } e)
+                    Log.ErrorNotify(e, "Failed to get queue estimates", "Couldn't Get Queue Info");
+            }, TaskContinuationOptions.OnlyOnFaulted);
+            for (var i = 0; i < worldIds.Length; ++i)
+            {
+                if (estimates[i] == null)
+                {
+                    var id = worldIds[i];
+                    estimates[i] = CachedQueueEstimates[id] = ret.ContinueWith(t =>
+                    {
+                        if (t.Exception is { } e)
+                            throw e;
+                        return t.Result.FirstOrDefault(q => q.WorldId == id);
+                    });
+                }
+            }
+        }
+
+        return estimates.Select(t =>
+        {
+            CachedQueueEstimate.CacheState state;
+            QueueEstimate? estimate = null;
+            if (!t.IsCompleted)
+                state = CachedQueueEstimate.CacheState.InProgress;
+            else if (t.IsFaulted)
+                state = CachedQueueEstimate.CacheState.Failed;
+            else if (t.Result == null)
+                state = CachedQueueEstimate.CacheState.NotFound;
+            else
+            {
+                state = CachedQueueEstimate.CacheState.Found;
+                estimate = t.Result;
+            }
+            return new CachedQueueEstimate()
+            {
+                State = state,
+                Estimate = estimate
+            };
+        }).ToArray();
+    }
+
     public void Dispose()
     {
         Client.Dispose();
@@ -239,10 +311,12 @@ public sealed class Api : IDisposable
     public sealed record QueueEstimate
     {
         public required ushort WorldId { get; init; }
-        public required ushort DatacenterId { get; init; }
-        public required ushort RegionId { get; init; }
 
-        public required TimeSpan EstimatedQueueTime { get; init; }
+        public required DateTime LastUpdate { get; init; }
+        public required uint LastSize { get; init; }
+        public required TimeSpan LastDuration { get; init; }
+
+        // public required TimeSpan EstimatedQueueDuration { get; init; }
     }
 
     public sealed record CreateNotificationData
@@ -278,6 +352,21 @@ public sealed class Api : IDisposable
         public required string Nonce { get; init; }
         public required string Data { get; init; }
     }
+
+    public readonly record struct CachedQueueEstimate
+    {
+        public required CacheState State { get; init; }
+
+        public required QueueEstimate? Estimate { get; init; }
+
+        public enum CacheState : byte
+        {
+            Found,
+            InProgress,
+            NotFound,
+            Failed
+        }
+    }
 }
 
 internal static class HttpExtensions
@@ -296,4 +385,17 @@ internal static class HttpExtensions
 
 public sealed class ApiException(string endpoint, string message) : Exception($"{message} ({endpoint})")
 {
+}
+
+public sealed class TimeSpanConverter : JsonConverter<TimeSpan>
+{
+    public override TimeSpan Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return TimeSpan.FromSeconds(reader.GetDouble());
+    }
+
+    public override void Write(Utf8JsonWriter writer, TimeSpan value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value.TotalSeconds);
+    }
 }
