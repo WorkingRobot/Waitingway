@@ -3,32 +3,35 @@ name = "waitingway-web"
 authors = ["Asriel Camora <asriel@camora.dev>"]
 description = "Backend web server for Waitingway"
 repository = "https://github.com/WorkingRobot/Waitingway"
-version = "2.1.4"
+version = "2.2.0"
 edition = "2021"
 
 [dependencies]
-actix-cors = "0.7"
-actix-web = "4"
-actix-web-httpauth = "0.8"
-actix-web-prom = { version = "0.8", features = ["process"] }
-reqwest = { version = "0.12", default-features = false, features = [
+actix-cors = "0.7.0"
+actix-web = "4.9.0"
+actix-web-httpauth = "0.8.2"
+actix-web-lab = "0.22.0"
+actix-web-prom = { version = "0.8.0", features = ["process"] }
+reqwest = { version = "0.12.7", default-features = false, features = [
     "rustls-tls",
     "json",
 ] }
-base64 = "0.22"
-config = { version = "0.14", default-features = false, features = ["yaml"] }
-chacha20poly1305 = "0.10"
-dotenvy = "0.15"
-env_logger = "0.11"
-futures-util = { version = "0.3", default-features = false, features = ["std"] }
-hex = { version = "0.4", features = ["serde"] }
-konst = "0.3"
-log = "0.4"
-prometheus = { version = "0.13", default-features = false }
-rand = "0.8"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serenity = { version = "0.12", default-features = false, features = [
+base64 = "0.22.1"
+config = { version = "0.14.0", default-features = false, features = ["yaml"] }
+chacha20poly1305 = "0.10.1"
+dotenvy = "0.15.7"
+env_logger = "0.11.5"
+futures-util = { version = "0.3.30", default-features = false, features = [
+    "std",
+] }
+hex = { version = "0.4.3", features = ["serde"] }
+konst = "0.3.9"
+log = "0.4.22"
+prometheus = { version = "0.13.4", default-features = false }
+rand = "0.8.5"
+serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.127"
+serenity = { version = "0.12.2", default-features = false, features = [
     "builder",
     "client",
     "gateway",
@@ -37,7 +40,7 @@ serenity = { version = "0.12", default-features = false, features = [
     "utils",
     "rustls_backend",
 ] }
-sqlx = { version = "0.7", default-features = false, features = [
+sqlx = { version = "0.8.1", default-features = false, features = [
     "runtime-tokio",
     "postgres",
     "macros",
@@ -46,12 +49,12 @@ sqlx = { version = "0.7", default-features = false, features = [
     "time",
     "uuid",
 ] }
-thiserror = "1.0"
-time = { version = "0.3", features = ["serde", "formatting"] }
-tokio = { version = "1.37", features = ["rt", "rt-multi-thread", "macros"] }
-tokio-util = "0.7"
-url = "2.5"
-uuid = { version = "1", features = ["serde", "fast-rng", "v7"] }
+thiserror = "1.0.63"
+time = { version = "0.3.36", features = ["serde", "formatting"] }
+tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
+tokio-util = "0.7.11"
+url = "2.5.2"
+uuid = { version = "1.10.0", features = ["serde", "fast-rng", "v7"] }
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

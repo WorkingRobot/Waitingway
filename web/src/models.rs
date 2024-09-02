@@ -39,6 +39,7 @@ pub struct Recap {
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
+#[allow(dead_code)]
 pub struct RecapPosition {
     // Recap id that this position is for
     #[serde(skip)]
@@ -87,9 +88,9 @@ pub struct Connection {
 
 #[derive(Debug, Deserialize)]
 pub struct QueueQueryFilter {
-    pub world_id: Option<u16>,
-    pub datacenter_id: Option<u16>,
-    pub region_id: Option<u16>,
+    pub world_id: Option<Vec<u16>>,
+    pub datacenter_id: Option<Vec<u16>>,
+    pub region_id: Option<Vec<u16>>,
 }
 
 // sqlx throws a fit and doesn't accept sqlx(rename = "") nor Option<DatabaseU16>

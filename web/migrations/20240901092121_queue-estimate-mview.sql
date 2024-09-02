@@ -25,8 +25,11 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS queue_estimates AS
                         world_id,
                         max(start_time) AS start_time
                     FROM recaps
+                    WHERE successful AND NOT reentered
                     GROUP BY world_id
                 ) AS sub ON recaps.world_id = sub.world_id
                 AND recaps.start_time = sub.start_time
             )
     ORDER BY world_id;
+
+CREATE UNIQUE INDEX ON queue_estimates(world_id);

@@ -16,7 +16,13 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
-    (health, version, create_queue_size, create_recap, get_queue)
+    (
+        health,
+        version,
+        create_queue_size,
+        create_recap,
+        get_queue_estimate,
+    )
 }
 
 #[derive(Debug, Serialize)]
@@ -75,28 +81,6 @@ async fn create_queue_size(
     }
 }
 
-#[get("/queue/")]
-async fn get_queue_estimate(
-    pool: web::Data<PgPool>,
-    filter: web::Query<QueueQueryFilter>,
-) -> Result<HttpResponse> {
-    let filter = filter.into_inner();
-    let resp = if let Some(region_id) = filter.region_id {
-        db::get_queue_estimate_by_region_id(&pool, region_id).await
-    } else if let Some(datacenter_id) = filter.datacenter_id {
-        db::get_queue_estimate_by_datacenter_id(&pool, datacenter_id).await
-    } else if let Some(world_id) = filter.world_id {
-        db::get_queue_estimate_by_world_id(&pool, world_id).await
-    } else {
-        db::get_queue_estimate(&pool).await
-    };
-
-    match resp {
-        Ok(estimate) => Ok(HttpResponse::Ok().json(estimate)),
-        Err(e) => Err(ErrorInternalServerError(e)),
-    }
-}
-
 #[route("/recap/", method = "POST", wrap = "BasicAuthentication")]
 async fn create_recap(
     pool: web::Data<PgPool>,
@@ -118,6 +102,23 @@ async fn create_recap(
 }
 
 #[get("/queue/")]
-async fn get_queue() -> Result<HttpResponse> {
-    Ok(HttpResponse::Ok().finish())
+async fn get_queue_estimate(
+    pool: web::Data<PgPool>,
+    filter: actix_web_lab::extract::Query<QueueQueryFilter>,
+) -> Result<HttpResponse> {
+    let filter = filter.into_inner();
+    let resp = if let Some(region_id) = filter.region_id {
+        db::get_queue_estimates_by_region_id(&pool, region_id).await
+    } else if let Some(datacenter_id) = filter.datacenter_id {
+        db::get_queue_estimates_by_datacenter_id(&pool, datacenter_id).await
+    } else if let Some(world_id) = filter.world_id {
+        db::get_queue_estimates_by_world_id(&pool, world_id).await
+    } else {
+        db::get_queue_estimates(&pool).await
+    };
+
+    match resp {
+        Ok(estimate) => Ok(HttpResponse::Ok().json(estimate)),
+        Err(e) => Err(ErrorInternalServerError(e)),
+    }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM queue_estimates WHERE world_id = $1",
+  "query": "SELECT * FROM queue_estimates WHERE world_id = ANY($1)",
   "describe": {
     "columns": [
       {
@@ -26,7 +26,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int2"
+        "Int2Array"
       ]
     },
     "nullable": [
@@ -36,5 +36,5 @@
       true
     ]
   },
-  "hash": "242db7c7c224ea55adfb7a0f76b0b4b8805c3293e261d84720d38865cee67bd4"
+  "hash": "91d7279cba8fe9c3dd34e231fbe9fc9529a50f761002cff828ed326f96688390"
 }

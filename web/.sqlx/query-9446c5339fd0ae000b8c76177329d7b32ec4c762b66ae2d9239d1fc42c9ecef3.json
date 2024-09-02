@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where region_id = $1)",
+  "query": "SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where region_id = ANY($1))",
   "describe": {
     "columns": [
       {
@@ -26,7 +26,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int2"
+        "Int2Array"
       ]
     },
     "nullable": [
@@ -36,5 +36,5 @@
       true
     ]
   },
-  "hash": "f1142eab60f1fd87777fb4741ddba1c75400d6c86ce51a601899ac48a8bf79d5"
+  "hash": "9446c5339fd0ae000b8c76177329d7b32ec4c762b66ae2d9239d1fc42c9ecef3"
 }

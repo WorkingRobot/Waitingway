@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{database::HasValueRef, error::BoxDynError};
+use sqlx::error::BoxDynError;
 
 macro_rules! define_unsigned_database_type {
     ($wrapper:ident, $unsigned:ty, $signed:ty) => {
@@ -19,7 +19,7 @@ macro_rules! define_unsigned_database_type {
         where
             $signed: sqlx::Decode<'r, D>,
         {
-            fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
+            fn decode(value: <D as sqlx::Database>::ValueRef<'r>) -> Result<Self, BoxDynError> {
                 Ok($wrapper(<$signed>::decode(value)? as $unsigned))
             }
         }
@@ -30,8 +30,8 @@ macro_rules! define_unsigned_database_type {
         {
             fn encode_by_ref(
                 &self,
-                buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-            ) -> sqlx::encode::IsNull {
+                buf: &mut <D as sqlx::Database>::ArgumentBuffer<'q>,
+            ) -> Result<sqlx::encode::IsNull, BoxDynError> {
                 (self.0 as $signed).encode_by_ref(buf)
             }
         }
@@ -79,7 +79,7 @@ impl<'r, D: sqlx::Database> sqlx::Decode<'r, D> for DatabaseDateTime
 where
     time::PrimitiveDateTime: sqlx::Decode<'r, D>,
 {
-    fn decode(value: <D as HasValueRef<'r>>::ValueRef) -> Result<Self, BoxDynError> {
+    fn decode(value: <D as sqlx::Database>::ValueRef<'r>) -> Result<Self, BoxDynError> {
         Ok(Self(time::PrimitiveDateTime::decode(value)?.assume_utc()))
     }
 }
@@ -90,8 +90,8 @@ where
 {
     fn encode_by_ref(
         &self,
-        buf: &mut <D as sqlx::database::HasArguments<'q>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
+        buf: &mut <D as sqlx::Database>::ArgumentBuffer<'q>,
+    ) -> Result<sqlx::encode::IsNull, BoxDynError> {
         self.as_db().encode_by_ref(buf)
     }
 }

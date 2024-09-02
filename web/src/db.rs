@@ -192,49 +192,61 @@ pub async fn refresh_queue_estimates(pool: &PgPool) -> Result<PgQueryResult, Err
         .await
 }
 
-pub async fn get_queue_estimate(pool: &PgPool) -> Result<Vec<QueueEstimate>, Error> {
+pub async fn get_queue_estimates(pool: &PgPool) -> Result<Vec<QueueEstimate>, Error> {
     sqlx::query_as!(DbQueueEstimate, r#"SELECT * FROM queue_estimates"#)
         .fetch_all(pool)
         .await
         .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
 }
 
-pub async fn get_queue_estimate_by_world_id(
+pub async fn get_queue_estimates_by_region_id(
     pool: &PgPool,
-    world_id: u16,
+    region_ids: Vec<u16>,
 ) -> Result<Vec<QueueEstimate>, Error> {
+    let region_ids = region_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
     sqlx::query_as!(
         DbQueueEstimate,
-        r#"SELECT * FROM queue_estimates WHERE world_id = $1"#,
-        DatabaseU16(world_id).as_db()
+        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where region_id = ANY($1))"#,
+        region_ids.as_slice()
     )
     .fetch_all(pool)
     .await
     .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
 }
 
-pub async fn get_queue_estimate_by_datacenter_id(
+pub async fn get_queue_estimates_by_datacenter_id(
     pool: &PgPool,
-    datacenter_id: u16,
+    datacenter_ids: Vec<u16>,
 ) -> Result<Vec<QueueEstimate>, Error> {
+    let datacenter_ids = datacenter_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
     sqlx::query_as!(
         DbQueueEstimate,
-        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where datacenter_id = $1)"#,
-        DatabaseU16(datacenter_id).as_db()
+        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where datacenter_id = ANY($1))"#,
+        datacenter_ids.as_slice()
     )
     .fetch_all(pool)
     .await
     .map(|estimates| estimates.into_iter().map(QueueEstimate::from).collect())
 }
 
-pub async fn get_queue_estimate_by_region_id(
+pub async fn get_queue_estimates_by_world_id(
     pool: &PgPool,
-    region_id: u16,
+    world_ids: Vec<u16>,
 ) -> Result<Vec<QueueEstimate>, Error> {
+    let world_ids = world_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
     sqlx::query_as!(
         DbQueueEstimate,
-        r#"SELECT * FROM queue_estimates WHERE world_id IN (SELECT world_id FROM worlds where region_id = $1)"#,
-        DatabaseU16(region_id).as_db()
+        r#"SELECT * FROM queue_estimates WHERE world_id = ANY($1)"#,
+        world_ids.as_slice()
     )
     .fetch_all(pool)
     .await
