@@ -190,7 +190,7 @@ impl DiscordClient {
         let channel = user_id.create_dm_channel(self.http()).await?;
 
         let embed = CreateEmbed::new().title("You're linked up!")
-            .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}\n*Make sure you stay in the server to get notifications and enable DMs from server members.*",
+            .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}\n***Make sure you stay in the server to get notifications and enable DMs from server members.***",
                 self.config().queue_size_dm_threshold,
                 if already_in_guild {
                     "You've already joined the server, so you're all set!"

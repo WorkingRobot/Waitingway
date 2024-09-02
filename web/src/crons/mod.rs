@@ -20,7 +20,7 @@ pub fn create_cron_job<T: CronJob + Send + 'static>(job: T) -> CancellationToken
     tokio::spawn(async move {
         let new_job = job;
         loop {
-            log::debug!("Running cron job \"{}\"", T::NAME);
+            log::info!("Running cron job \"{}\"", T::NAME);
             new_job.run(signal.clone()).await;
 
             tokio::select! {
