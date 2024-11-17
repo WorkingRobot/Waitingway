@@ -128,14 +128,16 @@ public sealed unsafe class WorldSelector : IDisposable
 
     public static string FormatDuration(TimeSpan duration)
     {
+        if (duration == TimeSpan.Zero)
+            return "Instant";
         if (duration > TimeSpan.FromDays(1))
-            return $"{duration.TotalDays:.0}d";
+            return $"{duration.TotalDays:0.0}d";
         else if (duration > TimeSpan.FromHours(1))
-            return $"{duration.TotalHours:.0}h";
+            return $"{duration.TotalHours:0.0}h";
         else if (duration > TimeSpan.FromMinutes(1))
-            return $"{duration.TotalMinutes:.0}m";
+            return $"{duration.TotalMinutes:0.0}m";
         else
-            return $"{duration.TotalSeconds:.0}s";
+            return $"{duration.TotalSeconds:0.0}s";
     }
 
     public static ByteColor GetStateColor(int state) =>

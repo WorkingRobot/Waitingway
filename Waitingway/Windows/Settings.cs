@@ -262,6 +262,8 @@ public sealed class Settings : Window, IDisposable
                     Log.ErrorNotify(e, "Failed to open Discord");
             });
         }
+        if (ImGui.IsItemHovered())
+            ImGuiUtils.TooltipWrapped("Connecting your Discord account will add you to the official Waitingway Discord server. Due to the nature of Discord's API, you must stay in this server to recieve notifications.");
 
         if (isDirty)
             Config.Save();
