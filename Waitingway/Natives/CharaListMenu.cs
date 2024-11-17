@@ -62,7 +62,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         Service.Api.ClearWorldQueueCache();
 
         // Saves an extra API call by getting all world queues at once
-        var dcId = AgentLobby.Instance()->DataCenter;
+        var dcId = ((AgentLobby2*)AgentLobby.Instance())->DataCenter;
         Service.Api.GetWorldQueuesCached(World.GetWorlds().Where(w => w.DatacenterId == dcId).Select(w => w.WorldId).ToArray());
 
         AdjustNativeUi();
@@ -77,7 +77,7 @@ public sealed unsafe class CharaListMenu : IDisposable
 
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
-        var worldId = AgentLobby.Instance()->WorldId;
+        var worldId = ((AgentLobby2*)AgentLobby.Instance())->WorldId;
         if (worldId != 0)
         {
             CachedQueueEstimate = Service.Api.GetWorldQueuesCached(worldId)[0];
@@ -107,7 +107,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         CreatedAsset = Calloc<AtkUldAsset>();
         CreatedAsset->Id = 99899;
         CreatedAsset->AtkTexture.Ctor();
-        CreatedAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, (uint)TextureFormat.R8G8B8A8, 0, 0);
+        CreatedAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, (uint)TextureFormat.B8G8R8A8_UNORM, 0, 0);
 
         CachedTexture = CreatedAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView;
         CreatedAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.ImGuiHandle;

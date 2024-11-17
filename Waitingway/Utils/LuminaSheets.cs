@@ -1,15 +1,15 @@
 using Dalamud.Utility;
-using ExdSheets;
-using ExdSheets.Sheets;
-using SWorld = ExdSheets.Sheets.World;
+using Lumina.Excel;
+using Lumina.Excel.Sheets;
+using SWorld = Lumina.Excel.Sheets.World;
 
 namespace Waitingway.Utils;
 
 public static class LuminaSheets
 {
-    private static readonly Module Module = new(Service.DataManager.GameData, Service.DataManager.Language.ToLumina());
+    private static readonly ExcelModule Module = Service.DataManager.GameData.Excel;
 
-    public static readonly Sheet<SWorld> World = Module.GetSheet<SWorld>()!;
-    public static readonly Sheet<WorldDCGroupType> WorldDCGroupType = Module.GetSheet<WorldDCGroupType>()!;
-    public static readonly Sheet<Error> Error = Module.GetSheet<Error>()!;
+    public static readonly ExcelSheet<SWorld> World = Module.GetSheet<SWorld>()!;
+    public static readonly ExcelSheet<WorldDCGroupType> WorldDCGroupType = Module.GetSheet<WorldDCGroupType>()!;
+    public static readonly ExcelSheet<Error> Error = Module.GetSheet<Error>()!;
 }

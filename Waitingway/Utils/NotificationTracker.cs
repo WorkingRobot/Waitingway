@@ -103,7 +103,7 @@ public sealed class NotificationTracker : IDisposable
                     QueueEndSize = (uint)obj.Positions[^1].PositionNumber,
                     Duration = (uint)(obj.EndTime - obj.StartTime).TotalSeconds,
                     ErrorCode = obj.Error?.Code,
-                    ErrorMessage = obj.Error?.ErrorRow is { } errorRow ? LuminaSheets.Error.TryGetRow(errorRow)?.Unknown0.ExtractText() : null,
+                    ErrorMessage = obj.Error?.ErrorRow is { } errorRow ? LuminaSheets.Error.GetRowOrDefault(errorRow)?.Unknown0.ExtractText() : null,
                     IdentifyTimeout = !obj.IsIdentifyExpired ? obj.IdentifyTimeout : null
                 });
     }

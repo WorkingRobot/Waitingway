@@ -25,15 +25,6 @@ public sealed unsafe class Hooks : IDisposable
         [FieldOffset(0x78)] public ushort ErrorSheetRow;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x1DF8)]
-    public unsafe partial struct AgentLobby2
-    {
-        [FieldOffset(0x48)] public LobbySubscriptionInfo* SubscriptionInfo;
-        [FieldOffset(0x1164)] public byte LobbyUpdateStage;
-        [FieldOffset(0x1111)] public byte SelectedCharacterIndex;
-        [FieldOffset(0x1180)] public ulong QueueTimeSinceLastUpdate;
-    }
-
     public delegate void EnterQueueDelegate(string characterName, ulong contentId, bool isFreeTrial, ushort homeWorldId, ushort worldId);
     public delegate void CancelQueueDelegate();
     public delegate void FailedQueueDelegate(int codeType, int code, string codeString, ushort errorSheetRow);
@@ -63,7 +54,7 @@ public sealed unsafe class Hooks : IDisposable
     [Signature("40 55 53 56 57 41 54 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 8B B1", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
     private readonly Hook<AgentLobbyUpdatePositionDelegate> agentLobbyUpdatePositionHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
+    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B B4 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
     private readonly Hook<AgentLobbySendIdentify6Delegate> agentLobbySendIdentify6Hook = null!;
 
     private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;
@@ -150,7 +141,7 @@ public sealed unsafe class Hooks : IDisposable
         return agentLobbyReceiveEventHook.Original(@this, returnValue, values, valueCount, eventKind);
     }
 
-    public static ulong? AgentLobbyGetTimeSinceLastIdentify()
+    public static long? AgentLobbyGetTimeSinceLastIdentify()
     {
         var agent = (AgentLobby2*)AgentLobby.Instance();
         if (agent->LobbyUpdateStage != 31)
