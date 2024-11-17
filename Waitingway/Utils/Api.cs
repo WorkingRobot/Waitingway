@@ -72,7 +72,7 @@ public sealed class Api : IDisposable
         {
             if (t != ServerVersionTask)
                 return;
-            if (Service.Version.Version.Major != t.Result.VersionMajor || Service.Version.Version.Minor != t.Result.VersionMinor)
+            if (Service.Version.Version.Major != t.Result.VersionMajor || Service.Version.Version.Minor < t.Result.VersionMinor)
                 Log.WarnNotify("Waitingway is outdated and may not work correctly. Please update for the latest features and bug fixes.", "Waitingway Server Version Mismatch");
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
 
@@ -228,7 +228,7 @@ public sealed class Api : IDisposable
         }
         if (estimatesToRetrieve.Count > 0)
         {
-        Log.Debug($"Getting world queues {worldIds.Length}");
+            Log.Debug($"Getting world queues {string.Join(", ", worldIds)}");
             var ret = GetWorldQueuesAsync(estimatesToRetrieve);
             ret.ContinueWith(t =>
             {
