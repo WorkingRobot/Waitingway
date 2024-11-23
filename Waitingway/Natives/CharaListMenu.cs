@@ -22,9 +22,8 @@ public sealed unsafe class CharaListMenu : IDisposable
     private IDalamudTextureWrap SettingsImageWrap { get; }
 
     private AtkComponentButton* SettingsButton { get; set; }
-    private AtkUldPart* CachedPart { get; set; }
-    private AtkUldAsset* CreatedAsset { get; set; }
-    private AtkUldAsset* CachedAsset { get; set; }
+    private AtkUldPartsList* CachedParts { get; set; }
+    private AtkUldPartsList* CreatedParts { get; set; }
     private void* CachedTexture { get; set; }
 
     private AtkTextNode* QueueSizeTextNode { get; set; }
@@ -90,7 +89,6 @@ public sealed unsafe class CharaListMenu : IDisposable
         var worldBtn = Addon->UldManager.SearchNodeById(4);
         var newCharaBtn = Addon->UldManager.SearchNodeById(5);
         var backupBtn = Addon->UldManager.SearchNodeById(6);
-        var connectionInfoNode = Addon->UldManager.SearchNodeById(9);
 
         var width = MathF.Round(backupBtn->Width * Settings + SettingsPadding);
         SettingsDecreasedWidth = width;
@@ -104,26 +102,32 @@ public sealed unsafe class CharaListMenu : IDisposable
 
         var imageNode = (AtkImageNode*)SettingsButton->GetImageNodeById(4);
 
-        CreatedAsset = Calloc<AtkUldAsset>();
-        CreatedAsset->Id = 99899;
-        CreatedAsset->AtkTexture.Ctor();
-        CreatedAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, (uint)TextureFormat.B8G8R8A8_UNORM, 0, 0);
+        var createdAsset = AtkUtils.Calloc<AtkUldAsset>();
+        createdAsset->Id = 99899;
+        createdAsset->AtkTexture.Ctor();
+        createdAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, (uint)TextureFormat.B8G8R8A8_UNORM, 0, 0);
 
-        CachedTexture = CreatedAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView;
-        CreatedAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.ImGuiHandle;
+        CachedTexture = createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView;
+        createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.ImGuiHandle;
 
-        CreatedAsset->AtkTexture.TextureType = TextureType.KernelTexture;
+        createdAsset->AtkTexture.TextureType = TextureType.KernelTexture;
+        
+        var createdPart = AtkUtils.Calloc<AtkUldPart>();
+        createdPart->Width = 36;
+        createdPart->Height = 36;
+        createdPart->UldAsset = createdAsset;
 
+        CreatedParts = AtkUtils.Calloc<AtkUldPartsList>();
+        CreatedParts->Id = 9999;
+        CreatedParts->PartCount = 1;
+        CreatedParts->Parts = createdPart;
+        
         imageNode->AddRed = 0;
         imageNode->AddGreen = 0;
         imageNode->AddBlue = 0;
         imageNode->PartId = 0;
-
-        CachedPart = imageNode->PartsList->Parts + imageNode->PartId;
-        CachedAsset = CachedPart->UldAsset;
-
-        CachedPart->UldAsset = CreatedAsset;
-
+        imageNode->PartsList = CreatedParts;
+        
         var tooltipHandler = WorldSelector.CreateTooltipHandler("Open Waitingway Settings"u8);
         EventHandles.AddRange([
             Service.AddonEventManager.AddEvent((nint)Addon, (nint)settingsNode, AddonEventType.MouseOver, tooltipHandler),
@@ -138,7 +142,6 @@ public sealed unsafe class CharaListMenu : IDisposable
         AdjustX(newCharaBtn, -width / 2);
         AdjustWidth(newCharaBtn, -width / 2);
         AdjustX(backupBtn, -width);
-        AdjustX(connectionInfoNode, width);
 
         settingsNode->ToggleVisibility(true);
     }
@@ -154,18 +157,20 @@ public sealed unsafe class CharaListMenu : IDisposable
             return;
 
         if (SettingsButton != null)
+        {
             SettingsButton->OwnerNode->ToggleVisibility(false);
+            var imageNode = (AtkImageNode*)SettingsButton->GetImageNodeById(4);
+            imageNode->PartsList = CachedParts;
+        }
 
         var worldBtn = Addon->UldManager.SearchNodeById(4);
         var newCharaBtn = Addon->UldManager.SearchNodeById(5);
         var backupBtn = Addon->UldManager.SearchNodeById(6);
-        var connectionInfoNode = Addon->UldManager.SearchNodeById(9);
 
         AdjustWidth(worldBtn, width / 2);
         AdjustX(newCharaBtn, width / 2);
         AdjustWidth(newCharaBtn, width / 2);
         AdjustX(backupBtn, width);
-        AdjustX(connectionInfoNode, -width);
 
         foreach (var handle in EventHandles)
         {
@@ -173,12 +178,14 @@ public sealed unsafe class CharaListMenu : IDisposable
                 Service.AddonEventManager.RemoveEvent(handle);
         }
 
-        CachedPart->UldAsset = CachedAsset;
-
-        CreatedAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = CachedTexture;
-        CreatedAsset->AtkTexture.ReleaseTexture();
-        CreatedAsset->AtkTexture.Destroy(false);
-        IMemorySpace.Free(CreatedAsset);
+        var createdPart = CreatedParts->Parts;
+        var createdAsset = createdPart->UldAsset;
+        createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = CachedTexture;
+        createdAsset->AtkTexture.ReleaseTexture();
+        createdAsset->AtkTexture.Destroy(false);
+        IMemorySpace.Free(createdAsset);
+        IMemorySpace.Free(createdPart);
+        IMemorySpace.Free(CreatedParts);
 
         if (QueueDurationTextNode != null)
         {
@@ -367,15 +374,5 @@ public sealed unsafe class CharaListMenu : IDisposable
         RevertNativeUi();
 
         SettingsImage.Dispose();
-    }
-
-    private static unsafe T* Calloc<T>() where T : unmanaged
-    {
-        var ptr = (T*)IMemorySpace.GetUISpace()->Malloc<T>();
-        if (ptr == null)
-            return null;
-
-        IMemorySpace.Memset(ptr, 0, (ulong)sizeof(T));
-        return ptr;
     }
 }
