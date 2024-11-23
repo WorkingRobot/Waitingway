@@ -14,6 +14,7 @@ using Lumina.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Waitingway.Utils;
@@ -24,7 +25,10 @@ public sealed unsafe class WorldSelector : IDisposable
 {
     private AddonCharaSelectWorldServer* Addon { get; set; }
 
-    private short? OldDcCharaIconX { get; set; }
+    private Vector2? OldDcTextPos { get; set; }
+    private Vector2? OldDcCharaIconPos { get; set; }
+    private Vector2? OldDcCharaTextPos { get; set; }
+
     private AtkImageNode* CreatedImageNode { get; set; }
     private List<Pointer<AtkTextNode>> CreatedTextNodes { get; } = [];
     private List<IAddonEventHandle?> EventHandles { get; } = [];
@@ -325,8 +329,9 @@ public sealed unsafe class WorldSelector : IDisposable
 
     private void CreateHeaderImageNodeIfNeeded()
     {
-        var parentResNode = Addon->Base.UldManager.SearchNodeById(2);
-        var siblingNode = (AtkImageNode*)Addon->Base.UldManager.SearchNodeById(6);
+        var parentResNode = Addon->Base.UldManager.SearchNodeById(3);
+        var parentComponent = parentResNode->GetComponent();
+        var siblingNode = parentComponent->UldManager.SearchNodeById(2)->GetAsAtkImageNode();
 
         if ((siblingNode->PrevSiblingNode != null && siblingNode->PrevSiblingNode->NodeId == 5001) || CreatedImageNode != null)
             return;
@@ -339,10 +344,11 @@ public sealed unsafe class WorldSelector : IDisposable
         imageNode->WrapMode = 1;
         imageNode->PartsList = siblingNode->PartsList;
         imageNode->PartId = 26;
-        imageNode->SetPositionShort(203, 4);
+        imageNode->SetPositionFloat(214f, 7.5f);
         imageNode->SetWidth(36);
         imageNode->SetHeight(36);
-        imageNode->SetScale(28 / 36f, 28 / 36f);
+        // 36 is the part size; 20 is the intended drawn size
+        imageNode->SetScale(24 / 36f, 24 / 36f);
 
         var tooltipHandler = CreateTooltipHandler(() => (Service.Configuration.ShowDurationInWorldSelector ? "Queue Time"u8 : "Queue Size"u8).ToArray());
         EventHandles.AddRange([
@@ -357,37 +363,24 @@ public sealed unsafe class WorldSelector : IDisposable
 
         CreatedImageNode = imageNode;
 
-        Addon->Base.UldManager.UpdateDrawNodeList();
+        parentComponent->UldManager.UpdateDrawNodeList();
         Addon->Base.UpdateCollisionNodeList(false);
     }
 
     private void AdjustNativeUi()
     {
-        var dcCharaIcon = Addon->Base.UldManager.SearchNodeById(6);
+        var dcButton = Addon->Base.UldManager.SearchNodeById(3)->GetAsAtkComponentButton();
+        var dcText = dcButton->UldManager.SearchNodeById(3);
+        var dcCharaIcon = dcButton->UldManager.SearchNodeById(2);
+        var dcCharaText = dcButton->UldManager.SearchNodeById(4);
 
-        OldDcCharaIconX = dcCharaIcon->GetXShort();
-        dcCharaIcon->SetXShort(160);
+        OldDcTextPos = dcText->GetPosition();
+        OldDcCharaIconPos = dcCharaIcon->GetPosition();
+        OldDcCharaTextPos = dcCharaText->GetPosition();
 
-        // No need to revert this; this is just a bug in the game.
-        var dcNineGrid = Addon->Base.UldManager.SearchNodeById(5);
-        if (dcNineGrid->PrevSiblingNode == Addon->Base.UldManager.SearchNodeById(4))
-        {
-            var listNode = Addon->Base.UldManager.SearchNodeById(7);
-
-            // Remove node from its current spot
-            dcNineGrid->PrevSiblingNode->NextSiblingNode = dcNineGrid->NextSiblingNode;
-            dcNineGrid->NextSiblingNode->PrevSiblingNode = dcNineGrid->PrevSiblingNode;
-
-            // Link node with its new neighbors
-            dcNineGrid->PrevSiblingNode = listNode->PrevSiblingNode;
-            dcNineGrid->NextSiblingNode = listNode;
-
-            // Link new neighbors with the node
-            listNode->PrevSiblingNode->NextSiblingNode = dcNineGrid;
-            listNode->PrevSiblingNode = dcNineGrid;
-
-            Addon->Base.UldManager.UpdateDrawNodeList();
-        }
+        dcText->SetPositionFloat(18, 8.5f);
+        dcCharaIcon->SetXFloat(167);
+        dcCharaText->SetPositionFloat(185, 9);
 
         for (var idx = 0; idx < Addon->WorldList->GetItemCount(); ++idx)
         {
@@ -424,16 +417,26 @@ public sealed unsafe class WorldSelector : IDisposable
 
     private void RevertNativeUi()
     {
-        if (OldDcCharaIconX is not { } dcCharaIconX)
+        if (OldDcTextPos is not { } dcTextPos)
             return;
-
-        OldDcCharaIconX = null;
+        OldDcTextPos = null;
+        if (OldDcCharaIconPos is not { } dcCharaIconPos)
+            return;
+        OldDcCharaIconPos = null;
+        if (OldDcCharaTextPos is not { } dcCharaTextPos)
+            return;
 
         if (Addon == null)
             return;
 
-        var dcCharaIcon = Addon->Base.UldManager.SearchNodeById(6);
-        dcCharaIcon->SetXShort(dcCharaIconX);
+        var dcButton = Addon->Base.UldManager.SearchNodeById(3)->GetAsAtkComponentButton();
+        var dcText = dcButton->UldManager.SearchNodeById(3);
+        var dcCharaIcon = dcButton->UldManager.SearchNodeById(2);
+        var dcCharaText = dcButton->UldManager.SearchNodeById(4);
+
+        dcText->SetPosition(dcTextPos);
+        dcCharaIcon->SetPosition(dcCharaIconPos);
+        dcCharaText->SetPosition(dcCharaTextPos);
 
         foreach (var handle in EventHandles)
         {
@@ -467,7 +470,11 @@ public sealed unsafe class WorldSelector : IDisposable
             if (CreatedImageNode->NextSiblingNode != null)
                 CreatedImageNode->NextSiblingNode->PrevSiblingNode = CreatedImageNode->PrevSiblingNode;
 
-            Addon->Base.UldManager.UpdateDrawNodeList();
+            var component = CreatedImageNode->ParentNode->GetComponent();
+            if (component != null)
+                component->UldManager.UpdateDrawNodeList();
+            else
+                Addon->Base.UldManager.UpdateDrawNodeList();
             
             IMemorySpace.Free(CreatedImageNode);
 
@@ -503,15 +510,5 @@ public sealed unsafe class WorldSelector : IDisposable
         Service.AddonLifecycle.UnregisterListener(OnUpdate);
 
         RevertNativeUi();
-    }
-
-    private static unsafe T* Calloc<T>() where T : unmanaged
-    {
-        var ptr = (T*)IMemorySpace.GetUISpace()->Malloc<T>();
-        if (ptr == null)
-            return null;
-
-        IMemorySpace.Memset(ptr, 0, (ulong)sizeof(T));
-        return ptr;
     }
 }
