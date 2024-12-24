@@ -1,7 +1,8 @@
 FROM clux/muslrust:stable AS chef
 USER root
-ENV DOTNET_CLI_TELEMETRY_OPTOUT 1
-RUN add-apt-repository ppa:dotnet/backports && apt-get update && apt-get install -y dotnet-sdk-9.0
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
+RUN curl -sSL https://dot.net/v1/dotnet-install.sh | /bin/sh /dev/stdin -Channel 9.0 -InstallDir /usr/share/dotnet \
+    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 RUN cargo install cargo-chef
 WORKDIR /app
 
@@ -13,7 +14,7 @@ FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
 COPY . .
-ENV SQLX_OFFLINE true
+ENV SQLX_OFFLINE=true
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM alpine AS runtime
