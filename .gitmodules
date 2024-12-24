@@ -1,0 +1,3 @@
+[submodule "TemporalStasis"]
+	path = TemporalStasis
+	url = https://github.com/WorkingRobot/TemporalStasis.git
