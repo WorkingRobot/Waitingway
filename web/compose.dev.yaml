@@ -1,3 +1,7 @@
+volumes:
+  wway-pg-data:
+    driver: local
+
 services:
   db:
     image: postgres:alpine
@@ -7,6 +11,6 @@ services:
       POSTGRES_PASSWORD: waitingway_passwd
       POSTGRES_DB: waitingway
     volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      - wway-pg-data:/var/lib/postgresql/data
     ports:
       - 5432:5432

@@ -6,3 +6,6 @@ bin/
 /web/target
 /web/postgres-data
 /web/.secrets.env
+/web/dc_token.json
+/web/uid.json
+/web/connector

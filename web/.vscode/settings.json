@@ -1,0 +1,11 @@
+{
+    "rust-analyzer.cargo.extraEnv": {
+        "DATABASE_URL": "postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway"
+    },
+    "rust-analyzer.server.extraEnv": {
+        "DATABASE_URL": "postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway"
+    },
+    "rust-analyzer.check.extraEnv": {
+        "DATABASE_URL": "postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway"
+    }
+}

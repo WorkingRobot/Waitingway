@@ -10,28 +10,28 @@ edition = "2021"
 actix-cors = "0.7.0"
 actix-web = "4.9.0"
 actix-web-httpauth = "0.8.2"
-actix-web-lab = "0.22.0"
-actix-web-prom = { version = "0.8.0", features = ["process"] }
-reqwest = { version = "0.12.7", default-features = false, features = [
+actix-web-lab = "0.23.0"
+actix-web-prom = { version = "0.9.0", features = ["process"] }
+reqwest = { version = "0.12.9", default-features = false, features = [
     "rustls-tls",
     "json",
 ] }
 base64 = "0.22.1"
-config = { version = "0.14.0", default-features = false, features = ["yaml"] }
+config = { version = "0.15.4", default-features = false, features = ["yaml"] }
 chacha20poly1305 = "0.10.1"
 dotenvy = "0.15.7"
-env_logger = "0.11.5"
-futures-util = { version = "0.3.30", default-features = false, features = [
+env_logger = "0.11.6"
+futures-util = { version = "0.3.31", default-features = false, features = [
     "std",
 ] }
 hex = { version = "0.4.3", features = ["serde"] }
-konst = "0.3.9"
+konst = "0.3.15"
 log = "0.4.22"
 prometheus = { version = "0.13.4", default-features = false }
 rand = "0.8.5"
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.127"
-serenity = { version = "0.12.2", default-features = false, features = [
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = "1.0.134"
+serenity = { version = "0.12.4", default-features = false, features = [
     "builder",
     "client",
     "gateway",
@@ -40,7 +40,7 @@ serenity = { version = "0.12.2", default-features = false, features = [
     "utils",
     "rustls_backend",
 ] }
-sqlx = { version = "0.8.1", default-features = false, features = [
+sqlx = { version = "0.8.2", default-features = false, features = [
     "runtime-tokio",
     "postgres",
     "macros",
@@ -49,14 +49,22 @@ sqlx = { version = "0.8.1", default-features = false, features = [
     "time",
     "uuid",
 ] }
-thiserror = "1.0.63"
-time = { version = "0.3.36", features = ["serde", "formatting"] }
-tokio = { version = "1.40.0", features = ["rt", "rt-multi-thread", "macros"] }
-tokio-util = "0.7.11"
+thiserror = "2.0.9"
+time = { version = "0.3.37", features = ["serde", "formatting"] }
+tokio = { version = "1.42.0", features = [
+    "rt",
+    "rt-multi-thread",
+    "macros",
+    "process",
+] }
+tokio-util = "0.7.13"
 url = "2.5.2"
-uuid = { version = "1.10.0", features = ["serde", "fast-rng", "v7"] }
+uuid = { version = "1.11.0", features = ["serde", "fast-rng", "v7"] }
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3
 
 [dev-dependencies]
+
+[build-dependencies]
+copy_to_output = "2.2.0"

@@ -3,51 +3,72 @@ server_addr: 0.0.0.0:3000
 metrics_server_addr: 0.0.0.0:4000
 database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway
 max_connections_per_user: 3
+stasis:
+  version_file: stasis_version.json
+  lobby_hosts:
+    - neolobby01.ffxiv.com # Elemental
+    - neolobby03.ffxiv.com # Gaia
+    - neolobby05.ffxiv.com # Mana
+    - neolobby02.ffxiv.com # Aether
+    - neolobby04.ffxiv.com # Primal
+    - neolobby06.ffxiv.com # Chaos
+    - neolobby07.ffxiv.com # Light
+    - neolobby08.ffxiv.com # Crystal
+    - neolobby09.ffxiv.com # Materia
+    - neolobby10.ffxiv.com # Meteor
+    - neolobby11.ffxiv.com # Dynamis
+    # - neolobby12.ffxiv.com # Shadow
+  uid_cache:
+    path: uid.json
+    ttl: 86400 # 24 hours
+  dc_token_cache:
+    path: dc_token.json
+    ttl: 43200 # 12 hours
 discord:
   redirect_uri: http://localhost:3000/api/v1/oauth/callback
   queue_size_dm_threshold: 0
   connected_role_id: 1236758675385749534
   activity_update_interval: 60
   activities:
-    - type: watching
+    - type: Watching
       text: your queue
-    - type: playing
+    - type: Playing
       text: the piano
-    - type: listening
+    - type: Listening
       text: Spotify
-    - type: playing
+    - type: Playing
       text: Dawntrail
-    - type: playing
+    - type: Playing
       text: Endwalker
-    - type: listening
+    - type: Listening
       text: music
-    - type: watching
+    - type: Watching
       text: the stars
-    - type: watching
+    - type: Watching
       text: the world go round
-    - type: watching
+    - type: Watching
       text: you
-    - type: playing
+    - type: Playing
       text: the critically acclaimed MMORPG Final Fantasy XIV
-    - type: playing
+    - type: Playing
       text: FINAL FANTASY XIV
-    - type: competing
+    - type: Competing
       text: Week 1 clears
-    - type: playing
+    - type: Playing
       text: roulettes
-    - type: watching
+    - type: Watching
       text: queue stats
-    - type: listening
+    - type: Listening
       text: your queue pop
-    - type: custom
+    - type: Custom
       text: Waiting..?
-    - type: custom
+    - type: Custom
       text: If the fantasy is final, why are there sixteen of them?
-    - type: custom
+    - type: Custom
       text: Waiting for the queue to pop
-    - type: custom
+    - type: Custom
       text: Waiting for your queue to end
-    - type: custom
+    - type: Custom
       text: Waiting to notify you
-    - type: custom
+    - type: Custom
       text: Waiting for the heat death of the universe

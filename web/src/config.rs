@@ -32,12 +32,29 @@ pub struct DiscordConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct StasisConfig {
+    pub username: String,
+    pub password: String,
+    pub lobby_hosts: Vec<String>,
+    pub uid_cache: StasisCache,
+    pub dc_token_cache: StasisCache,
+    pub version_file: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StasisCache {
+    pub path: String,
+    pub ttl: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub server_addr: String,
     pub metrics_server_addr: String,
     pub database_url: String,
     pub max_connections_per_user: u32,
     pub discord: DiscordConfig,
+    pub stasis: StasisConfig,
     #[serde(with = "hex::serde")]
     pub updates_key: [u8; 32],
     pub log_filter: Option<String>,

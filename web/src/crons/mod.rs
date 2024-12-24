@@ -1,6 +1,9 @@
 pub mod refresh_queue_estimates;
 pub use refresh_queue_estimates::RefreshQueueEstimates;
 
+pub mod refresh_dc_travels;
+pub use refresh_dc_travels::RefreshDcTravels;
+
 use std::time::Duration;
 
 use serenity::async_trait;

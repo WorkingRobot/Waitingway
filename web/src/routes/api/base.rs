@@ -1,7 +1,7 @@
 use crate::{
     db,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
-    models::{QueueQueryFilter, QueueSize, Recap},
+    models::{QueueSize, Recap, WorldQueryFilter},
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
@@ -13,6 +13,7 @@ use konst::{
 };
 use serde::Serialize;
 use sqlx::PgPool;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
@@ -22,6 +23,7 @@ pub fn service() -> impl HttpServiceFactory {
         create_queue_size,
         create_recap,
         get_queue_estimate,
+        get_travel_state,
     )
 }
 
@@ -38,6 +40,12 @@ struct VersionData {
     pub version_patch: u32,
     #[serde(with = "time::serde::rfc3339")]
     pub build_time: time::OffsetDateTime,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TravelStates {
+    pub travel_time: i32,
+    pub prohibited: HashMap<u16, bool>,
 }
 
 #[get("/")]
@@ -104,7 +112,7 @@ async fn create_recap(
 #[get("/queue/")]
 async fn get_queue_estimate(
     pool: web::Data<PgPool>,
-    filter: actix_web_lab::extract::Query<QueueQueryFilter>,
+    filter: actix_web_lab::extract::Query<WorldQueryFilter>,
 ) -> Result<HttpResponse> {
     let filter = filter.into_inner();
     let resp = if let Some(region_id) = filter.region_id {
@@ -120,5 +128,38 @@ async fn get_queue_estimate(
     match resp {
         Ok(estimate) => Ok(HttpResponse::Ok().json(estimate)),
         Err(e) => Err(ErrorInternalServerError(e)),
+    }
+}
+
+#[get("/travel/")]
+async fn get_travel_state(
+    pool: web::Data<PgPool>,
+    filter: actix_web_lab::extract::Query<WorldQueryFilter>,
+) -> Result<HttpResponse> {
+    let filter = filter.into_inner();
+    let resp = get_travel_state_filtered(&pool, filter);
+    let time = db::get_travel_time(&pool);
+    match tokio::join!(resp, time) {
+        (Ok(states), Ok(time)) => Ok(HttpResponse::Ok().json(TravelStates {
+            travel_time: time,
+            prohibited: states,
+        })),
+        (Err(e), _) => Err(ErrorInternalServerError(e)),
+        (_, Err(e)) => Err(ErrorInternalServerError(e)),
+    }
+}
+
+async fn get_travel_state_filtered(
+    pool: &PgPool,
+    filter: WorldQueryFilter,
+) -> Result<HashMap<u16, bool>, sqlx::Error> {
+    if let Some(region_id) = filter.region_id {
+        db::get_travel_states_by_region_id(&pool, region_id).await
+    } else if let Some(datacenter_id) = filter.datacenter_id {
+        db::get_travel_states_by_datacenter_id(&pool, datacenter_id).await
+    } else if let Some(world_id) = filter.world_id {
+        db::get_travel_states_by_world_id(&pool, world_id).await
+    } else {
+        db::get_travel_states(&pool).await
     }
 }
