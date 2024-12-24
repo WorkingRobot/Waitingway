@@ -1,8 +1,10 @@
 FROM clux/muslrust:stable AS chef
 USER root
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
-RUN curl -sSL https://dot.net/v1/dotnet-install.sh | /bin/sh /dev/stdin -Channel 9.0 -InstallDir /usr/share/dotnet \
-    && ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
+RUN curl -sSL https://dot.net/v1/dotnet-install.sh -o dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh -Channel 9.0 -InstallDir /usr/share/dotnet && \
+    ln -s /usr/share/dotnet/dotnet /usr/bin/dotnet
 RUN cargo install cargo-chef
 WORKDIR /app
 
