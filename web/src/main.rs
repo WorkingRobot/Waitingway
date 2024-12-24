@@ -68,7 +68,7 @@ async fn main() -> Result<(), ServerError> {
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshQueueEstimates::new(db_pool.clone()));
 
-    let refresh_dc_travels_token = crons::create_cron_job(crons::RefreshDcTravels::new(
+    let refresh_travel_states_token = crons::create_cron_job(crons::RefreshTravelStates::new(
         config.stasis.clone(),
         db_pool.clone(),
     ));
@@ -148,7 +148,7 @@ async fn main() -> Result<(), ServerError> {
     let server_ret = server_task.await;
 
     refresh_queue_estimates_token.cancel();
-    refresh_dc_travels_token.cancel();
+    refresh_travel_states_token.cancel();
     discord_bot.stop().await;
     let prometheus_server_ret = prometheus_server_task.await;
     let discord_ret = discord_task.await;

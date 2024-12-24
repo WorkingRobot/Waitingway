@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT * FROM queue_estimates WHERE world_id = ANY($1)",
+  "query": "SELECT\n            q.*\n        FROM queue_estimates q\n        JOIN worlds w ON q.world_id = w.world_id\n        WHERE w.datacenter_id = ANY($1)",
   "describe": {
     "columns": [
       {
@@ -36,5 +36,5 @@
       true
     ]
   },
-  "hash": "91d7279cba8fe9c3dd34e231fbe9fc9529a50f761002cff828ed326f96688390"
+  "hash": "95f71c5f0ba8fefadb3e52d9ee87daaf7753f6ccaf0cf8e5101d124d05135fbf"
 }

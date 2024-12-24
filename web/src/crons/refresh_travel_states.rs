@@ -19,24 +19,24 @@ use crate::{
 
 use super::CronJob;
 
-pub struct RefreshDcTravels {
+pub struct RefreshTravelStates {
     config: StasisConfig,
     pool: PgPool,
 }
 
-impl RefreshDcTravels {
+impl RefreshTravelStates {
     pub fn new(config: StasisConfig, pool: PgPool) -> Self {
         Self { config, pool }
     }
 }
 
 #[async_trait]
-impl CronJob for RefreshDcTravels {
-    const NAME: &'static str = "refresh_dc_travels";
+impl CronJob for RefreshTravelStates {
+    const NAME: &'static str = "referesh_travel_states";
     const PERIOD: Duration = Duration::from_secs(60);
 
     async fn run(&self, stop_signal: CancellationToken) {
-        let cmd = Command::new("connector/TemporalStasis.Connector")
+        let cmd = Command::new("./TemporalStasis.Connector")
             .args(&self.config.lobby_hosts)
             .args(["--version-file", &self.config.version_file])
             .args(["-u", &self.config.username])
@@ -52,7 +52,7 @@ impl CronJob for RefreshDcTravels {
             .spawn();
         let mut cmd = match cmd {
             Err(e) => {
-                log::error!("Failed to start refresh dc travel: {}", e);
+                log::error!("Failed to start refresh travel states: {}", e);
                 return;
             }
             Ok(cmd) => cmd,
@@ -63,7 +63,7 @@ impl CronJob for RefreshDcTravels {
             s = cmd.wait() => {status = Some(s);}
             _ = stop_signal.cancelled() => {
                 if let Err(e) = cmd.kill().await {
-                    log::error!("Failed to kill refresh dc travel: {}", e);
+                    log::error!("Failed to kill refresh travel states: {}", e);
                 }
             }
         };
@@ -75,12 +75,15 @@ impl CronJob for RefreshDcTravels {
 
         match status.unwrap() {
             Err(e) => {
-                log::error!("Failed to wait for refresh dc travel: {}", e);
+                log::error!("Failed to wait for refresh travel states: {}", e);
                 return;
             }
             Ok(status) => {
                 if !status.success() {
-                    log::error!("Failed to refresh dc travel: non-zero exit code");
+                    log::error!(
+                        "Failed to refresh travel states: non-zero exit code ({})",
+                        status
+                    );
                     return;
                 }
             }
@@ -93,7 +96,7 @@ impl CronJob for RefreshDcTravels {
         loop {
             let line = match out.next_line().await {
                 Err(e) => {
-                    log::error!("Failed to read dc travel line: {}", e);
+                    log::error!("Failed to read travel states line: {}", e);
                     return;
                 }
                 Ok(None) => {
@@ -104,7 +107,7 @@ impl CronJob for RefreshDcTravels {
 
             let line = match serde_json::from_str::<DCTravelResponse>(&line) {
                 Err(e) => {
-                    log::error!("Failed to parse refresh dc travel line: {}", e);
+                    log::error!("Failed to parse refresh travel states line: {}", e);
                     continue;
                 }
                 Ok(line) => line,
@@ -112,7 +115,7 @@ impl CronJob for RefreshDcTravels {
 
             if let Some(error) = line.error {
                 log::error!(
-                    "Failed to refresh dc travel: {} - {}; {} ({})",
+                    "Failed to refresh travel states: {} - {}; {} ({})",
                     error,
                     line.result.code,
                     line.result.errcode,
@@ -124,7 +127,7 @@ impl CronJob for RefreshDcTravels {
             let result = line.result;
             if result.code != "OK" {
                 log::error!(
-                    "Failed to refresh dc travel: {}; {} ({})",
+                    "Failed to refresh travel states: {}; {} ({})",
                     result.code,
                     result.errcode,
                     result.status
@@ -134,7 +137,7 @@ impl CronJob for RefreshDcTravels {
 
             if result.data.is_none() {
                 log::error!(
-                    "Failed to refresh dc travel: no data - {}; {} ({})",
+                    "Failed to refresh travel states: no data - {}; {} ({})",
                     result.code,
                     result.errcode,
                     result.status
@@ -174,7 +177,7 @@ impl CronJob for RefreshDcTravels {
         }
 
         if travel_map.is_empty() || travel_time.is_none() {
-            log::error!("Failed to refresh dc travel: no data");
+            log::error!("Failed to refresh travel states: no data");
             return;
         }
 
@@ -195,7 +198,7 @@ impl CronJob for RefreshDcTravels {
         )
         .await
         {
-            log::error!("Failed to add dc travel states: {}", e);
+            log::error!("Failed to add travel states: {}", e);
         }
     }
 }

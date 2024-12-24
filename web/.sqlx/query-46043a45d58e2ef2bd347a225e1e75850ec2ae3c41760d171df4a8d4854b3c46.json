@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (world_id)\n            world_id, prohibit\n        FROM travel_states\n        WHERE world_id = ANY($1)\n        ORDER BY world_id, time DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "world_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "prohibit",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "46043a45d58e2ef2bd347a225e1e75850ec2ae3c41760d171df4a8d4854b3c46"
+}

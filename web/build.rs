@@ -1,5 +1,5 @@
 use build_target::{Arch, Env, Os};
-use copy_to_output::copy_to_output;
+use copy_to_output::copy_to_output_path;
 use std::{process::Command, time::SystemTime};
 
 fn main() {
@@ -20,7 +20,7 @@ fn main() {
 
     println!("cargo:rustc-env=PROFILE={}", profile);
 
-    println!("cargo:rerun-if-changed=../TemporalStasis/TemporalStasis.Connector");
+    println!("cargo:rerun-if-changed=TemporalStasis");
     let connector_result_path = format!("{}/connector", std::env::var("OUT_DIR").unwrap());
 
     let target = build_target::target().unwrap();
@@ -58,13 +58,19 @@ fn main() {
     let connector_result = Command::new("dotnet")
         .arg("publish")
         .arg("--nologo")
-        .arg("../TemporalStasis/TemporalStasis.Connector")
+        .arg("TemporalStasis/TemporalStasis.Connector")
         .args(["-r", &rid])
         .args(["-o", &connector_result_path])
         .status()
         .unwrap();
     assert!(connector_result.success());
 
-    copy_to_output(&connector_result_path, &std::env::var("PROFILE").unwrap())
-        .expect("Could not connector artifact");
+    for entry in std::fs::read_dir(&connector_result_path).unwrap() {
+        let path = entry.unwrap().path();
+        let path = path.as_path();
+        if path.is_file() {
+            copy_to_output_path(path, &std::env::var("PROFILE").unwrap())
+                .expect("Could not copy connector artifact");
+        }
+    }
 }

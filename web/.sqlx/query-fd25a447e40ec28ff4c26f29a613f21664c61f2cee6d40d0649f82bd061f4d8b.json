@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO travel_times\n            (travel_time)\n            VALUES ($1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fd25a447e40ec28ff4c26f29a613f21664c61f2cee6d40d0649f82bd061f4d8b"
+}

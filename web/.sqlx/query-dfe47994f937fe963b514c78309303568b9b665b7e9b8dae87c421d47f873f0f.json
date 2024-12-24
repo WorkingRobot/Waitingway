@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (s.world_id)\n            s.world_id, s.prohibit\n        FROM travel_states s\n        JOIN worlds w ON s.world_id = w.world_id\n        WHERE w.region_id = ANY($1)\n        ORDER BY s.world_id, s.time DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "world_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "prohibit",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "dfe47994f937fe963b514c78309303568b9b665b7e9b8dae87c421d47f873f0f"
+}
