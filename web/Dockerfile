@@ -20,6 +20,7 @@ FROM alpine AS runtime
 RUN addgroup -S waiting && adduser -S waiting -G waiting
 USER waiting
 WORKDIR /app
+VOLUME /app/cache
 COPY --from=builder /app/target/release/waitingway-web waitingway-web
 COPY --from=builder /app/target/release/TemporalStasis.Connector TemporalStasis.Connector
 CMD ["./waitingway-web"]
