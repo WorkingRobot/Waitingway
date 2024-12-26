@@ -1,4 +1,5 @@
 {
+    "rust-analyzer.cargo.targetDir": true,
     "rust-analyzer.cargo.extraEnv": {
         "DATABASE_URL": "postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway"
     },

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT ON (s.world_id)\n            s.world_id, s.status, s.category, s.can_create\n        FROM world_statuses s\n        JOIN worlds w ON s.world_id = w.world_id\n        WHERE w.region_id = ANY($1)\n        ORDER BY s.world_id, s.time DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "world_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "status",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 2,
+        "name": "category",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "can_create",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "08dfa09bb75612b63d93f1f42f2d5afa914def820e15464053a2fdb7abdb8cb7"
+}
