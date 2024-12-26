@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
+
+    <title>Waitingway</title>
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+    <!--<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js"></script>
+    <link rel="stylesheet" href="/assets/style.css">
+
+    <script src="/assets/main.js" defer></script>
+</head>
+
+<body>
+    <nav class="container fixed">
+        <ul>
+            <li><a aria-label="Pico CSS homepage" data-discover="true" href="/"><strong>Waitingway</strong></a>
+            </li>
+        </ul>
+        <ul>
+            <details class="dropdown">
+                <summary>
+                    Basic
+                </summary>
+                <ul dir="rtl">
+                    <li><a href="#">Advanced</a></li>
+                    <li><a href="#">Full</a></li>
+                </ul>
+            </details>
+            <li><a href="#" class="secondary">About</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        <section>
+            <h3>Global</h3>
+            <table id="table-global">
+                <tbody>
+                    <tr id="travel-time">
+                        <th scope="row">Average DC Travel Time</th>
+                        <td>3 seconds</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <section style="display: none;">
+            <hgroup>
+                <h3>Primal</h3>
+                <h4>North America</h4>
+            </hgroup>
+            <table class="iconified">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th>Server</th>
+                        <th>Queue Size</th>
+                        <th>Queue Time</th>
+                        <th>Last Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="status-offline"></td>
+                        <td class="status-congested"></td>
+                        <td class="status-transferrable"></td>
+                        <th scope="row">Behemoth</th>
+                        <td>38</td>
+                        <td>Instant</td>
+                        <td>A few seconds ago</td>
+                    </tr>
+                    <tr>
+                        <td class="status-issues"></td>
+                        <td class="status-create"></td>
+                        <td class="status-prohibited"></td>
+                        <th scope="row">Leviathan</th>
+                        <td>3</td>
+                        <td>32.3 seconds</td>
+                        <td>3 minutes</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+        <!--<canvas id="resourceChart"></canvas>-->
+    </main>
+
+    <script>
+        const ctx = document.getElementById('resourceChart').getContext('2d');
+        const resourceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
+                datasets: [{
+                    label: 'CPU Usage',
+                    data: [65, 59, 80, 81, 56, 55, 40],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }, {
+                    label: 'Memory Usage',
+                    data: [28, 48, 40, 19, 86, 27, 90],
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

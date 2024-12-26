@@ -1,0 +1,57 @@
+section>hgroup {
+    margin-bottom: 0;
+}
+
+.iconified tr td:nth-child(1),
+.iconified tr td:nth-child(2),
+.iconified tr td:nth-child(3) {
+    width: 0px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.iconified th[scope="row"] {
+    --pico-font-weight: 500;
+}
+
+.status-online::after,
+.status-issues::after,
+.status-offline::after,
+.status-transferrable::after,
+.status-congested::after,
+.status-create::after,
+.status-prohibited::after {
+    content: "";
+    display: inline-block;
+    width: 1.6em;
+    height: 1.6em;
+    background-position: center center;
+}
+
+.status-online::after {
+    background-image: url("/assets/status-online2.svg");
+}
+
+.status-issues::after {
+    background-image: url("/assets/status-partial2.svg");
+}
+
+.status-offline::after {
+    background-image: url("/assets/status-offline2.svg");
+}
+
+.status-create::after {
+    background-image: url("/assets/create-on2.svg");
+}
+
+.status-congested::after {
+    background-image: url("/assets/create-off2.svg");
+}
+
+.status-transferrable::after {
+    background-image: url("/assets/travel-on.svg");
+}
+
+.status-prohibited::after {
+    background-image: url("/assets/travel-off.svg");
+}
