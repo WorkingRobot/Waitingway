@@ -43,6 +43,7 @@ async fn main() -> Result<(), ServerError> {
     {
         _ = dotenvy::from_filename(".env");
         _ = dotenvy::from_filename(".secrets.env")?;
+        unsafe { std::env::set_var("RUST_BACKTRACE", "1") };
     }
 
     let config: config::Config = Config::builder()
@@ -65,11 +66,21 @@ async fn main() -> Result<(), ServerError> {
 
     sqlx::migrate!().run(&db_pool).await.unwrap();
 
+    let web_client = reqwest::Client::builder()
+        .user_agent("Waitingway")
+        .build()
+        .expect("Error creating reqwest client");
+
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshQueueEstimates::new(db_pool.clone()));
 
-    let refresh_travel_states_token = crons::create_cron_job(crons::RefreshTravelStates::new(
-        config.stasis.clone(),
+    let refresh_travel_states_token = crons::create_cron_job(
+        crons::RefreshTravelStates::new(config.stasis.clone(), db_pool.clone())
+            .expect("Error creating travel states cron job"),
+    );
+
+    let refresh_world_states_token = crons::create_cron_job(crons::RefreshWorldStatuses::new(
+        web_client.clone(),
         db_pool.clone(),
     ));
 
@@ -101,14 +112,10 @@ async fn main() -> Result<(), ServerError> {
             .app_data(Data::new(server_pool.clone()))
             .app_data(Data::new(server_config.clone()))
             .app_data(Data::new(server_discord.clone()))
-            .app_data(Data::new(
-                reqwest::Client::builder()
-                    .user_agent("Waitingway")
-                    .build()
-                    .expect("Error creating reqwest client"),
-            ))
-            .service(routes::redirects::service())
+            .app_data(Data::new(web_client.clone()))
             .service(routes::api::service())
+            .service(routes::redirects::service())
+            .service(routes::assets::service())
     })
     .bind(config.server_addr.clone())?
     .run();
@@ -149,6 +156,7 @@ async fn main() -> Result<(), ServerError> {
 
     refresh_queue_estimates_token.cancel();
     refresh_travel_states_token.cancel();
+    refresh_world_states_token.cancel();
     discord_bot.stop().await;
     let prometheus_server_ret = prometheus_server_task.await;
     let discord_ret = discord_task.await;

@@ -1,6 +1,9 @@
 use crate::{
     db_wrappers::{DatabaseU16, DatabaseU64},
-    models::{Connection, DbQueueEstimate, DbTravelState, QueueEstimate, QueueSize, Recap},
+    models::{
+        Connection, DbQueueEstimate, DbTravelState, DbWorldInfo, DbWorldStatus, QueueEstimate,
+        QueueSize, Recap,
+    },
 };
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
 use std::{collections::HashMap, io};
@@ -293,11 +296,9 @@ pub async fn add_travel_states(
 }
 
 pub async fn get_travel_time(pool: &PgPool) -> Result<i32, Error> {
-    Ok(
-        sqlx::query_scalar!(r#"SELECT travel_time FROM travel_times ORDER BY time DESC LIMIT 1"#)
-            .fetch_one(pool)
-            .await?,
-    )
+    sqlx::query_scalar!(r#"SELECT travel_time FROM travel_times ORDER BY time DESC LIMIT 1"#)
+        .fetch_one(pool)
+        .await
 }
 
 pub async fn get_travel_states(pool: &PgPool) -> Result<HashMap<u16, bool>, Error> {
@@ -381,4 +382,109 @@ pub async fn get_travel_states_by_world_id(
     .into_iter()
     .map(|s| (s.world_id as u16, s.prohibit))
     .collect::<HashMap<_, _>>())
+}
+
+pub async fn add_world_statuses(
+    pool: &PgPool,
+    worlds: Vec<crate::models::WorldStatusWorldInfo>,
+) -> Result<PgQueryResult, Error> {
+    let mut query_builder = QueryBuilder::new(
+        r#"INSERT INTO world_statuses (world_id, status, category, can_create)
+        SELECT worlds.world_id, data.status, data.category, data.can_create
+        FROM ("#,
+    );
+    query_builder.push_values(worlds, |mut b, world| {
+        b.push_bind(world.name)
+            .push_bind(world.status)
+            .push_bind(world.category)
+            .push_bind(world.create);
+    });
+    query_builder.push(
+        r#") AS data(name, status, category, can_create)
+        JOIN worlds ON worlds.world_name = data.name"#,
+    );
+    query_builder.build().execute(pool).await
+}
+
+pub async fn get_world_statuses(pool: &PgPool) -> Result<Vec<DbWorldStatus>, Error> {
+    sqlx::query_as!(
+        DbWorldStatus,
+        r#"SELECT DISTINCT ON (world_id)
+            world_id, status, category, can_create
+        FROM world_statuses
+        ORDER BY world_id, time DESC"#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_world_statuses_by_region_id(
+    pool: &PgPool,
+    region_ids: Vec<u16>,
+) -> Result<Vec<DbWorldStatus>, Error> {
+    let region_ids = region_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
+    sqlx::query_as!(
+        DbWorldStatus,
+        r#"SELECT DISTINCT ON (s.world_id)
+            s.world_id, s.status, s.category, s.can_create
+        FROM world_statuses s
+        JOIN worlds w ON s.world_id = w.world_id
+        WHERE w.region_id = ANY($1)
+        ORDER BY s.world_id, s.time DESC"#,
+        region_ids.as_slice()
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_world_statuses_by_datacenter_id(
+    pool: &PgPool,
+    datacenter_ids: Vec<u16>,
+) -> Result<Vec<DbWorldStatus>, Error> {
+    let datacenter_ids = datacenter_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
+    sqlx::query_as!(
+        DbWorldStatus,
+        r#"SELECT DISTINCT ON (s.world_id)
+            s.world_id, s.status, s.category, s.can_create
+        FROM world_statuses s
+        JOIN worlds w ON s.world_id = w.world_id
+        WHERE w.datacenter_id = ANY($1)
+        ORDER BY s.world_id, s.time DESC"#,
+        datacenter_ids.as_slice()
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_world_statuses_by_world_id(
+    pool: &PgPool,
+    world_ids: Vec<u16>,
+) -> Result<Vec<DbWorldStatus>, Error> {
+    let world_ids = world_ids
+        .into_iter()
+        .map(|id| DatabaseU16(id).as_db())
+        .collect::<Vec<_>>();
+    sqlx::query_as!(
+        DbWorldStatus,
+        r#"SELECT DISTINCT ON (world_id)
+            world_id, status, category, can_create
+        FROM world_statuses
+        WHERE world_id = ANY($1)
+        ORDER BY world_id, time DESC"#,
+        world_ids.as_slice()
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_world_info(pool: &PgPool) -> Result<Vec<DbWorldInfo>, Error> {
+    sqlx::query_as!(DbWorldInfo, r#"SELECT * FROM worlds WHERE hidden = FALSE"#)
+        .fetch_all(pool)
+        .await
 }

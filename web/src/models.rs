@@ -103,7 +103,7 @@ pub struct DbQueueEstimate {
     pub duration: Option<f64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueueEstimate {
     pub world_id: u16,
 
@@ -177,4 +177,95 @@ pub struct DCTravelWorldInfo {
     pub accept: u8,
     #[serde(rename = "prohibitFlag")]
     pub prohibit: u8,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize)]
+pub struct DbWorldStatus {
+    pub world_id: DatabaseU16,
+    pub status: i16,
+    pub category: i16,
+    #[serde(rename = "create")]
+    pub can_create: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorldStatusResponse {
+    pub data: Vec<WorldStatusRegionInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorldStatusRegionInfo {
+    #[allow(dead_code)]
+    pub name: String,
+    pub dc: Vec<WorldStatusDCInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorldStatusDCInfo {
+    #[allow(dead_code)]
+    pub name: String,
+    pub world: Vec<WorldStatusWorldInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorldStatusWorldInfo {
+    pub name: String,
+    pub status: i16,
+    pub category: i16,
+    pub create: bool,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize)]
+pub struct DbWorldInfo {
+    pub world_id: DatabaseU16,
+    pub world_name: String,
+    pub datacenter_id: DatabaseU16,
+    pub datacenter_name: String,
+    pub region_id: DatabaseU16,
+    pub region_name: String,
+    pub region_abbreviation: String,
+    pub is_cloud: bool,
+    pub hidden: bool,
+}
+
+#[derive(Serialize)]
+pub struct Summary {
+    pub average_travel_time: i32,
+    pub worlds: Vec<WorldSummary>,
+    pub datacenters: Vec<DatacenterSummary>,
+    pub regions: Vec<RegionSummary>,
+}
+
+#[derive(Serialize)]
+pub struct WorldSummary {
+    pub id: u16,
+    pub name: String,
+    pub datacenter_id: u16,
+
+    pub travel_prohibited: bool,
+    pub world_status: i16,
+    pub world_category: i16,
+    pub world_character_creation_enabled: bool,
+
+    pub queue_size: i32,
+    pub queue_duration: f64,
+    pub queue_last_update: DatabaseDateTime,
+}
+
+#[derive(Serialize)]
+pub struct DatacenterSummary {
+    pub id: u16,
+    pub name: String,
+    pub region_id: u16,
+    // pub lobby_ping: u32,
+    // pub server_ping: u32,
+    // pub packet_loss: f32,
+    // pub open_ports: f32,
+}
+
+#[derive(Serialize)]
+pub struct RegionSummary {
+    pub id: u16,
+    pub name: String,
+    pub abbreviation: String,
 }
