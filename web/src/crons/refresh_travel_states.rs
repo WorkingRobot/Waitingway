@@ -26,8 +26,8 @@ pub struct RefreshTravelStates {
 impl RefreshTravelStates {
     pub fn new(config: StasisConfig, pool: PgPool) -> std::io::Result<Self> {
         let connector_path = std::env::current_exe()?.with_file_name(format!(
-            "TemporalStasis.Connector.{}",
-            std::env::consts::EXE_EXTENSION,
+            "TemporalStasis.Connector{}",
+            std::env::consts::EXE_SUFFIX,
         ));
         if !connector_path.exists() {
             return Err(std::io::Error::new(
