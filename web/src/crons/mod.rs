@@ -1,5 +1,5 @@
-pub mod refresh_queue_estimates;
-pub use refresh_queue_estimates::RefreshQueueEstimates;
+pub mod refresh_materialized_views;
+pub use refresh_materialized_views::RefreshMaterializedViews;
 
 pub mod refresh_travel_states;
 pub use refresh_travel_states::RefreshTravelStates;

@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM world_summary",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "world_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "world_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "datacenter_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "datacenter_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "region_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 5,
+        "name": "region_abbreviation",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "region_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "status",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 8,
+        "name": "category",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 9,
+        "name": "can_create",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "prohibit",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 11,
+        "name": "time",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 12,
+        "name": "size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
+        "name": "duration",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "86129b0c5c0e6989a2b9b67a6fc498451dda0b82e5f44906f4bb6b26ac3bab81"
+}

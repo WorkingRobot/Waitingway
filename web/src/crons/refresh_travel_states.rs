@@ -129,15 +129,7 @@ impl CronJob for RefreshTravelStates {
                 }
             }
 
-            if let Some(t) = travel_time {
-                if t != data.average_elapsed_time {
-                    log::error!("Travel time changed");
-                    log::error!("Home {}: {}", data.home_world_id, data.average_elapsed_time);
-                    log::error!("Old: {}", t);
-                }
-            } else {
-                travel_time = Some(data.average_elapsed_time);
-            }
+            travel_time = Some(data.average_elapsed_time);
         }
 
         if travel_map.is_empty() || travel_time.is_none() {

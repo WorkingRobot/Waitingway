@@ -1,16 +1,14 @@
 use crate::{
     db,
-    db_wrappers::DatabaseDateTime,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
     models::{
-        DatacenterSummary, DbWorldInfo, DbWorldStatus, QueueEstimate, QueueSize, Recap,
-        RegionSummary, Summary, WorldQueryFilter, WorldSummary,
+        DatacenterSummary, QueueSize, Recap, RegionSummary, Summary, WorldQueryFilter,
+        WorldSummary, WorldSummaryInfo,
     },
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
 };
-use anyhow::anyhow;
 use konst::{
     option,
     primitive::{parse_i64, parse_u32},
@@ -195,104 +193,55 @@ async fn get_world_statuses(
 
 #[get("/summary/")]
 async fn get_summary(pool: web::Data<PgPool>) -> Result<HttpResponse> {
-    let world_info = db::get_world_info(&pool);
-    let travel_states = db::get_travel_states(&pool);
+    let world_summaries = db::get_world_summaries(&pool);
     let travel_time = db::get_travel_time(&pool);
-    let queue_estimates = db::get_queue_estimates(&pool);
-    let world_statuses = db::get_world_statuses(&pool);
-    match tokio::join!(
-        world_info,
-        travel_states,
-        travel_time,
-        queue_estimates,
-        world_statuses
-    ) {
-        (
-            Ok(world_info),
-            Ok(travel_states),
-            Ok(travel_time),
-            Ok(queue_estimates),
-            Ok(world_statuses),
-        ) => Ok(HttpResponse::Ok().json(
-            construct_summary(
-                world_info,
-                travel_states,
-                travel_time,
-                queue_estimates,
-                world_statuses,
-            )
-            .map_err(ErrorInternalServerError)?,
+    match tokio::join!(world_summaries, travel_time) {
+        (Ok(world_summaries), Ok(travel_time)) => Ok(HttpResponse::Ok().json(
+            construct_summary(world_summaries, travel_time).map_err(ErrorInternalServerError)?,
         )),
-        (Err(e), _, _, _, _)
-        | (_, Err(e), _, _, _)
-        | (_, _, Err(e), _, _)
-        | (_, _, _, Err(e), _)
-        | (_, _, _, _, Err(e)) => Err(ErrorInternalServerError(e)),
+        (Err(e), _) | (_, Err(e)) => Err(ErrorInternalServerError(e)),
     }
 }
 
 fn construct_summary(
-    world_info: Vec<DbWorldInfo>,
-    travel_states: HashMap<u16, bool>,
+    world_summaries: Vec<WorldSummaryInfo>,
     travel_time: i32,
-    queues: Vec<QueueEstimate>,
-    statuses: Vec<DbWorldStatus>,
 ) -> anyhow::Result<Summary> {
     let mut regions = HashMap::new();
     let mut datacenters = HashMap::new();
     let mut worlds = HashMap::new();
-    for world in &world_info {
+    for world in &world_summaries {
         regions
-            .entry(world.region_id.0)
+            .entry(world.region_id)
             .or_insert_with(|| RegionSummary {
-                id: world.region_id.0,
+                id: world.region_id,
                 name: world.region_name.clone(),
                 abbreviation: world.region_abbreviation.clone(),
             });
 
         datacenters
-            .entry(world.datacenter_id.0)
+            .entry(world.datacenter_id)
             .or_insert_with(|| DatacenterSummary {
-                id: world.datacenter_id.0,
+                id: world.datacenter_id,
                 name: world.datacenter_name.clone(),
-                region_id: world.region_id.0,
+                region_id: world.region_id,
             });
-
-        let world_id = world.world_id.0;
-        let travel_info = travel_states
-            .get(&world_id)
-            .ok_or_else(|| anyhow!("No travel info {world_id}"))?;
-        let queue_info = queues
-            .iter()
-            .find(|q| q.world_id == world_id)
-            .cloned()
-            .unwrap_or_else(|| QueueEstimate {
-                world_id,
-                last_update: DatabaseDateTime(time::OffsetDateTime::now_utc()),
-                last_size: 0,
-                last_duration: 0.0,
-            });
-        //.ok_or_else(|| anyhow!("No queue info {world_id}"))?;
-        let status_info = statuses
-            .iter()
-            .find(|s| s.world_id.0 == world_id)
-            .ok_or_else(|| anyhow!("No status info {world_id}"))?;
 
         worlds
-            .entry(world.world_id.0)
+            .entry(world.world_id)
             .or_insert_with(|| WorldSummary {
-                id: world.world_id.0,
+                id: world.world_id,
                 name: world.world_name.clone(),
-                datacenter_id: world.datacenter_id.0,
+                datacenter_id: world.datacenter_id,
 
-                travel_prohibited: *travel_info,
-                world_status: status_info.status,
-                world_category: status_info.category,
-                world_character_creation_enabled: status_info.can_create,
+                travel_prohibited: world.travel_prohibit,
+                world_status: world.status,
+                world_category: world.category,
+                world_character_creation_enabled: world.can_create,
 
-                queue_size: queue_info.last_size,
-                queue_duration: queue_info.last_duration,
-                queue_last_update: queue_info.last_update,
+                queue_size: world.queue_size,
+                queue_duration: world.queue_duration,
+                queue_last_update: world.queue_time,
             });
     }
     Ok(Summary {

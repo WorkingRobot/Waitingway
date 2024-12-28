@@ -1,8 +1,8 @@
 use crate::{
     db_wrappers::{DatabaseU16, DatabaseU64},
     models::{
-        Connection, DbQueueEstimate, DbTravelState, DbWorldInfo, DbWorldStatus, QueueEstimate,
-        QueueSize, Recap,
+        Connection, DbQueueEstimate, DbTravelState, DbWorldStatus, DbWorldSummaryInfo,
+        QueueEstimate, QueueSize, Recap, WorldSummaryInfo,
     },
 };
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
@@ -483,8 +483,15 @@ pub async fn get_world_statuses_by_world_id(
     .await
 }
 
-pub async fn get_world_info(pool: &PgPool) -> Result<Vec<DbWorldInfo>, Error> {
-    sqlx::query_as!(DbWorldInfo, r#"SELECT * FROM worlds WHERE hidden = FALSE"#)
+pub async fn refresh_world_summaries(pool: &PgPool) -> Result<PgQueryResult, Error> {
+    sqlx::query!(r#"REFRESH MATERIALIZED VIEW CONCURRENTLY world_summary"#)
+        .execute(pool)
+        .await
+}
+
+pub async fn get_world_summaries(pool: &PgPool) -> Result<Vec<WorldSummaryInfo>, Error> {
+    sqlx::query_as!(DbWorldSummaryInfo, r#"SELECT * FROM world_summary"#)
         .fetch_all(pool)
         .await
+        .map(|summary| summary.into_iter().map(WorldSummaryInfo::from).collect())
 }

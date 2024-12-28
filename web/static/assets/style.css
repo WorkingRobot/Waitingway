@@ -1,3 +1,65 @@
+@media (min-width: 1024px) {
+    .logo+* {
+        display: inline !important;
+    }
+
+    .hide-desktop {
+        display: none;
+    }
+
+    .hide-mobile {
+        display: inline-block !important;
+    }
+}
+
+.hide-mobile {
+    display: none;
+}
+
+.world-icons [data-tooltip][data-placement=shifted] {
+    --pico-tooltip-shift: -50%;
+}
+
+.world-icons [data-tooltip][data-placement=shifted-long] {
+    --pico-tooltip-shift: calc(-100% + 1.5rem);
+}
+
+@media (hover: hover) and (pointer:fine) {
+
+    .world-icons [data-tooltip]:focus::before,
+    .world-icons [data-tooltip]:hover::before {
+        transform: translate(var(--pico-tooltip-shift), 0);
+    }
+}
+
+.world-icons [data-tooltip]::before {
+    transform: var(--pico-tooltip-slide-to);
+    --pico-tooltip-slide-to: translate(var(--pico-tooltip-shift), -.25rem);
+}
+
+#table-global td {
+    text-align: right;
+}
+
+details.dropdown summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    transform: translateY(.125rem);
+}
+
+details.dropdown summary::before {
+    width: auto !important;
+}
+
+details.dropdown summary+ul {
+    left: initial;
+    right: 0;
+}
+
+dialog {
+    animation-duration: 400ms;
+}
+
 span:has(> nav) {
     position: sticky;
     top: 0;
@@ -6,6 +68,10 @@ span:has(> nav) {
     background-color: color-mix(in srgb, var(--pico-background-color) 60%, transparent);
     backdrop-filter: blur(1rem);
     border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+
+hgroup {
+    text-align: center;
 }
 
 span:has(> .status),
@@ -54,21 +120,18 @@ span:has(> .status)::before {
 }
 
 .worlds-container {
-    display: flex;
-    flex-flow: row wrap;
-    justify-content: space-between;
-    gap: 0;
+    display: grid;
+    column-gap: var(--pico-block-spacing-horizontal);
+    row-gap: var(--pico-block-spacing-vertical);
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     white-space: nowrap;
 }
 
 .worlds-container>article {
-    flex-grow: 1;
-    flex-basis: 30%;
+    margin: 0;
 
     display: flex;
     flex-direction: column;
-
-    margin: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
 }
 
 .world-header,
@@ -85,7 +148,6 @@ span:has(> .status)::before {
     --pico-typography-spacing-vertical: 0;
     margin-bottom: calc(var(--pico-block-spacing-vertical) * 0.5);
 
-    /* flex-wrap: wrap; */
     align-items: center;
     justify-content: space-between;
 }
@@ -104,14 +166,7 @@ span:has(> .status)::before {
     text-align: right;
 }
 
-/* .world-name {
-    flex-grow: 1;
-    flex-shrink: 1;
-    text-align: center;
-} */
-
 .world-icons {
-    /* flex-grow: 1; */
     font-size: inherit;
 
     display: flex;
@@ -128,15 +183,6 @@ span:has(> .status)::before {
 
 [id] {
     scroll-margin-top: calc(var(--link-offset) + 1rem);
-}
-
-.defs-only {
-    position: fixed;
-    left: -9999px;
-    top: -9999px;
-    z-index: -1;
-    width: 0;
-    height: 0;
 }
 
 li:has(.logo-container) {
@@ -161,18 +207,18 @@ li:has(.logo-container) {
 .logo {
     display: inline;
     height: 3rem;
-    width: 3rem;
+    min-width: 3rem;
     border-radius: 30%;
 }
 
 .logo+* {
-    display: inline;
+    display: none;
+    /* display: inline; */
     margin: 0;
 }
 
 nav {
     text-align: center;
-    justify-content: space-between;
 }
 
 nav>* {
@@ -181,6 +227,12 @@ nav>* {
 
 .region-hyperlinks {
     justify-content: center;
+    white-space: nowrap;
+}
+
+.region-hyperlinks li:has(details.dropdown) {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 nav>:last-child {
@@ -198,6 +250,15 @@ nav>:last-child {
 .icons svg {
     height: 1.125rem;
     transform: translateY(-.125rem);
+}
+
+nav details.dropdown>summary {
+    background: none !important;
+    border: inherit !important;
+}
+
+nav details.dropdown>summary::after {
+    transform: translateY(.0625rem);
 }
 
 @keyframes waiting {
@@ -257,4 +318,34 @@ g.timer-reloading circle {
     stroke-dasharray: 75, 100;
     stroke-dashoffset: -5;
     animation: reloading-dash 1.5s ease-in-out infinite;
+}
+
+.shadow-container {
+    --pico-card-box-shadow: 0 transparent;
+    --pico-shadow-card-radius: 0.25rem;
+    --pico-shadow-card-color: rgb(var(--pico-box-shadow-color));
+    position: relative;
+}
+
+.shadow-container::before {
+    z-index: -1;
+    content: "";
+    position: absolute;
+    opacity: .25;
+    border-radius: var(--pico-border-radius);
+    inset: calc(var(--pico-shadow-card-radius) * -1);
+    filter: blur(var(--pico-shadow-card-radius));
+    background: var(--pico-shadow-card-color);
+}
+
+.shadow-container article {
+    margin-bottom: 0;
+}
+
+[data-theme=light] {
+    --pico-box-shadow-color: 129, 145, 181;
+}
+
+[data-theme=dark] {
+    --pico-box-shadow-color: 7, 9, 12;
 }

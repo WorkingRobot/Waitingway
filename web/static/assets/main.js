@@ -1,5 +1,6 @@
 const main = document.querySelector('main');
-const region_group = document.querySelector('.region-hyperlinks');
+const region_hyperlinks = document.querySelector('.region-hyperlinks');
+const region_dropdown = document.querySelector('.region-dropdown');
 const global_table = document.querySelector('#table-global');
 const nav = document.querySelector('nav');
 const theme_toggles = document.querySelectorAll('.theme-toggle');
@@ -12,7 +13,7 @@ function updateAnchorOffset(e) {
 }
 
 addEventListener("resize", updateAnchorOffset);
-addEventListener("DOMContentLoaded", updateAnchorOffset);
+updateAnchorOffset();
 
 function switchTheme(e) {
     toggleTheme();
@@ -39,8 +40,8 @@ function format_relative_past(time) {
 }
 
 function format_future_duration(diff) {
-    if (diff < 1000) {
-        return 'now';
+    if (diff < 500) {
+        return 'soon';
     }
     return 'in ' + humanizeDuration(diff, { largest: 2, round: true });
 }
@@ -50,12 +51,13 @@ function update_global_row(row, text) {
     data.textContent = text;
 }
 
-function get_region_section(region_id) {
-    let ret = region_group.querySelector('#region-' + region_id);
+function get_region_section_a(region_id) {
+    let ret = region_hyperlinks.querySelector('#region-a-' + region_id);
     if (ret === null) {
         ret = create_hierarchy({
             "tag": "li",
-            "id": "region-" + region_id,
+            "id": "region-a-" + region_id,
+            "class_name": "hide-mobile",
             "children": [
                 {
                     "tag": "a",
@@ -65,9 +67,30 @@ function get_region_section(region_id) {
                 }
             ]
         });
-        region_group.appendChild(ret);
+        region_hyperlinks.appendChild(ret);
     }
-    return ret;
+    return ret.querySelector('a');
+}
+function get_region_section_b(region_id) {
+    let ret = region_dropdown.querySelector('#region-b-' + region_id);
+    if (ret === null) {
+        ret = create_hierarchy({
+            "tag": "li",
+            "id": "region-b-" + region_id,
+            "children": [
+                {
+                    "tag": "a",
+                    "attributes": { "href": "#" },
+                    "content": "Region"
+                }
+            ]
+        });
+        ret.children[0].addEventListener('click', function (e) {
+            region_dropdown.parentElement.removeAttribute('open');
+        });
+        region_dropdown.appendChild(ret);
+    }
+    return ret.querySelector('a');
 }
 
 function get_dc_section(datacenter_id) {
@@ -104,78 +127,87 @@ function get_dc_section(datacenter_id) {
 function get_world_row(datacenter_id, world_id) {
     let dc_section = get_dc_section(datacenter_id);
 
-    let ret = dc_section.querySelector('.worlds-container>#world-' + world_id);
+    let ret = dc_section.querySelector('#world-' + world_id);
     if (ret === null) {
         ret = create_hierarchy({
-            "tag": "article",
-            "id": "world-" + world_id,
+            "tag": "div",
+            "class_name": "shadow-container",
             "children": [
                 {
-                    "tag": "header",
-                    "class_name": "world-header",
+                    "tag": "article",
+                    "id": "world-" + world_id,
                     "children": [
                         {
-                            "tag": "h4",
-                            "class_name": "world-name"
-                        },
-                        {
-                            "tag": "h4",
-                            "class_name": "world-icons",
+                            "tag": "header",
+                            "class_name": "world-header",
                             "children": [
                                 {
-                                    "tag": "span",
-                                    "children": [
-                                        {
-                                            "tag": "span",
-                                            "class_name": "status"
-                                        }
-                                    ]
+                                    "tag": "h4",
+                                    "class_name": "world-name"
                                 },
                                 {
-                                    "tag": "span",
+                                    "tag": "h4",
+                                    "class_name": "world-icons",
                                     "children": [
                                         {
                                             "tag": "span",
-                                            "class_name": "status"
-                                        }
-                                    ]
-                                },
-                                {
-                                    "tag": "span",
-                                    "children": [
+                                            "attributes": { "data-placement": "shifted" },
+                                            "children": [
+                                                {
+                                                    "tag": "span",
+                                                    "class_name": "status",
+                                                }
+                                            ]
+                                        },
                                         {
                                             "tag": "span",
-                                            "class_name": "status"
+                                            "attributes": { "data-placement": "shifted-long" },
+                                            "children": [
+                                                {
+                                                    "tag": "span",
+                                                    "class_name": "status",
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "tag": "span",
+                                            "attributes": { "data-placement": "shifted-long" },
+                                            "children": [
+                                                {
+                                                    "tag": "span",
+                                                    "class_name": "status",
+                                                }
+                                            ]
                                         }
                                     ]
                                 }
                             ]
-                        }
-                    ]
-                },
-                {
-                    "tag": "div",
-                    "class_name": "world-body",
-                    "attributes": { "data-placement": "bottom" },
-                    "children": [
-                        {
-                            "tag": "div",
-                            "children": [
-                                {
-                                    "tag": "h6",
-                                    "content": "Queue Time"
-                                },
-                                { "tag": "div", "class_name": "queue-time" }
-                            ]
                         },
                         {
                             "tag": "div",
+                            "class_name": "world-body",
+                            "attributes": { "data-placement": "bottom" },
                             "children": [
                                 {
-                                    "tag": "h6",
-                                    "content": "Queue Size"
+                                    "tag": "div",
+                                    "children": [
+                                        {
+                                            "tag": "h6",
+                                            "content": "Queue Time"
+                                        },
+                                        { "tag": "div", "class_name": "queue-time" }
+                                    ]
                                 },
-                                { "tag": "div", "class_name": "queue-size" }
+                                {
+                                    "tag": "div",
+                                    "children": [
+                                        {
+                                            "tag": "h6",
+                                            "content": "Queue Size"
+                                        },
+                                        { "tag": "div", "class_name": "queue-size" }
+                                    ]
+                                }
                             ]
                         }
                     ]
@@ -217,6 +249,72 @@ function create_hierarchy(data) {
     }
     return ret;
 }
+
+function toggleModal(e) {
+    e.preventDefault();
+    const modal = document.getElementById(e.currentTarget.dataset.target);
+    if (!modal) return;
+    modal && (modal.open ? closeModal(modal) : openModal(modal));
+};
+
+const modalIsOpenClass = "modal-is-open";
+const modalOpeningClass = "modal-is-opening";
+const modalClosingClass = "modal-is-closing";
+const scrollbarWidthCssVar = "--pico-scrollbar-width";
+const modalAnimDur = 400;
+const modalAnimDur2 = 400;
+let visibleModal = null;
+function openModal(modal) {
+    const html = document.documentElement;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    if (scrollbarWidth) {
+        html.style.setProperty(scrollbarWidthCssVar, `${scrollbarWidth}px`);
+    }
+    html.classList.add(modalIsOpenClass);
+    html.classList.add(modalOpeningClass);
+    setTimeout(() => {
+        visibleModal = modal;
+    }, modalAnimDur);
+    setTimeout(() => {
+        html.classList.remove(modalOpeningClass);
+    }, modalAnimDur2);
+    modal.showModal();
+};
+
+function closeModal(modal) {
+    visibleModal = null;
+    const html = document.documentElement;
+    html.classList.add(modalClosingClass);
+    setTimeout(() => {
+        html.classList.remove(modalClosingClass, modalIsOpenClass);
+        html.style.removeProperty(scrollbarWidthCssVar);
+        modal.close();
+    }, modalAnimDur2);
+};
+
+document.addEventListener("click", (event) => {
+    if (visibleModal === null) return;
+    const modalContent = visibleModal.querySelector("article");
+    const isClickInside = modalContent.contains(event.target);
+    !isClickInside && closeModal(visibleModal);
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && visibleModal) {
+        closeModal(visibleModal);
+    }
+});
+
+// Get scrollbar width
+const getScrollbarWidth = () => {
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    return scrollbarWidth;
+};
+
+// Is scrollbar visible
+const isScrollbarVisible = () => {
+    return document.body.scrollHeight > screen.height;
+};
 
 const status_lookup = {
     1: ['Online', 'status-online'],
@@ -268,9 +366,10 @@ function update_dc_data(data, regions) {
 }
 
 function update_region_data(data, datacenters) {
-    let section = get_region_section(data.id);
-    section.querySelector('a').textContent = data.name;
-    section.querySelector('a').setAttribute('href', '#dc-' + datacenters.find(dc => dc.region_id === data.id).id);
+    for (let section of [get_region_section_a(data.id), get_region_section_b(data.id)]) {
+        section.textContent = data.name;
+        section.setAttribute('href', '#dc-' + datacenters.find(dc => dc.region_id === data.id).id);
+    }
 }
 
 function update_global_data(data) {
@@ -311,9 +410,12 @@ function update_from_summary(summary) {
         update_region_data(region, summary.datacenters);
     }
 
-    let hash = document.getElementById(window.location.hash.slice(1));
-    if (hash !== null) {
-        hash.scrollIntoView();
+    if (!scrolled_to_hash) {
+        scrolled_to_hash = true;
+        let hash = document.getElementById(window.location.hash.slice(1));
+        if (hash !== null) {
+            hash.scrollIntoView();
+        }
     }
 }
 
@@ -360,6 +462,8 @@ function queue_url_update(url) {
     timer_group.classList.remove('timer-reloading');
     timer_group.classList.add('timer-waiting');
 }
+
+let scrolled_to_hash = false;
 try {
     let summary = localStorage.getItem('summary');
     if (summary !== null) {

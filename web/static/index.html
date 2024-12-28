@@ -7,13 +7,11 @@
     <meta name="color-scheme" content="light dark" />
 
     <title>Waitingway</title>
-    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
     <link rel="stylesheet" href="/assets/toggle.css">
-
-
-    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js"></script>
     <link rel="stylesheet" href="/assets/style.css">
 
+    <script src="https://cdn.jsdelivr.net/npm/humanize-duration@3.32.1/humanize-duration.min.js"></script>
     <script src="/assets/theme.js"></script>
 </head>
 
@@ -29,14 +27,23 @@
                 </li>
             </ul>
             <ul class="region-hyperlinks">
+                <li class="hide-desktop">
+                    <details class="dropdown">
+                        <summary>Region</summary>
+                        <ul class="region-dropdown">
+                        </ul>
+                    </details>
+                </li>
             </ul>
             <ul>
                 <ul>
-                    <li><a href="#" class="secondary">About</a></li>
+                    <li><a href="#" class="secondary" data-target="modal-about" onclick="toggleModal(event)">About</a>
+                    </li>
                 </ul>
                 <ul class="icons divider">
                     <li>
-                        <a class="timer-container contrast" aria-label="Refresh Timer" data-placement="bottom">
+                        <a class="timer-container contrast" aria-label="Refresh Timer" data-tooltip="Reloading"
+                            data-placement="bottom">
                             <svg height='24' width='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
                                 <g class="timer timer-reloading">
                                     <circle cx='12' cy='12' r='9' fill='none' stroke='currentColor' stroke-width='4' />
@@ -88,7 +95,9 @@
 
     <main class="container">
         <section>
-            <h2>Global</h2>
+            <hgroup>
+                <h2>Global</h2>
+            </hgroup>
             <table id="table-global">
                 <tbody>
                     <tr id="travel-time">
@@ -100,6 +109,18 @@
         </section>
 
     </main>
+
+    <dialog id="modal-about">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" data-target="modal-about" onclick="toggleModal(event)"></button>
+                <h3>About</h3>
+            </header>
+            <p>
+                soon&trade;
+            </p>
+        </article>
+    </dialog>
 
     <script src="/assets/main.js"></script>
 </body>
