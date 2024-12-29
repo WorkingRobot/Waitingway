@@ -2,11 +2,40 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light dark" />
+    <meta charset="utf-8">
 
     <title>Waitingway</title>
+    <meta property="og:title" content="Waitingway">
+    <meta property="og:site_name" content="Waitingway">
+    <meta property="og:url" content="https://waiting.camora.dev">
+    <meta name="description" content="FFXIV world status, queue times, and datacenter travel information">
+    <meta property="og:description" content="FFXIV world status, queue times, and datacenter travel information">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://waiting.camora.dev/assets/icon.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:alt" content="Waitingway logo">
+
+    <link rel="apple-touch-icon" sizes="57x57" href="/assets/icons/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/assets/icons/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/assets/icons/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/assets/icons/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/assets/icons/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/assets/icons/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/assets/icons/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/assets/icons/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/icons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/favicon-16x16.png">
+    <meta name="msapplication-TileImage" content="/assets/icons/ms-icon-144x144.png">
+    <meta name="msapplication-TileColor" content="#13171f">
+    <meta name="theme-color" content="#13171f">
+    <link rel="manifest" href="/manifest.json">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.0.6/css/pico.min.css">
     <link rel="stylesheet" href="/assets/toggle.css">
     <link rel="stylesheet" href="/assets/style.css">
@@ -20,8 +49,8 @@
         <nav class="container fixed">
             <ul>
                 <li>
-                    <a aria-label="Waitingway home page" data-discover="true" href="#" class="logo-container">
-                        <img src="/assets/icon.png" alt="Waitingway logo" class="logo" />
+                    <a aria-label="Waitingway Home" data-discover="true" href="#" class="logo-container">
+                        <img src="/assets/icon.png" alt="Waitingway logo" class="logo">
                         <h3>Waitingway</h3>
                     </a>
                 </li>
@@ -37,7 +66,8 @@
             </ul>
             <ul>
                 <ul>
-                    <li><a href="#" class="secondary" data-target="modal-about" onclick="toggleModal(event)">About</a>
+                    <li>
+                        <a href="#" class="secondary" data-target="modal-about" onclick="toggleModal(event)">FAQ</a>
                     </li>
                 </ul>
                 <ul class="icons divider">
@@ -114,10 +144,40 @@
         <article>
             <header>
                 <button aria-label="Close" rel="prev" data-target="modal-about" onclick="toggleModal(event)"></button>
-                <h3>About</h3>
+                <h3>FAQ</h3>
             </header>
+            <h4>What is this?</h4>
             <p>
-                soon&trade;
+                Waitingway provides real-time information on datacenter travel, world status, and queue times for the
+                critically acclaimed MMORPG Final Fantasy XIV.
+            </p>
+            <h4>How does it work?</h4>
+            <p>
+                Datacenter travel and world status information is updated directly from Square Enix's
+                servers. Queue times are crowd-sourced from the Waitingway <a href="https://goatcorp.github.io"
+                    rel="noopener noreferrer" target="_blank">Dalamud</a> plugin. All data is updated every 60 seconds.
+            </p>
+            <h4>Where can I find some cool graphs?</h4>
+            <p>
+                You can find all the cool graphs you want on the public <a
+                    href="https://grafana.camora.dev/goto/Po-6qk_SR?orgId=1" rel="noopener noreferrer"
+                    target="_blank">Waitingway Grafana dashboard</a>.
+            </p>
+            <h4>How can I contribute?</h4>
+            <p>
+                By downloading the official Waitingway <a href="https://goatcorp.github.io" rel="noopener noreferrer"
+                    target="_blank">Dalamud</a> plugin, you can help provide queue times to the community whenever you
+                log into the game.
+            </p>
+            <p>
+                If you're a developer, you can contribute to the <a rel="noopener noreferrer" aria-label="GitHub"
+                    href="/github" target="_blank">GitHub repository</a> to help improve the backend server, website,
+                and plugin.
+            </p>
+            <h4>Who are you?</h4>
+            <p>
+                I'm <a href="https://camora.dev" rel="noopener noreferrer" target="_blank">Asriel</a>, the maintainer of
+                Waitingway. <img class="emoji" src="/assets/wavey.webp" alt="Wave">
             </p>
         </article>
     </dialog>

@@ -195,7 +195,7 @@ async fn get_world_statuses(
 async fn get_summary(pool: web::Data<PgPool>) -> Result<HttpResponse> {
     let world_summaries = db::get_world_summaries(&pool);
     let travel_time = db::get_travel_time(&pool);
-    match tokio::join!(world_summaries, travel_time) {
+    match tokio::join!(world_summaries, travel_time,) {
         (Ok(world_summaries), Ok(travel_time)) => Ok(HttpResponse::Ok().json(
             construct_summary(world_summaries, travel_time).map_err(ErrorInternalServerError)?,
         )),

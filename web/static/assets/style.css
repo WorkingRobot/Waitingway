@@ -320,6 +320,17 @@ g.timer-reloading circle {
     animation: reloading-dash 1.5s ease-in-out infinite;
 }
 
+dialog article h4 {
+    --pico-typography-spacing-top: 0;
+}
+
+.emoji {
+    object-fit: contain;
+    vertical-align: baseline;
+    height: 1em;
+    width: auto;
+}
+
 .shadow-container {
     --pico-card-box-shadow: 0 transparent;
     --pico-shadow-card-radius: 0.25rem;
