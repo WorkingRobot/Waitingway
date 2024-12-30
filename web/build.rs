@@ -20,7 +20,17 @@ fn main() {
 
     println!("cargo:rustc-env=PROFILE={}", profile);
 
-    println!("cargo:rerun-if-changed=TemporalStasis");
+    // Skip building the connector if we're running in rust-analyzer
+    if !std::env::var("_NT_SYMBOL_PATH")
+        .map(|v| v.contains("rust-analyzer"))
+        .unwrap_or_default()
+    {
+        println!("cargo:rerun-if-changed=TemporalStasis");
+        build_connector();
+    }
+}
+
+fn build_connector() {
     let connector_result_path = format!("{}/connector", std::env::var("OUT_DIR").unwrap());
 
     let target = build_target::target().unwrap();
