@@ -3,6 +3,7 @@ server_addr: 0.0.0.0:3000
 metrics_server_addr: 0.0.0.0:4000
 database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway
 max_connections_per_user: 3
+cache_ttl_ms: 2000
 stasis:
   version_file: stasis_version.json
   lobby_hosts:

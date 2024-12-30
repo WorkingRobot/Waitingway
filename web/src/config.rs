@@ -53,6 +53,7 @@ pub struct Config {
     pub metrics_server_addr: String,
     pub database_url: String,
     pub max_connections_per_user: u32,
+    pub cache_ttl_ms: u64,
     pub discord: DiscordConfig,
     pub stasis: StasisConfig,
     #[serde(with = "hex::serde")]

@@ -1,3 +1,4 @@
+mod cache;
 mod config;
 mod crons;
 mod db;
@@ -17,6 +18,7 @@ use actix_web::{
     App, HttpServer,
 };
 use actix_web_prom::PrometheusMetricsBuilder;
+use cache::Cache;
 use prometheus::Registry;
 use std::io;
 use thiserror::Error;
@@ -113,6 +115,11 @@ async fn main() -> Result<(), ServerError> {
             .app_data(Data::new(server_config.clone()))
             .app_data(Data::new(server_discord.clone()))
             .app_data(Data::new(web_client.clone()))
+            .app_data(Data::new(
+                Cache::builder()
+                    .time_to_live(core::time::Duration::from_millis(config.cache_ttl_ms))
+                    .build(),
+            ))
             .service(routes::api::service())
             .service(routes::redirects::service())
             .service(routes::assets::service())

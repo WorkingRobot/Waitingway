@@ -1,4 +1,5 @@
 use crate::{
+    cache::{cached_response, Cache, CacheKey},
     db,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
     models::{
@@ -192,15 +193,18 @@ async fn get_world_statuses(
 }
 
 #[get("/summary/")]
-async fn get_summary(pool: web::Data<PgPool>) -> Result<HttpResponse> {
-    let world_summaries = db::get_world_summaries(&pool);
-    let travel_time = db::get_travel_time(&pool);
-    match tokio::join!(world_summaries, travel_time,) {
-        (Ok(world_summaries), Ok(travel_time)) => Ok(HttpResponse::Ok().json(
-            construct_summary(world_summaries, travel_time).map_err(ErrorInternalServerError)?,
-        )),
-        (Err(e), _) | (_, Err(e)) => Err(ErrorInternalServerError(e)),
-    }
+async fn get_summary(pool: web::Data<PgPool>, cache: web::Data<Cache>) -> Result<HttpResponse> {
+    cached_response(&cache, CacheKey::WorldSummary, || async {
+        let world_summaries = db::get_world_summaries(&pool);
+        let travel_time = db::get_travel_time(&pool);
+        match tokio::join!(world_summaries, travel_time) {
+            (Ok(world_summaries), Ok(travel_time)) => {
+                construct_summary(world_summaries, travel_time).map_err(ErrorInternalServerError)
+            }
+            (Err(e), _) | (_, Err(e)) => Err(ErrorInternalServerError(e)),
+        }
+    })
+    .await
 }
 
 fn construct_summary(
