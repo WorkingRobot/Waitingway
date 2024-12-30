@@ -446,6 +446,10 @@ function update_from_url(url) {
 function queue_url_update(url) {
     let now = Date.now();
     let timerId = setInterval(() => {
+        // Don't update in the background
+        if (document.visibilityState === 'hidden') {
+            return;
+        }
         let diff = Date.now() - now;
         if (diff >= 30000) {
             timer_circle.removeAttribute('stroke-dashoffset');
