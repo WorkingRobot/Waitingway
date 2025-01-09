@@ -1,14 +1,15 @@
-use crate::config::DiscordConfig;
+use crate::{config::DiscordConfig, db};
 use rand::seq::SliceRandom;
 use serenity::{
     all::{
-        ActivityData, AddMember, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter,
-        CreateMessage, DiscordJsonError, EditMessage, ErrorResponse, EventHandler,
-        FormattedTimestamp, FormattedTimestampStyle, GatewayIntents, Http, HttpError, Message,
-        MessageId, ShardManager, Timestamp, UserId,
+        ActivityData, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
+        DiscordJsonError, EditMessage, ErrorResponse, EventHandler, FormattedTimestamp,
+        FormattedTimestampStyle, GatewayIntents, Http, HttpError, Member, Message, MessageId,
+        ShardManager, Timestamp, UserId,
     },
     async_trait, Client,
 };
+use sqlx::PgPool;
 use std::sync::{Arc, OnceLock};
 use time::{Duration, OffsetDateTime};
 use tokio::{
@@ -27,6 +28,7 @@ pub struct DiscordClient {
 
 struct DiscordClientImp {
     config: DiscordConfig,
+    db: PgPool,
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
     shards: OnceLock<Arc<ShardManager>>,
@@ -35,12 +37,13 @@ struct DiscordClientImp {
 }
 
 impl DiscordClient {
-    pub async fn new(config: DiscordConfig) -> Self {
-        let intents = GatewayIntents::empty();
+    pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
+        let intents = GatewayIntents::GUILD_MEMBERS;
 
         let ret = Self {
             imp: Arc::new(DiscordClientImp {
                 config,
+                db,
                 client: OnceLock::new(),
                 http: OnceLock::new(),
                 shards: OnceLock::new(),
@@ -143,6 +146,10 @@ impl DiscordClient {
         self.imp.http.get().unwrap()
     }
 
+    fn db(&self) -> &PgPool {
+        &self.imp.db
+    }
+
     fn config(&self) -> &DiscordConfig {
         &self.imp.config
     }
@@ -163,11 +170,7 @@ impl DiscordClient {
         });
     }
 
-    pub async fn onboard_user(
-        &self,
-        user_id: UserId,
-        access_token: String,
-    ) -> Result<Message, serenity::Error> {
+    pub async fn onboard_user(&self, user_id: UserId) -> Result<Message, serenity::Error> {
         log::info!("Onboarding user {}", user_id);
 
         let already_in_guild = match self.config().guild_id.member(self.http(), user_id).await {
@@ -179,32 +182,32 @@ impl DiscordClient {
             Err(e) => return Err(e),
         };
 
-        if !already_in_guild {
-            self.config()
-                .guild_id
-                .add_member(self.http(), user_id, AddMember::new(access_token))
-                .await?
-                .ok_or(serenity::Error::Other("Member already exists"))?;
-        }
-
         let channel = user_id.create_dm_channel(self.http()).await?;
 
+        let invite_url = format!("https://discord.gg/{}", self.config().guild_invite_code);
+
         let embed = CreateEmbed::new().title("You're linked up!")
-            .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}\n***Make sure you stay in the server to get notifications and enable DMs from server members.***",
+            .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}",
                 self.config().queue_size_dm_threshold,
                 if already_in_guild {
-                    "You've already joined the server, so you're all set!"
+                    format!("Thanks for joining the [official Discord server]({})! It's the best way to stay up to date with Waitingway!", invite_url)
                 }
                 else {
-                    "You've been added to the server, so you're all set!"
+                    format!("If you'd like to stay up to date with Waitingway, be sure to join the [official Discord server]({}).", invite_url)
                 }))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
             .color(COLOR_SUCCESS);
 
-        channel
+        let message = channel
             .send_message(self.http(), CreateMessage::new().embed(embed))
-            .await
+            .await?;
+        if !already_in_guild {
+            channel
+                .send_message(self.http(), CreateMessage::new().content(invite_url))
+                .await?;
+        }
+        Ok(message)
     }
 
     pub async fn offboard_user(&self, user_id: UserId) -> Result<(), serenity::Error> {
@@ -457,6 +460,27 @@ impl EventHandler for DiscordClient {
 
         if let Some(activity) = self.imp.current_activity.read().await.as_ref() {
             ctx.set_activity(Some(activity.clone()));
+        }
+    }
+
+    async fn guild_member_addition(&self, _ctx: Context, member: Member) {
+        let is_connected = match db::does_connection_id_exist(self.db(), member.user.id.get()).await
+        {
+            Ok(r) => r,
+            Err(e) => {
+                log::error!("Error checking if user is connected: {:?}", e);
+                return;
+            }
+        };
+        if is_connected {
+            match self.mark_user_connected(member.user.id).await {
+                Ok(_) => log::info!("Marked user {} as connected", member.user.id),
+                Err(e) => log::error!(
+                    "Error marking user {} as connected: {:?}",
+                    member.user.id,
+                    e
+                ),
+            }
         }
     }
 }

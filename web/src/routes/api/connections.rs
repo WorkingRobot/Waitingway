@@ -4,7 +4,7 @@ use actix_web::{
     error::{ErrorInternalServerError, ErrorNotFound},
     route, web, HttpResponse, Result,
 };
-use serenity::all::UserId;
+use serenity::all::{DiscordJsonError, ErrorResponse, HttpError, UserId};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -47,10 +47,14 @@ async fn delete_connection(
         .await
         .map_err(ErrorInternalServerError)?
     {
-        discord
-            .mark_user_disconnected(UserId::new(id))
-            .await
-            .map_err(ErrorInternalServerError)?;
+        match discord.mark_user_disconnected(UserId::new(id)).await {
+            Ok(()) => {}
+            Err(serenity::Error::Http(HttpError::UnsuccessfulRequest(ErrorResponse {
+                error: DiscordJsonError { code: 10007, .. }, // Unknown Member
+                ..
+            }))) => {}
+            Err(e) => return Err(ErrorInternalServerError(e)),
+        }
     }
 
     discord

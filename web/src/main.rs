@@ -86,7 +86,7 @@ async fn main() -> Result<(), ServerError> {
         db_pool.clone(),
     ));
 
-    let discord_bot = DiscordClient::new(config.discord.clone()).await;
+    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
 
     let prometheus_registry = Registry::new();
 

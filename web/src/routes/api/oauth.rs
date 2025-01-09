@@ -84,7 +84,7 @@ async fn callback(
     let _guard = KillTokenGuard::new(&client, &token.access_token);
 
     let scopes: Vec<&str> = token.scope.split_whitespace().collect();
-    if !scopes.contains(&"guilds.join") || !scopes.contains(&"identify") {
+    if !scopes.contains(&"applications.commands") || !scopes.contains(&"identify") {
         return Err(ErrorBadRequest("Invalid scope"));
     }
     let identity = oauth::get_discord_identity(&client, &token.access_token)
@@ -112,12 +112,7 @@ async fn callback(
     }
 
     let message = discord
-        .onboard_user(identity.id, token.access_token)
-        .await
-        .map_err(ErrorInternalServerError)?;
-
-    discord
-        .mark_user_connected(identity.id.get().into())
+        .onboard_user(identity.id)
         .await
         .map_err(ErrorInternalServerError)?;
 

@@ -24,6 +24,7 @@ pub struct DiscordConfig {
     pub redirect_uri: String,
     pub bot_token: String,
     pub guild_id: GuildId,
+    pub guild_invite_code: String,
     pub log_channel_id: ChannelId,
     pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,

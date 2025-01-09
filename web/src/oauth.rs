@@ -20,7 +20,8 @@ pub fn get_redirect_url(config: &DiscordConfig, username: Uuid) -> Result<Url, O
     url.query_pairs_mut()
         .append_pair("response_type", "code")
         .append_pair("client_id", &config.client_id.to_string())
-        .append_pair("scope", "identify guilds.join")
+        .append_pair("scope", "identify applications.commands")
+        .append_pair("integration_type", "1")
         .append_pair("state", &URL_SAFE.encode(username.as_bytes()))
         .append_pair("redirect_uri", &config.redirect_uri)
         .append_pair("prompt", "consent");
