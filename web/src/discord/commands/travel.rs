@@ -1,42 +1,27 @@
 use super::Context;
 use super::Error;
 use super::{
-    subscribe::{subscribe_dc, subscribe_world},
+    subscribe::{subscribe_datacenter, subscribe_world},
     utils::{autocomplete_world, create_travel_embed},
 };
 use crate::{
     db,
-    discord::travel_param::{get_travel_params, TravelDatacenterParam, TravelWorldParam},
+    discord::travel_param::{get_travel_params, TravelDatacenterParam},
 };
 use ::serenity::all::ReactionType;
 use poise::{serenity_prelude as serenity, CreateReply};
 
-/// Check datacenter travel status for an entire datacenter or for a specific world
-#[poise::command(slash_command)]
-pub async fn travel(
-    ctx: Context<'_>,
-    #[description = "Datacenter to check status for"] datacenter: Option<TravelDatacenterParam>,
-    #[description = "World to check status for"]
-    #[autocomplete = "autocomplete_world"]
-    world: Option<u16>,
-) -> Result<(), Error> {
-    match (datacenter, world) {
-        (Some(dc), _) => travel_dc(ctx, dc).await,
-        (None, Some(world)) => {
-            travel_world(
-                ctx,
-                get_travel_params()
-                    .and_then(|v| v.get_world_by_id(world))
-                    .cloned()
-                    .ok_or(Error::UnknownWorld)?,
-            )
-            .await
-        }
-        (None, None) => Err(Error::NoDestination),
-    }
+#[poise::command(slash_command, subcommands("datacenter", "world"))]
+pub async fn travel(_: Context<'_>) -> Result<(), Error> {
+    Ok(())
 }
 
-async fn travel_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> Result<(), Error> {
+/// Check DC travel status for a datacenter
+#[poise::command(slash_command)]
+async fn datacenter(
+    ctx: Context<'_>,
+    #[description = "Datacenter to check for"] datacenter: TravelDatacenterParam,
+) -> Result<(), Error> {
     let client = ctx.data();
     let db = client.db();
     let config = client.config();
@@ -83,7 +68,8 @@ async fn travel_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> Resul
             .filter(move |mci| mci.data.custom_id == "set_reminder")
             .await
         {
-            subscribe_dc(ctx, datacenter.clone()).await?;
+            log::info!("MCI Interaction: {:?}", mci);
+            subscribe_datacenter(ctx, datacenter.clone()).await?;
             mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
                 .await?;
         }
@@ -92,7 +78,19 @@ async fn travel_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> Resul
     Ok(())
 }
 
-async fn travel_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), Error> {
+/// Check DC travel status for a world
+#[poise::command(slash_command)]
+async fn world(
+    ctx: Context<'_>,
+    #[description = "World to check for"]
+    #[autocomplete = "autocomplete_world"]
+    world: u16,
+) -> Result<(), Error> {
+    let world = get_travel_params()
+        .and_then(|v| v.get_world_by_id(world))
+        .cloned()
+        .ok_or(Error::UnknownWorld)?;
+
     let client = ctx.data();
     let db = client.db();
     let config = client.config();
@@ -129,6 +127,7 @@ async fn travel_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), E
             .filter(move |mci| mci.data.custom_id == "set_reminder")
             .await
         {
+            log::info!("MCI Interaction: {:?}", mci);
             subscribe_world(ctx, world.clone()).await?;
             mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
                 .await?;

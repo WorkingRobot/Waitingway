@@ -3,7 +3,7 @@ use super::Context;
 use super::Error;
 use crate::{
     discord::{
-        travel_param::{get_travel_params, TravelDatacenterParam, TravelWorldParam},
+        travel_param::{get_travel_params, TravelDatacenterParam},
         utils::{COLOR_ERROR, COLOR_SUCCESS},
     },
     subscriptions::{Endpoint, Subscriber},
@@ -11,39 +11,30 @@ use crate::{
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
 
-/// Remove a datacenter travel reminder (opposite of /remind)
-#[poise::command(slash_command, rename = "remindoff")]
-pub async fn unsubscribe(
-    ctx: Context<'_>,
-    #[description = "Datacenter to remind for"] datacenter: Option<TravelDatacenterParam>,
-    #[description = "World to remind for"]
-    #[autocomplete = "autocomplete_world"]
-    world: Option<u16>,
-) -> Result<(), Error> {
-    match (datacenter, world) {
-        (Some(dc), _) => unsubscribe_dc(ctx, dc).await,
-        (None, Some(world)) => {
-            unsubscribe_world(
-                ctx,
-                get_travel_params()
-                    .and_then(|v| v.get_world_by_id(world))
-                    .cloned()
-                    .ok_or(Error::UnknownWorld)?,
-            )
-            .await
-        }
-        (None, None) => Err(Error::NoDestination),
-    }
+#[poise::command(
+    slash_command,
+    rename = "remindoff",
+    subcommands("datacenter", "world")
+)]
+pub async fn unsubscribe(_: Context<'_>) -> Result<(), Error> {
+    Ok(())
 }
 
-async fn unsubscribe_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> Result<(), Error> {
+/// Remove a DC travel reminder for a datacenter (opposite of /remind)
+#[poise::command(slash_command)]
+async fn datacenter(
+    ctx: Context<'_>,
+    #[description = "Datacenter to remind for"] datacenter: TravelDatacenterParam,
+) -> Result<(), Error> {
     let client = ctx.data();
     let subscriptions = client.subscriptions();
 
-    let success = subscriptions.unsubscribe(
-        Endpoint::Datacenter(datacenter.id),
-        &Subscriber::Discord(ctx.author().id),
-    );
+    let success = subscriptions
+        .unsubscribe(
+            Endpoint::Datacenter(datacenter.id),
+            &Subscriber::Discord(ctx.author().id.get()),
+        )
+        .await?;
     let embed = if success {
         CreateEmbed::new()
             .title(format!("Unsubscribed from {}", datacenter.name()))
@@ -61,14 +52,28 @@ async fn unsubscribe_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> 
     Ok(())
 }
 
-async fn unsubscribe_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), Error> {
+/// Remove a DC travel reminder for a specific world (opposite of /remind)
+#[poise::command(slash_command)]
+async fn world(
+    ctx: Context<'_>,
+    #[description = "World to remind for"]
+    #[autocomplete = "autocomplete_world"]
+    world: u16,
+) -> Result<(), Error> {
+    let world = get_travel_params()
+        .and_then(|v| v.get_world_by_id(world))
+        .cloned()
+        .ok_or(Error::UnknownWorld)?;
+
     let client = ctx.data();
     let subscriptions = client.subscriptions();
 
-    let success = subscriptions.unsubscribe(
-        Endpoint::World(world.id),
-        &Subscriber::Discord(ctx.author().id),
-    );
+    let success = subscriptions
+        .unsubscribe(
+            Endpoint::World(world.id),
+            &Subscriber::Discord(ctx.author().id.get()),
+        )
+        .await?;
     let embed = if success {
         CreateEmbed::new()
             .title(format!("Unsubscribed from {}", world.name()))

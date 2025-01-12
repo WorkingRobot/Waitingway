@@ -12,32 +12,21 @@ use crate::{
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
 
-/// Send a reminder when datacenter travel is available to a datacenter or a specific world
-#[poise::command(slash_command, rename = "remind")]
-pub async fn subscribe(
-    ctx: Context<'_>,
-    #[description = "Datacenter to remind for"] datacenter: Option<TravelDatacenterParam>,
-    #[description = "World to remind for"]
-    #[autocomplete = "autocomplete_world"]
-    world: Option<u16>,
-) -> Result<(), Error> {
-    match (datacenter, world) {
-        (Some(dc), _) => subscribe_dc(ctx, dc).await,
-        (None, Some(world)) => {
-            subscribe_world(
-                ctx,
-                get_travel_params()
-                    .and_then(|v| v.get_world_by_id(world))
-                    .cloned()
-                    .ok_or(Error::UnknownWorld)?,
-            )
-            .await
-        }
-        (None, None) => Err(Error::NoDestination),
-    }
+#[poise::command(slash_command, rename = "remind", subcommands("datacenter", "world"))]
+pub async fn subscribe(_: Context<'_>) -> Result<(), Error> {
+    Ok(())
 }
 
-pub async fn subscribe_dc(
+/// Send a reminder when DC travel is available to a datacenter
+#[poise::command(slash_command)]
+async fn datacenter(
+    ctx: Context<'_>,
+    #[description = "Datacenter to remind for"] datacenter: TravelDatacenterParam,
+) -> Result<(), Error> {
+    subscribe_datacenter(ctx, datacenter).await
+}
+
+pub async fn subscribe_datacenter(
     ctx: Context<'_>,
     datacenter: TravelDatacenterParam,
 ) -> Result<(), Error> {
@@ -65,10 +54,12 @@ pub async fn subscribe_dc(
             .description("This datacenter is aleady open for travel.")
             .color(COLOR_ERROR)
     } else {
-        let success = subscriptions.subscribe(
-            Endpoint::Datacenter(datacenter.id),
-            Subscriber::Discord(ctx.author().id),
-        );
+        let success = subscriptions
+            .subscribe(
+                Endpoint::Datacenter(datacenter.id),
+                Subscriber::Discord(ctx.author().id.get()),
+            )
+            .await?;
 
         if success {
             CreateEmbed::new()
@@ -87,6 +78,21 @@ pub async fn subscribe_dc(
     Ok(())
 }
 
+/// Send a reminder when DC travel is available to a world
+#[poise::command(slash_command)]
+async fn world(
+    ctx: Context<'_>,
+    #[description = "World to remind for"]
+    #[autocomplete = "autocomplete_world"]
+    world: u16,
+) -> Result<(), Error> {
+    let world = get_travel_params()
+        .and_then(|v| v.get_world_by_id(world))
+        .cloned()
+        .ok_or(Error::UnknownWorld)?;
+    subscribe_world(ctx, world).await
+}
+
 pub async fn subscribe_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), Error> {
     let client = ctx.data();
     let db = client.db();
@@ -102,10 +108,12 @@ pub async fn subscribe_world(ctx: Context<'_>, world: TravelWorldParam) -> Resul
             .description("This world is aleady open for travel.")
             .color(COLOR_ERROR)
     } else {
-        let success = subscriptions.subscribe(
-            Endpoint::World(world.id),
-            Subscriber::Discord(ctx.author().id),
-        );
+        let success = subscriptions
+            .subscribe(
+                Endpoint::World(world.id),
+                Subscriber::Discord(ctx.author().id.get()),
+            )
+            .await?;
 
         if success {
             CreateEmbed::new()

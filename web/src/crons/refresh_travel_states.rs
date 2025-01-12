@@ -167,6 +167,18 @@ impl CronJob for RefreshTravelStates {
             bail!("No data");
         }
 
+        if cfg!(debug_assertions) {
+            travel_map.insert(
+                23,
+                DCTravelWorldInfo {
+                    id: 23,
+                    prohibit: time::OffsetDateTime::now_utc().minute() as u8 % 2,
+                    travel: 1,
+                    accept: 1,
+                },
+            );
+        }
+
         log::info!("Travel time: {:?} sec", travel_time.unwrap());
         log::info!(
             "Travel prohibited worlds: {:?}",
