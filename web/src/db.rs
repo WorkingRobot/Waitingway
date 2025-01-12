@@ -1,8 +1,8 @@
 use crate::{
     db_wrappers::{DatabaseU16, DatabaseU64},
     models::{
-        Connection, DbQueueEstimate, DbTravelState, DbWorldStatus, DbWorldSummaryInfo,
-        QueueEstimate, QueueSize, Recap, WorldSummaryInfo,
+        Connection, DbQueueEstimate, DbTravelState, DbWorldInfo, DbWorldStatus, DbWorldSummaryInfo,
+        QueueEstimate, QueueSize, Recap, WorldInfo, WorldSummaryInfo,
     },
 };
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
@@ -494,4 +494,11 @@ pub async fn get_world_summaries(pool: &PgPool) -> Result<Vec<WorldSummaryInfo>,
         .fetch_all(pool)
         .await
         .map(|summary| summary.into_iter().map(WorldSummaryInfo::from).collect())
+}
+
+pub async fn get_worlds(pool: &PgPool) -> Result<Vec<WorldInfo>, Error> {
+    sqlx::query_as!(DbWorldInfo, r#"SELECT * FROM worlds"#)
+        .fetch_all(pool)
+        .await
+        .map(|worlds| worlds.into_iter().map(WorldInfo::from).collect())
 }

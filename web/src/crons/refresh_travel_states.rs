@@ -1,30 +1,40 @@
-use anyhow::bail;
-use serenity::async_trait;
-use sqlx::PgPool;
-use std::{collections::HashMap, process::Stdio, time::Duration};
-use tokio::{
-    io::{AsyncBufReadExt, BufReader},
-    process::Command,
-};
-use tokio_util::sync::CancellationToken;
-
+use super::CronJob;
 use crate::{
     await_cancellable,
     config::StasisConfig,
     db,
+    discord::travel_param::get_travel_params,
     models::{DCTravelResponse, DCTravelWorldInfo},
+    subscriptions::{EndpointPublish, SubscriptionManager},
 };
-
-use super::CronJob;
+use anyhow::bail;
+use itertools::Itertools;
+use serenity::async_trait;
+use sqlx::PgPool;
+use std::{
+    collections::{HashMap, HashSet},
+    process::Stdio,
+    time::Duration,
+};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
+    process::Command,
+};
+use tokio_util::sync::CancellationToken;
 
 pub struct RefreshTravelStates {
     config: StasisConfig,
     pool: PgPool,
+    subscriptions: SubscriptionManager,
     connector_path: std::path::PathBuf,
 }
 
 impl RefreshTravelStates {
-    pub fn new(config: StasisConfig, pool: PgPool) -> std::io::Result<Self> {
+    pub fn new(
+        config: StasisConfig,
+        pool: PgPool,
+        subscriptions: SubscriptionManager,
+    ) -> std::io::Result<Self> {
         let connector_path = std::env::current_exe()?.with_file_name(format!(
             "TemporalStasis.Connector{}",
             std::env::consts::EXE_SUFFIX,
@@ -38,6 +48,7 @@ impl RefreshTravelStates {
         Ok(Self {
             config,
             pool,
+            subscriptions,
             connector_path,
         })
     }
@@ -62,15 +73,35 @@ impl CronJob for RefreshTravelStates {
                 &self.config.dc_token_cache.ttl.to_string(),
             ])
             .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .spawn()?;
-        let stdout = cmd.stdout.take().unwrap();
+        let mut stdout = cmd.stdout.take().unwrap();
+        let mut stderr = cmd.stderr.take().unwrap();
         let status = await_cancellable!(cmd.wait(), stop_signal, {
             cmd.kill().await?;
         });
         drop(cmd);
 
         if !status.success() {
-            bail!("non-zero exit code: {}", status);
+            let mut stdout_buf = String::new();
+            let mut stderr_buf = String::new();
+
+            if let Err(e) = stdout.read_to_string(&mut stdout_buf).await {
+                log::error!("Failed to read stdout: {}", e);
+                stdout_buf = "<failed to read stdout>".to_string();
+            }
+
+            if let Err(e) = stderr.read_to_string(&mut stderr_buf).await {
+                log::error!("Failed to read stderr: {}", e);
+                stderr_buf = "<failed to read stderr>".to_string();
+            }
+
+            bail!(
+                "non-zero exit code: {}\nstdout:\n{}\nstderr:\n{}",
+                status,
+                stdout_buf,
+                stderr_buf
+            );
         }
 
         let mut out = BufReader::new(stdout).lines();
@@ -143,15 +174,43 @@ impl CronJob for RefreshTravelStates {
                 .iter()
                 .filter(|w| w.1.prohibit != 0)
                 .map(|w| w.0)
+                .sorted_unstable()
                 .collect::<Vec<_>>()
         );
 
-        db::add_travel_states(
-            &self.pool,
-            travel_map.into_values().collect(),
-            travel_time.unwrap(),
-        )
-        .await?;
+        let travel_states: Vec<DCTravelWorldInfo> = travel_map.values().cloned().collect();
+
+        db::add_travel_states(&self.pool, travel_states.clone(), travel_time.unwrap()).await?;
+
+        let travel_params = get_travel_params().expect("Failed to get travel params");
+        let mut published_datacenters = HashSet::new();
+        for world in &travel_states {
+            if world.prohibit == 0 {
+                if let Some(world_param) = travel_params.get_world_by_id(world.id) {
+                    if published_datacenters.insert(world_param.datacenter.id) {
+                        self.subscriptions
+                            .publish_endpoint(EndpointPublish::Datacenter {
+                                id: world_param.datacenter.id,
+                                data: &world_param.datacenter,
+                                worlds: travel_params
+                                    .worlds
+                                    .iter()
+                                    .filter(|w| w.datacenter.id == world_param.datacenter.id)
+                                    .map(|w| (w, travel_map.get(&w.id).unwrap().prohibit != 0))
+                                    .collect::<Vec<_>>(),
+                            })
+                            .await?;
+                    }
+                    self.subscriptions
+                        .publish_endpoint(EndpointPublish::World {
+                            id: world.id,
+                            data: world_param,
+                        })
+                        .await?;
+                }
+            }
+        }
+
         Ok(())
     }
 }

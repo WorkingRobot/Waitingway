@@ -1,8 +1,15 @@
-use crate::{config::DiscordConfig, db};
+use super::{
+    commands::command_list,
+    travel_param,
+    utils::{COLOR_ERROR, COLOR_IN_QUEUE, COLOR_SUCCESS},
+};
+use crate::{
+    config::DiscordConfig, db, discord::utils::format_duration, subscriptions::SubscriptionManager,
+};
 use rand::seq::SliceRandom;
 use serenity::{
     all::{
-        ActivityData, ChannelId, Color, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
+        ActivityData, ChannelId, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
         DiscordJsonError, EditMessage, ErrorResponse, EventHandler, FormattedTimestamp,
         FormattedTimestampStyle, GatewayIntents, Http, HttpError, Member, Message, MessageId,
         ShardManager, Timestamp, UserId,
@@ -17,10 +24,6 @@ use tokio::{
     task::JoinHandle,
 };
 
-const COLOR_SUCCESS: Color = Color::from_rgb(16, 240, 12);
-const COLOR_ERROR: Color = Color::from_rgb(235, 96, 94);
-const COLOR_IN_QUEUE: Color = Color::BLITZ_BLUE;
-
 #[derive(Clone)]
 pub struct DiscordClient {
     imp: Arc<DiscordClientImp>,
@@ -29,6 +32,7 @@ pub struct DiscordClient {
 struct DiscordClientImp {
     config: DiscordConfig,
     db: PgPool,
+    subscriptions: OnceLock<SubscriptionManager>,
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
     shards: OnceLock<Arc<ShardManager>>,
@@ -38,12 +42,17 @@ struct DiscordClientImp {
 
 impl DiscordClient {
     pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
-        let intents = GatewayIntents::GUILD_MEMBERS;
+        let intents = GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS;
+
+        travel_param::init_travel_params(&db)
+            .await
+            .expect("Error initializing travel params");
 
         let ret = Self {
             imp: Arc::new(DiscordClientImp {
                 config,
                 db,
+                subscriptions: OnceLock::new(),
                 client: OnceLock::new(),
                 http: OnceLock::new(),
                 shards: OnceLock::new(),
@@ -53,10 +62,30 @@ impl DiscordClient {
         };
 
         ret.imp
+            .subscriptions
+            .set(SubscriptionManager::new(ret.clone()))
+            .unwrap_or_else(|_| unreachable!());
+
+        let framework_client = ret.clone();
+        let framework = poise::Framework::builder()
+            .options(poise::FrameworkOptions {
+                commands: command_list(),
+                ..Default::default()
+            })
+            .setup(|ctx, _ready, framework| {
+                Box::pin(async move {
+                    poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                    Ok(framework_client)
+                })
+            })
+            .build();
+
+        ret.imp
             .client
             .set(RwLock::new(
                 Client::builder(&ret.imp.config.bot_token, intents)
                     .event_handler(ret.clone())
+                    .framework(framework)
                     .await
                     .expect("Error creating client"),
             ))
@@ -142,15 +171,19 @@ impl DiscordClient {
         self.imp.client.get().unwrap().write().await
     }
 
-    fn http(&self) -> &Http {
+    pub fn http(&self) -> &Http {
         self.imp.http.get().unwrap()
     }
 
-    fn db(&self) -> &PgPool {
+    pub fn db(&self) -> &PgPool {
         &self.imp.db
     }
 
-    fn config(&self) -> &DiscordConfig {
+    pub fn subscriptions(&self) -> &SubscriptionManager {
+        self.imp.subscriptions.get().unwrap()
+    }
+
+    pub fn config(&self) -> &DiscordConfig {
         &self.imp.config
     }
 
@@ -482,23 +515,5 @@ impl EventHandler for DiscordClient {
                 ),
             }
         }
-    }
-}
-
-fn format_duration(duration: time::Duration) -> String {
-    let seconds = duration.whole_seconds();
-    let minutes = seconds / 60;
-    let seconds = seconds % 60;
-    let hours = minutes / 60;
-    let minutes = minutes % 60;
-    let days = hours / 24;
-    let hours = hours % 24;
-
-    if days > 0 {
-        format!("{}d {:02}:{:02}:{:02}", days, hours, minutes, seconds)
-    } else if hours > 0 {
-        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
-    } else {
-        format!("{:02}:{:02}", minutes, seconds)
     }
 }

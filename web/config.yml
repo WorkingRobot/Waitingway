@@ -1,4 +1,4 @@
-log_filter: info,tracing::span=warn,serenity::http=warn
+log_filter: info,tracing::span=warn,serenity::gateway::shard=warn,serenity::http=warn
 server_addr: 0.0.0.0:3000
 metrics_server_addr: 0.0.0.0:4000
 database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway
@@ -27,6 +27,8 @@ stasis:
     ttl: 43200 # 12 hours
 discord:
   redirect_uri: http://localhost:3000/api/v1/oauth/callback
+  green_check_emoji: "<:green_check:1327530017315487850>"
+  red_cross_emoji: "<:red_cross:1327522180308664340>"
   queue_size_dm_threshold: 0
   connected_role_id: 1236758675385749534
   activity_update_interval: 60

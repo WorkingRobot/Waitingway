@@ -25,6 +25,8 @@ pub struct DiscordConfig {
     pub bot_token: String,
     pub guild_id: GuildId,
     pub guild_invite_code: String,
+    pub green_check_emoji: String,
+    pub red_cross_emoji: String,
     pub log_channel_id: ChannelId,
     pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,

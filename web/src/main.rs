@@ -8,6 +8,7 @@ mod middleware;
 mod models;
 mod oauth;
 mod routes;
+mod subscriptions;
 
 use crate::discord::DiscordClient;
 use ::config::{Config, Environment, File, FileFormat};
@@ -73,20 +74,24 @@ async fn main() -> Result<(), ServerError> {
         .build()
         .expect("Error creating reqwest client");
 
+    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
+
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));
 
     let refresh_travel_states_token = crons::create_cron_job(
-        crons::RefreshTravelStates::new(config.stasis.clone(), db_pool.clone())
-            .expect("Error creating travel states cron job"),
+        crons::RefreshTravelStates::new(
+            config.stasis.clone(),
+            db_pool.clone(),
+            discord_bot.subscriptions().clone(),
+        )
+        .expect("Error creating travel states cron job"),
     );
 
     let refresh_world_states_token = crons::create_cron_job(crons::RefreshWorldStatuses::new(
         web_client.clone(),
         db_pool.clone(),
     ));
-
-    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
 
     let prometheus_registry = Registry::new();
 

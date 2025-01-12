@@ -1,0 +1,75 @@
+use super::utils::{autocomplete_world, create_queue_embed};
+use super::Context;
+use super::Error;
+use crate::{
+    db,
+    discord::travel_param::{get_travel_params, TravelDatacenterParam, TravelWorldParam},
+};
+use poise::CreateReply;
+
+/// Check queue times for an entire datacenter or for a specific world
+#[poise::command(slash_command, rename = "queue")]
+pub async fn queue_times(
+    ctx: Context<'_>,
+    #[description = "Datacenter to check for"] datacenter: Option<TravelDatacenterParam>,
+    #[description = "World to check for"]
+    #[autocomplete = "autocomplete_world"]
+    world: Option<u16>,
+) -> Result<(), Error> {
+    match (datacenter, world) {
+        (Some(dc), _) => queue_times_dc(ctx, dc).await,
+        (None, Some(world)) => {
+            queue_times_world(
+                ctx,
+                get_travel_params()
+                    .and_then(|v| v.get_world_by_id(world))
+                    .cloned()
+                    .ok_or(Error::UnknownWorld)?,
+            )
+            .await
+        }
+        (None, None) => Err(Error::NoDestination),
+    }
+}
+
+async fn queue_times_dc(ctx: Context<'_>, datacenter: TravelDatacenterParam) -> Result<(), Error> {
+    let client = ctx.data();
+    let db = client.db();
+    let estimates = db::get_queue_estimates_by_datacenter_id(db, vec![datacenter.id]).await?;
+    let travel_data = get_travel_params().ok_or(Error::UnknownWorld)?;
+    let datacenter = travel_data
+        .get_datacenter_by_id(datacenter.id)
+        .ok_or(Error::UnknownDatacenter)?;
+    let worlds = estimates
+        .into_iter()
+        .map(|estimate| {
+            travel_data
+                .get_world_by_id(estimate.world_id)
+                .map(|v| (v, estimate))
+                .ok_or(Error::UnknownWorld)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let embed = create_queue_embed(&datacenter.name(), worlds);
+
+    ctx.send(CreateReply::default().reply(true).embed(embed))
+        .await?;
+
+    Ok(())
+}
+
+async fn queue_times_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), Error> {
+    let client = ctx.data();
+    let db = client.db();
+    let estimate = db::get_queue_estimates_by_world_id(db, vec![world.id])
+        .await?
+        .pop()
+        .ok_or(Error::UnknownWorld)?;
+
+    let embed = create_queue_embed(&world.name(), vec![(&world, estimate)]);
+
+    ctx.send(CreateReply::default().reply(true).embed(embed))
+        .await?;
+
+    Ok(())
+}
