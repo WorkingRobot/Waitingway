@@ -18,8 +18,8 @@ pub enum Error {
     Serenity(#[from] serenity::Error),
     #[error("Database error")]
     Database(#[from] sqlx::Error),
-    #[error("No destination provided")]
-    NoDestination,
+    #[error("Subscription error")]
+    Subscription(#[from] crate::subscriptions::Error),
     #[error("Unknown world")]
     UnknownWorld,
     #[error("Unknown datacenter")]

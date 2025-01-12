@@ -51,10 +51,17 @@ pub struct StasisCache {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct RedisConfig {
+    pub url: String,
+    pub namespace: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub server_addr: String,
     pub metrics_server_addr: String,
     pub database_url: String,
+    pub redis: RedisConfig,
     pub max_connections_per_user: u32,
     pub cache_ttl_ms: u64,
     pub discord: DiscordConfig,

@@ -7,6 +7,7 @@ use crate::{
     config::DiscordConfig, db, discord::utils::format_duration, subscriptions::SubscriptionManager,
 };
 use rand::seq::SliceRandom;
+use redis::aio::ConnectionManager;
 use serenity::{
     all::{
         ActivityData, ChannelId, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
@@ -17,7 +18,10 @@ use serenity::{
     async_trait, Client,
 };
 use sqlx::PgPool;
-use std::sync::{Arc, OnceLock};
+use std::{
+    ops::Deref,
+    sync::{Arc, OnceLock},
+};
 use time::{Duration, OffsetDateTime};
 use tokio::{
     sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
@@ -29,9 +33,18 @@ pub struct DiscordClient {
     imp: Arc<DiscordClientImp>,
 }
 
+impl std::fmt::Debug for DiscordClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DiscordClient")
+            .field("name", self.client_blocking().cache.current_user().deref())
+            .finish()
+    }
+}
+
 struct DiscordClientImp {
     config: DiscordConfig,
     db: PgPool,
+    redis: ConnectionManager,
     subscriptions: OnceLock<SubscriptionManager>,
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
@@ -41,7 +54,7 @@ struct DiscordClientImp {
 }
 
 impl DiscordClient {
-    pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
+    pub async fn new(config: DiscordConfig, db: PgPool, redis: ConnectionManager) -> Self {
         let intents = GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS;
 
         travel_param::init_travel_params(&db)
@@ -52,6 +65,7 @@ impl DiscordClient {
             imp: Arc::new(DiscordClientImp {
                 config,
                 db,
+                redis,
                 subscriptions: OnceLock::new(),
                 client: OnceLock::new(),
                 http: OnceLock::new(),
@@ -61,15 +75,15 @@ impl DiscordClient {
             }),
         };
 
-        ret.imp
-            .subscriptions
-            .set(SubscriptionManager::new(ret.clone()))
-            .unwrap_or_else(|_| unreachable!());
-
         let framework_client = ret.clone();
         let framework = poise::Framework::builder()
             .options(poise::FrameworkOptions {
                 commands: command_list(),
+                on_error: |error| {
+                    Box::pin(async move {
+                        log::error!("Error in command: {:?}", error);
+                    })
+                },
                 ..Default::default()
             })
             .setup(|ctx, _ready, framework| {
@@ -163,6 +177,10 @@ impl DiscordClient {
         self.imp.shards.get().unwrap().shutdown_all().await;
     }
 
+    fn client_blocking(&self) -> RwLockReadGuard<Client> {
+        self.imp.client.get().unwrap().blocking_read()
+    }
+
     async fn client(&self) -> RwLockReadGuard<Client> {
         self.imp.client.get().unwrap().read().await
     }
@@ -179,8 +197,20 @@ impl DiscordClient {
         &self.imp.db
     }
 
+    pub fn redis(&self) -> &ConnectionManager {
+        &self.imp.redis
+    }
+
+    pub fn set_subscriptions(&self, subscriptions: SubscriptionManager) {
+        self.imp
+            .subscriptions
+            .set(subscriptions)
+            .map_err(|_| ())
+            .expect("Subscriptions already set");
+    }
+
     pub fn subscriptions(&self) -> &SubscriptionManager {
-        self.imp.subscriptions.get().unwrap()
+        self.imp.subscriptions.get().expect("Subscriptions not set")
     }
 
     pub fn config(&self) -> &DiscordConfig {

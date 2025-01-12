@@ -2,6 +2,9 @@ log_filter: info,tracing::span=warn,serenity::gateway::shard=warn,serenity::http
 server_addr: 0.0.0.0:3000
 metrics_server_addr: 0.0.0.0:4000
 database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingway
+redis:
+  url: redis://localhost:6379
+  namespace: wway
 max_connections_per_user: 3
 cache_ttl_ms: 2000
 stasis:

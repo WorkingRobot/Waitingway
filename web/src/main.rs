@@ -7,6 +7,7 @@ mod discord;
 mod middleware;
 mod models;
 mod oauth;
+mod redis_utils;
 mod routes;
 mod subscriptions;
 
@@ -22,6 +23,7 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use cache::Cache;
 use prometheus::Registry;
 use std::io;
+use subscriptions::SubscriptionManager;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -69,12 +71,22 @@ async fn main() -> Result<(), ServerError> {
 
     sqlx::migrate!().run(&db_pool).await.unwrap();
 
+    let redis_conn = redis::Client::open(config.redis.url.as_ref())
+        .unwrap()
+        .get_connection_manager()
+        .await
+        .unwrap();
+
     let web_client = reqwest::Client::builder()
         .user_agent("Waitingway")
         .build()
         .expect("Error creating reqwest client");
 
-    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
+    let discord_bot =
+        DiscordClient::new(config.discord.clone(), db_pool.clone(), redis_conn.clone()).await;
+
+    let subscriptions = SubscriptionManager::new(discord_bot.clone(), config.redis.clone());
+    discord_bot.set_subscriptions(subscriptions.clone());
 
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));

@@ -1,11 +1,13 @@
 volumes:
   wway-pg-data:
     driver: local
+  wway-keydb-data:
+    driver: local
 
 services:
   db:
+    restart: unless-stopped
     image: postgres:alpine
-    restart: always
     environment:
       POSTGRES_USER: waitingway
       POSTGRES_PASSWORD: waitingway_passwd
@@ -14,3 +16,13 @@ services:
       - wway-pg-data:/var/lib/postgresql/data
     ports:
       - 5432:5432
+
+  keydb:
+    restart: unless-stopped
+    image: eqalpha/keydb:alpine
+    healthcheck:
+      test: ['CMD', 'keydb-cli', 'ping']
+    volumes:
+      - wway-keydb-data:/data
+    ports:
+      - 6379:6379
