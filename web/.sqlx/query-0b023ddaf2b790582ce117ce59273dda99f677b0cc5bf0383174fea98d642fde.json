@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT * FROM worlds",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "world_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "world_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "datacenter_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "datacenter_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "region_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 5,
+        "name": "region_abbreviation",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_cloud",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "region_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "hidden",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0b023ddaf2b790582ce117ce59273dda99f677b0cc5bf0383174fea98d642fde"
+}
