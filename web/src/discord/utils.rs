@@ -10,6 +10,10 @@ pub const COLOR_DC_PROHIBITED: Color = colours::css::DANGER;
 pub const COLOR_DC_MIXED: Color = colours::css::WARNING;
 
 pub fn format_duration(duration: time::Duration) -> String {
+    if duration.is_zero() {
+        return "Instant".to_string();
+    }
+
     let seconds = duration.whole_seconds();
     let minutes = seconds / 60;
     let seconds = seconds % 60;
@@ -19,11 +23,13 @@ pub fn format_duration(duration: time::Duration) -> String {
     let hours = hours % 24;
 
     if days > 0 {
-        format!("{days}d {hours:02}:{minutes:02}:{seconds:02}")
+        format!("{days}d {hours}h {minutes}m {seconds}s")
     } else if hours > 0 {
-        format!("{hours:02}:{minutes:02}:{seconds:02}")
+        format!("{hours}h {minutes}m {seconds}s")
+    } else if minutes > 0 {
+        format!("{minutes}m {seconds}s")
     } else {
-        format!("{minutes:02}:{seconds:02}")
+        format!("{seconds}s")
     }
 }
 

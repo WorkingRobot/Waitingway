@@ -136,7 +136,7 @@ pub fn create_queue_embed(
         .max()
         .unwrap_or_default();
 
-    let embed = CreateEmbed::new().title(format!("Queue times for {name}"));
+    let embed = CreateEmbed::new().title(format!("Queue Times for {name}"));
 
     let embed = if worlds.len() == 1 {
         let estimate = &worlds.first().expect("worlds is not empty").1;
@@ -162,20 +162,23 @@ pub fn create_queue_embed(
 }
 
 fn format_queue_time(estimate: &QueueEstimate, add_updated: bool) -> String {
-    format!(
-        "Size: {}\nTime: {}{}",
-        estimate.last_size,
-        format_duration(time::Duration::seconds_f64(estimate.last_duration)),
-        if add_updated {
-            format!(
-                "\nUpdated: {}",
-                FormattedTimestamp::new(
-                    estimate.last_update.0.into(),
-                    Some(FormattedTimestampStyle::RelativeTime)
-                ),
-            )
-        } else {
-            String::new()
-        }
-    )
+    let mut result = if estimate.last_duration == 0f64 && estimate.last_size == 0 {
+        return "Instant".to_string();
+    } else {
+        format!(
+            "Size: {}\nTime: {}",
+            estimate.last_size,
+            format_duration(time::Duration::seconds_f64(estimate.last_duration))
+        )
+    };
+    if add_updated {
+        result.push_str(&format!(
+            "\nUpdated {}",
+            FormattedTimestamp::new(
+                estimate.last_update.0.into(),
+                Some(FormattedTimestampStyle::RelativeTime)
+            ),
+        ));
+    }
+    result
 }
