@@ -20,18 +20,11 @@ pub trait RedisKey: Serialize {
 pub trait RedisValue: Serialize + for<'de> Deserialize<'de> {
     #[inline]
     fn to_value(&self) -> postcard::Result<Vec<u8>> {
-        let ret = postcard::to_allocvec(self);
-        if cfg!(debug_assertions) {
-            log::info!("Serialized value: {:?}", ret);
-        }
-        ret
+        postcard::to_allocvec(self)
     }
 
     #[inline]
     fn from_value(value: &[u8]) -> postcard::Result<Self> {
-        if cfg!(debug_assertions) {
-            log::info!("Deserializing value: {:?}", value);
-        }
         postcard::from_bytes(value)
     }
 }

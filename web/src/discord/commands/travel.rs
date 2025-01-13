@@ -8,7 +8,7 @@ use crate::{
     db,
     discord::travel_param::{get_travel_params, TravelDatacenterParam},
 };
-use ::serenity::all::ReactionType;
+use ::serenity::all::{EditMessage, ReactionType};
 use poise::{serenity_prelude as serenity, CreateReply};
 
 #[poise::command(slash_command, subcommands("datacenter", "world"))]
@@ -113,24 +113,40 @@ async fn world(
         vec![]
     };
 
-    ctx.send(
-        CreateReply::default()
-            .reply(true)
-            .embed(embed)
-            .components(components),
-    )
-    .await?;
+    let reply = ctx
+        .send(
+            CreateReply::default()
+                .reply(true)
+                .embed(embed)
+                .components(components),
+        )
+        .await?;
 
     if is_prohibited {
-        while let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
+        if let Some(interaction) = reply
+            .message()
+            .await?
+            .await_component_interaction(ctx)
+            .author_id(ctx.author().id)
             .timeout(std::time::Duration::from_secs(120))
-            .filter(move |mci| mci.data.custom_id == "set_reminder")
             .await
         {
-            log::info!("MCI Interaction: {:?}", mci);
-            subscribe_world(ctx, world.clone()).await?;
-            mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
+            if interaction.data.custom_id == "set_reminder" {
+                subscribe_world(ctx, world).await?;
+            }
+            interaction
+                .create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
                 .await?;
+        } else {
+            let mut msg = reply.into_message().await?;
+            if !msg
+                .flags
+                .unwrap_or_default()
+                .contains(serenity::MessageFlags::EPHEMERAL)
+            {
+                msg.edit(ctx.http(), EditMessage::default().components(vec![]))
+                    .await?;
+            }
         }
     }
 

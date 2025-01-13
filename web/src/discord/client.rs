@@ -6,13 +6,17 @@ use super::{
 use crate::{
     config::DiscordConfig, db, discord::utils::format_duration, subscriptions::SubscriptionManager,
 };
+use futures_util::future::try_join_all;
+use itertools::Itertools;
 use rand::seq::SliceRandom;
 use redis::aio::ConnectionManager;
 use serenity::{
     all::{
-        ActivityData, ChannelId, Context, CreateEmbed, CreateEmbedFooter, CreateMessage,
-        DiscordJsonError, EditMessage, ErrorResponse, EventHandler, FormattedTimestamp,
-        FormattedTimestampStyle, GatewayIntents, Http, HttpError, Member, Message, MessageId,
+        ActionRowComponent, ActivityData, ChannelId, ComponentInteractionDataKind, Context,
+        CreateEmbed, CreateEmbedFooter, CreateInteractionResponse,
+        CreateInteractionResponseMessage, CreateMessage, DiscordJsonError, EditMessage,
+        ErrorResponse, EventHandler, FormattedTimestamp, FormattedTimestampStyle, GatewayIntents,
+        Http, HttpError, Interaction, Member, Mentionable, Message, MessageId, RoleId,
         ShardManager, Timestamp, UserId,
     },
     async_trait, Client,
@@ -86,9 +90,25 @@ impl DiscordClient {
                 },
                 ..Default::default()
             })
-            .setup(|ctx, _ready, framework| {
+            .setup(|ctx, _ready, _framework| {
                 Box::pin(async move {
-                    poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                    let is_internal =
+                        |c: &poise::Command<_, _>| c.identifying_name.starts_with("internal");
+
+                    poise::builtins::register_globally(
+                        ctx,
+                        &command_list()
+                            .into_iter()
+                            .filter(|c| !is_internal(c))
+                            .collect_vec(),
+                    )
+                    .await?;
+                    poise::builtins::register_in_guild(
+                        ctx,
+                        &command_list().into_iter().filter(is_internal).collect_vec(),
+                        framework_client.config().guild_id,
+                    )
+                    .await?;
                     Ok(framework_client)
                 })
             })
@@ -543,6 +563,120 @@ impl EventHandler for DiscordClient {
                     member.user.id,
                     e
                 ),
+            }
+        }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let interaction = match interaction.into_message_component() {
+            Some(i) => i,
+            None => return,
+        };
+        match interaction.guild_id {
+            Some(id) if id == self.config().guild_id => id,
+            _ => return,
+        };
+        if interaction.data.custom_id != "role_selector" {
+            return;
+        }
+        if interaction.message.author.id != ctx.cache.current_user().id {
+            return;
+        }
+
+        if let ComponentInteractionDataKind::StringSelect { values } = &interaction.data.kind {
+            let values = values
+                .iter()
+                .map(|v| v.parse::<u64>().ok().map(RoleId::new))
+                .collect::<Option<Vec<_>>>();
+            let values = match values {
+                Some(v) => v,
+                None => return,
+            };
+
+            let member = match &interaction.member {
+                Some(m) => m,
+                None => return,
+            };
+            let options = interaction.message.components.first().and_then(|c| {
+                c.components.iter().find_map(|r| match r {
+                    ActionRowComponent::SelectMenu(menu) => menu
+                        .options
+                        .iter()
+                        .map(|o| o.value.as_str().parse::<u64>().ok().map(RoleId::new))
+                        .collect::<Option<Vec<_>>>(),
+                    _ => None,
+                })
+            });
+            let options = match options {
+                Some(o) => o,
+                None => return,
+            };
+            let mut additions = vec![];
+            let mut removals = vec![];
+            for option in options {
+                if values.contains(&option) {
+                    // Add role if not already present
+                    if !member.roles.contains(&option) {
+                        additions.push(option);
+                    }
+                } else {
+                    // Remove role if present
+                    if member.roles.contains(&option) {
+                        removals.push(option);
+                    }
+                }
+            }
+
+            let futures_a = additions.iter().map(|r| member.add_role(&ctx.http, r));
+            let futures_b = removals.iter().map(|r| member.remove_role(&ctx.http, r));
+            let futures = tokio::try_join!(try_join_all(futures_a), try_join_all(futures_b));
+            match futures {
+                Ok(_) => {
+                    log::info!(
+                        "Gave roles {:?} and removed roles {:?} to user {}",
+                        additions,
+                        removals,
+                        interaction.user.id
+                    );
+                }
+                Err(e) => {
+                    log::error!("Error modifying roles: {:?}", e);
+                    return;
+                }
+            }
+            match interaction
+                .create_response(
+                    &ctx.http,
+                    CreateInteractionResponse::Message(
+                        CreateInteractionResponseMessage::new()
+                            .embed(
+                                CreateEmbed::new()
+                                    .title("Updated Roles")
+                                    .description(
+                                        additions
+                                            .into_iter()
+                                            .map(|r| format!("**+** {}", r.mention()))
+                                            .chain(
+                                                removals
+                                                    .into_iter()
+                                                    .map(|r| format!("**-** {}", r.mention())),
+                                            )
+                                            .join("\n"),
+                                    )
+                                    .color(COLOR_SUCCESS),
+                            )
+                            .ephemeral(true),
+                    ),
+                )
+                .await
+            {
+                Ok(_) => {
+                    log::info!("Gave roles {:?} to user {}", values, interaction.user.id);
+                }
+                Err(e) => {
+                    log::error!("Error acknowledging interaction: {:?}", e);
+                    return;
+                }
             }
         }
     }

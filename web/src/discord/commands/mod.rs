@@ -1,5 +1,6 @@
 use super::DiscordClient;
 
+mod admin;
 mod queue_times;
 mod subscribe;
 mod travel;
@@ -24,6 +25,8 @@ pub enum Error {
     UnknownWorld,
     #[error("Unknown datacenter")]
     UnknownDatacenter,
+    #[error("Admin error")]
+    Admin,
 }
 
 pub fn command_list() -> Vec<Command> {
@@ -32,5 +35,6 @@ pub fn command_list() -> Vec<Command> {
         queue_times::queue_times(),
         subscribe::subscribe(),
         unsubscribe::unsubscribe(),
+        admin::admin(),
     ]
 }
