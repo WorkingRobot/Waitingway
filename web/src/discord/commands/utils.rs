@@ -163,7 +163,7 @@ pub fn create_queue_embed(
 
 fn format_queue_time(estimate: &QueueEstimate, add_updated: bool) -> String {
     let mut result = if estimate.last_duration == 0f64 && estimate.last_size == 0 {
-        return "Instant".to_string();
+        "Instant".to_string()
     } else {
         format!(
             "Size: {}\nTime: {}",
