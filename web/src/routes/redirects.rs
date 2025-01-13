@@ -1,13 +1,17 @@
-use actix_web::{dev::HttpServiceFactory, get, http::header, HttpResponse, Result};
+use crate::config::Config;
+use actix_web::{dev::HttpServiceFactory, get, http::header, web, HttpResponse, Result};
 
 pub fn service() -> impl HttpServiceFactory {
     (discord, funding, github)
 }
 
 #[get("/discord/")]
-async fn discord() -> Result<HttpResponse> {
+async fn discord(config: web::Data<Config>) -> Result<HttpResponse> {
     Ok(HttpResponse::MovedPermanently()
-        .insert_header((header::LOCATION, "https://discord.gg/3PGKKWYTGc"))
+        .insert_header((
+            header::LOCATION,
+            format!("https://discord.gg/{}", config.discord.guild_invite_code),
+        ))
         .finish())
 }
 
