@@ -2,7 +2,7 @@ FROM rust:alpine AS chef
 USER root
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1
 RUN apk add musl-dev dotnet9-sdk
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
 FROM chef AS planner
