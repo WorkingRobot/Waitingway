@@ -34,6 +34,7 @@ async fn datacenter(
     let travel_data = get_travel_params().ok_or(Error::UnknownWorld)?;
     let datacenter = travel_data
         .get_datacenter_by_id(datacenter.id)
+        .cloned()
         .ok_or(Error::UnknownDatacenter)?;
     let is_all_prohibited = status.iter().all(|(_, status)| *status);
     let worlds = status
@@ -59,23 +60,38 @@ async fn datacenter(
         vec![]
     };
 
-    ctx.send(
-        CreateReply::default()
-            .reply(true)
-            .embed(embed)
-            .components(components),
-    )
-    .await?;
+    let reply = ctx
+        .send(
+            CreateReply::default()
+                .reply(true)
+                .embed(embed)
+                .components(components),
+        )
+        .await?;
 
     if is_all_prohibited {
-        while let Some(mci) = serenity::ComponentInteractionCollector::new(ctx.serenity_context())
+        if let Some(interaction) = reply
+            .message()
+            .await?
+            .await_component_interaction(ctx)
+            .author_id(ctx.author().id)
             .timeout(std::time::Duration::from_secs(120))
-            .filter(move |mci| mci.data.custom_id == "set_reminder")
             .await
         {
-            log::info!("MCI Interaction: {:?}", mci);
-            subscribe_datacenter(ctx, datacenter.clone()).await?;
-            mci.create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
+            if interaction.data.custom_id == "set_reminder" {
+                subscribe_datacenter(ctx, datacenter, true).await?;
+            }
+            interaction
+                .create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
+                .await?;
+        }
+        let mut msg = reply.into_message().await?;
+        if !msg
+            .flags
+            .unwrap_or_default()
+            .contains(serenity::MessageFlags::EPHEMERAL)
+        {
+            msg.edit(ctx.http(), EditMessage::default().components(vec![]))
                 .await?;
         }
     }
@@ -137,21 +153,20 @@ async fn world(
             .await
         {
             if interaction.data.custom_id == "set_reminder" {
-                subscribe_world(ctx, world).await?;
+                subscribe_world(ctx, world, true).await?;
             }
             interaction
                 .create_response(ctx, serenity::CreateInteractionResponse::Acknowledge)
                 .await?;
-        } else {
-            let mut msg = reply.into_message().await?;
-            if !msg
-                .flags
-                .unwrap_or_default()
-                .contains(serenity::MessageFlags::EPHEMERAL)
-            {
-                msg.edit(ctx.http(), EditMessage::default().components(vec![]))
-                    .await?;
-            }
+        }
+        let mut msg = reply.into_message().await?;
+        if !msg
+            .flags
+            .unwrap_or_default()
+            .contains(serenity::MessageFlags::EPHEMERAL)
+        {
+            msg.edit(ctx.http(), EditMessage::default().components(vec![]))
+                .await?;
         }
     }
 

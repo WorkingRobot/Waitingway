@@ -42,7 +42,7 @@ impl RefreshTravelStates {
         if !connector_path.exists() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Connector not found: {:?}", connector_path),
+                format!("Connector not found: {connector_path:?}"),
             ));
         }
         Ok(Self {
@@ -165,18 +165,6 @@ impl CronJob for RefreshTravelStates {
 
         if travel_map.is_empty() || travel_time.is_none() {
             bail!("No data");
-        }
-
-        if cfg!(debug_assertions) {
-            travel_map.insert(
-                23,
-                DCTravelWorldInfo {
-                    id: 23,
-                    prohibit: time::OffsetDateTime::now_utc().minute() as u8 % 2,
-                    travel: 1,
-                    accept: 1,
-                },
-            );
         }
 
         log::info!("Travel time: {:?} sec", travel_time.unwrap());

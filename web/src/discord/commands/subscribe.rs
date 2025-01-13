@@ -29,12 +29,13 @@ async fn datacenter(
     ctx: Context<'_>,
     #[description = "Datacenter to remind for"] datacenter: TravelDatacenterParam,
 ) -> Result<(), Error> {
-    subscribe_datacenter(ctx, datacenter).await
+    subscribe_datacenter(ctx, datacenter, false).await
 }
 
 pub async fn subscribe_datacenter(
     ctx: Context<'_>,
     datacenter: TravelDatacenterParam,
+    ephemeral: bool,
 ) -> Result<(), Error> {
     let client = ctx.data();
     let db = client.db();
@@ -79,8 +80,13 @@ pub async fn subscribe_datacenter(
                 .color(COLOR_ERROR)
         }
     };
-    ctx.send(CreateReply::default().reply(true).embed(response))
-        .await?;
+    ctx.send(
+        CreateReply::default()
+            .reply(true)
+            .embed(response)
+            .ephemeral(ephemeral),
+    )
+    .await?;
     Ok(())
 }
 
@@ -96,10 +102,14 @@ async fn world(
         .and_then(|v| v.get_world_by_id(world))
         .cloned()
         .ok_or(Error::UnknownWorld)?;
-    subscribe_world(ctx, world).await
+    subscribe_world(ctx, world, false).await
 }
 
-pub async fn subscribe_world(ctx: Context<'_>, world: TravelWorldParam) -> Result<(), Error> {
+pub async fn subscribe_world(
+    ctx: Context<'_>,
+    world: TravelWorldParam,
+    ephemeral: bool,
+) -> Result<(), Error> {
     let client = ctx.data();
     let db = client.db();
     let config = client.config();
@@ -133,8 +143,13 @@ pub async fn subscribe_world(ctx: Context<'_>, world: TravelWorldParam) -> Resul
                 .color(COLOR_ERROR)
         }
     };
-    ctx.send(CreateReply::default().reply(true).embed(response))
-        .await?;
+    ctx.send(
+        CreateReply::default()
+            .reply(true)
+            .embed(response)
+            .ephemeral(ephemeral),
+    )
+    .await?;
 
     Ok(())
 }
