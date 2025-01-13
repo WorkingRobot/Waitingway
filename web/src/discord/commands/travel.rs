@@ -11,7 +11,12 @@ use crate::{
 use ::serenity::all::{EditMessage, ReactionType};
 use poise::{serenity_prelude as serenity, CreateReply};
 
-#[poise::command(slash_command, subcommands("datacenter", "world"))]
+#[poise::command(
+    slash_command,
+    install_context = "Guild|User",
+    interaction_context = "Guild|BotDm|PrivateChannel",
+    subcommands("datacenter", "world")
+)]
 pub async fn travel(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

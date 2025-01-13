@@ -32,7 +32,9 @@ itertools = "0.14.0"
 konst = "0.3.16"
 log = "0.4.22"
 mini-moka = "0.10.3"
-poise = { version = "0.6.1", default-features = false, features = ["cache"] }
+poise = { version = "0.6.1", default-features = false, features = [
+    "cache",
+], git = "https://github.com/serenity-rs/poise.git", rev = "80a3a9c3ca1629725f0fa4ec98372d39cf36f6b6" }
 postcard = { version = "1.1.1", default-features = false, features = [
     "use-std",
 ] }

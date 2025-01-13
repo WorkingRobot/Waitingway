@@ -13,6 +13,8 @@ use poise::CreateReply;
 
 #[poise::command(
     slash_command,
+    install_context = "Guild|User",
+    interaction_context = "Guild|BotDm|PrivateChannel",
     rename = "remindoff",
     subcommands("datacenter", "world")
 )]

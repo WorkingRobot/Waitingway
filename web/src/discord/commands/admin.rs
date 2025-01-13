@@ -17,8 +17,11 @@ pub enum Subcommand {
 
 #[poise::command(
     slash_command,
+    install_context = "Guild",
+    interaction_context = "Guild",
     required_permissions = "ADMINISTRATOR",
     default_member_permissions = "ADMINISTRATOR",
+    identifying_name = "internal_admin",
     owners_only,
     guild_only,
     ephemeral

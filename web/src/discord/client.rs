@@ -92,20 +92,15 @@ impl DiscordClient {
             })
             .setup(|ctx, _ready, _framework| {
                 Box::pin(async move {
-                    let is_internal =
-                        |c: &poise::Command<_, _>| c.identifying_name.starts_with("internal");
-
-                    poise::builtins::register_globally(
-                        ctx,
-                        &command_list()
-                            .into_iter()
-                            .filter(|c| !is_internal(c))
-                            .collect_vec(),
-                    )
-                    .await?;
+                    let (global_commands, internal_commands): (Vec<_>, Vec<_>) = command_list()
+                        .into_iter()
+                        .partition(|c| !c.identifying_name.starts_with("internal"));
+                    log::info!("Registering global commands: {global_commands:?}");
+                    poise::builtins::register_globally(ctx, &global_commands).await?;
+                    log::info!("Registering internal guild commands: {internal_commands:?}");
                     poise::builtins::register_in_guild(
                         ctx,
-                        &command_list().into_iter().filter(is_internal).collect_vec(),
+                        &internal_commands,
                         framework_client.config().guild_id,
                     )
                     .await?;

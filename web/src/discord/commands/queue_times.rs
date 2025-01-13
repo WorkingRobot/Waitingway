@@ -13,7 +13,11 @@ pub async fn queue_times(_: Context<'_>) -> Result<(), Error> {
 }
 
 /// Check queue times for a datacenter
-#[poise::command(slash_command)]
+#[poise::command(
+    slash_command,
+    install_context = "Guild|User",
+    interaction_context = "Guild|BotDm|PrivateChannel"
+)]
 async fn datacenter(
     ctx: Context<'_>,
     #[description = "Datacenter to check for"] datacenter: TravelDatacenterParam,

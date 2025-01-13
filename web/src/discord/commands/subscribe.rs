@@ -12,7 +12,13 @@ use crate::{
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
 
-#[poise::command(slash_command, rename = "remind", subcommands("datacenter", "world"))]
+#[poise::command(
+    slash_command,
+    install_context = "Guild|User",
+    interaction_context = "Guild|BotDm|PrivateChannel",
+    rename = "remind",
+    subcommands("datacenter", "world")
+)]
 pub async fn subscribe(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
