@@ -150,8 +150,7 @@ async fn get_travel_state(
             travel_time: time,
             prohibited: states,
         })),
-        (Err(e), _) => Err(ErrorInternalServerError(e)),
-        (_, Err(e)) => Err(ErrorInternalServerError(e)),
+        (Err(e), _) | (_, Err(e)) => Err(ErrorInternalServerError(e)),
     }
 }
 
@@ -199,7 +198,7 @@ async fn get_summary(pool: web::Data<PgPool>, cache: web::Data<Cache>) -> Result
         let travel_time = db::get_travel_time(&pool);
         match tokio::join!(world_summaries, travel_time) {
             (Ok(world_summaries), Ok(travel_time)) => {
-                construct_summary(world_summaries, travel_time).map_err(ErrorInternalServerError)
+                Ok(construct_summary(&world_summaries, travel_time))
             }
             (Err(e), _) | (_, Err(e)) => Err(ErrorInternalServerError(e)),
         }
@@ -207,14 +206,11 @@ async fn get_summary(pool: web::Data<PgPool>, cache: web::Data<Cache>) -> Result
     .await
 }
 
-fn construct_summary(
-    world_summaries: Vec<WorldSummaryInfo>,
-    travel_time: i32,
-) -> anyhow::Result<Summary> {
+fn construct_summary(world_summaries: &[WorldSummaryInfo], travel_time: i32) -> Summary {
     let mut regions = HashMap::new();
     let mut datacenters = HashMap::new();
     let mut worlds = HashMap::new();
-    for world in &world_summaries {
+    for world in world_summaries {
         regions
             .entry(world.region_id)
             .or_insert_with(|| RegionSummary {
@@ -248,10 +244,10 @@ fn construct_summary(
                 queue_last_update: world.queue_time,
             });
     }
-    Ok(Summary {
+    Summary {
         average_travel_time: travel_time,
         worlds: worlds.into_values().collect(),
         datacenters: datacenters.into_values().collect(),
         regions: regions.into_values().collect(),
-    })
+    }
 }

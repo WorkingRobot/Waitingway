@@ -18,13 +18,10 @@ fn main() {
         println!("cargo::rustc-env=BUILD_TIMESTAMP=0");
     }
 
-    println!("cargo:rustc-env=PROFILE={}", profile);
+    println!("cargo:rustc-env=PROFILE={profile}");
 
     // Skip building the connector if we're running in rust-analyzer
-    if !std::env::var("_NT_SYMBOL_PATH")
-        .map(|v| v.contains("rust-analyzer"))
-        .unwrap_or_default()
-    {
+    if !std::env::var("_NT_SYMBOL_PATH").is_ok_and(|v| v.contains("rust-analyzer")) {
         println!("cargo:rerun-if-changed=TemporalStasis");
         build_connector();
     }

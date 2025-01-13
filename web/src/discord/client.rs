@@ -273,10 +273,10 @@ impl DiscordClient {
             .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}",
                 self.config().queue_size_dm_threshold,
                 if already_in_guild {
-                    format!("Thanks for joining the [official Discord server]({})! It's the best way to stay up to date with Waitingway!", invite_url)
+                    format!("Thanks for joining the [official Discord server]({invite_url})! It's the best way to stay up to date with Waitingway!")
                 }
                 else {
-                    format!("If you'd like to stay up to date with Waitingway, be sure to join the [official Discord server]({}).", invite_url)
+                    format!("If you'd like to stay up to date with Waitingway, be sure to join the [official Discord server]({invite_url}).")
                 }))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
@@ -467,15 +467,11 @@ impl DiscordClient {
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::RelativeTime)),
                 )
         } else {
-            format!(
-                "{} left the queue prematurely. If you didn't mean to, try queueing again.\n",
-                character_name
-            )
+            format!("{character_name} left the queue prematurely. If you didn't mean to, try queueing again.\n")
         };
         if let Some(error_message) = error_message {
             if let Some(error_code) = error_code {
-                description
-                    .push_str(format!("Error: {} ({})\n", error_message, error_code).as_str());
+                description.push_str(format!("Error: {error_message} ({error_code})\n").as_str());
             }
         }
         description.push('\n');
@@ -517,7 +513,7 @@ impl DiscordClient {
     ) -> CreateEmbed {
         let estimated: Timestamp = estimated.into();
         CreateEmbed::new()
-            .title(format!("{}'s Queue", character_name))
+            .title(format!("{character_name}'s Queue"))
             .description(format!(
                 "You're in position {}. You'll login {} (at {})\n\nYou'll receive a DM from me when your queue completes.",
                 position,
@@ -568,9 +564,8 @@ impl EventHandler for DiscordClient {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        let interaction = match interaction.into_message_component() {
-            Some(i) => i,
-            None => return,
+        let Some(interaction) = interaction.into_message_component() else {
+            return;
         };
         match interaction.guild_id {
             Some(id) if id == self.config().guild_id => id,
@@ -588,14 +583,10 @@ impl EventHandler for DiscordClient {
                 .iter()
                 .map(|v| v.parse::<u64>().ok().map(RoleId::new))
                 .collect::<Option<Vec<_>>>();
-            let values = match values {
-                Some(v) => v,
-                None => return,
-            };
+            let Some(values) = values else { return };
 
-            let member = match &interaction.member {
-                Some(m) => m,
-                None => return,
+            let Some(member) = &interaction.member else {
+                return;
             };
             let options = interaction.message.components.first().and_then(|c| {
                 c.components.iter().find_map(|r| match r {
@@ -607,10 +598,7 @@ impl EventHandler for DiscordClient {
                     _ => None,
                 })
             });
-            let options = match options {
-                Some(o) => o,
-                None => return,
-            };
+            let Some(options) = options else { return };
             let mut additions = vec![];
             let mut removals = vec![];
             for option in options {

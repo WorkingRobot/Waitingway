@@ -38,7 +38,7 @@ pub fn create_travel_embed(
         _ => COLOR_DC_MIXED,
     };
 
-    let embed = CreateEmbed::new().title(format!("DC Travel for {}", name));
+    let embed = CreateEmbed::new().title(format!("DC Travel for {name}"));
 
     let embed = if worlds.len() == 1 {
         let is_prohibited = worlds.first().expect("worlds is not empty").1;
@@ -136,7 +136,7 @@ pub fn create_queue_embed(
         .max()
         .unwrap_or_default();
 
-    let embed = CreateEmbed::new().title(format!("Queue times for {}", name));
+    let embed = CreateEmbed::new().title(format!("Queue times for {name}"));
 
     let embed = if worlds.len() == 1 {
         let estimate = &worlds.first().expect("worlds is not empty").1;
@@ -175,7 +175,7 @@ fn format_queue_time(estimate: &QueueEstimate, add_updated: bool) -> String {
                 ),
             )
         } else {
-            "".to_string()
+            String::new()
         }
     )
 }

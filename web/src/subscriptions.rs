@@ -214,7 +214,7 @@ impl SubscriptionManager {
                     ),
                 };
                 let embed = embed
-                    .title(format!("{} is now available for DC Travel", name))
+                    .title(format!("{name} is now available for DC Travel"))
                     .color(COLOR_SUCCESS);
 
                 UserId::new(*user_id)

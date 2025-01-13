@@ -19,11 +19,11 @@ pub fn format_duration(duration: time::Duration) -> String {
     let hours = hours % 24;
 
     if days > 0 {
-        format!("{}d {:02}:{:02}:{:02}", days, hours, minutes, seconds)
+        format!("{days}d {hours:02}:{minutes:02}:{seconds:02}")
     } else if hours > 0 {
-        format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+        format!("{hours:02}:{minutes:02}:{seconds:02}")
     } else {
-        format!("{:02}:{:02}", minutes, seconds)
+        format!("{minutes:02}:{seconds:02}")
     }
 }
 

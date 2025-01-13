@@ -28,9 +28,8 @@ pub async fn admin(
     subcommand: Subcommand,
     #[channel_types("Text")] channel: serenity::GuildChannel,
 ) -> Result<(), Error> {
-    let ctx = match ctx {
-        poise::Context::Application(ctx) => ctx,
-        _ => return Err(Error::Admin),
+    let poise::Context::Application(ctx) = ctx else {
+        return Err(Error::Admin);
     };
     match subcommand {
         Subcommand::CreateMessage => {

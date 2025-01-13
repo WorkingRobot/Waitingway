@@ -30,7 +30,7 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
         .await?;
     }
 
-    let queue_size = recap.positions.last().map(|p| p.position).unwrap_or(0);
+    let queue_size = recap.positions.last().map_or(0, |p| p.position);
 
     if queue_size == 0 {
         let queue_size_time = recap
