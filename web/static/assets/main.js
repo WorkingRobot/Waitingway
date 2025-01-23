@@ -318,8 +318,8 @@ const isScrollbarVisible = () => {
 
 const status_lookup = {
     1: ['Online', 'status-online'],
-    2: ['Offline', 'status-offline'],
-    3: ['Issues', 'status-issues']
+    2: ['Issues', 'status-issues']
+    3: ['Offline', 'status-offline'],
 };
 
 const create_lookup = {
