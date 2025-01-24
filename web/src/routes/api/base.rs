@@ -6,14 +6,10 @@ use crate::{
         DatacenterSummary, QueueSize, Recap, RegionSummary, Summary, WorldQueryFilter,
         WorldSummary, WorldSummaryInfo,
     },
+    natives::VERSION_DATA,
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
-};
-use konst::{
-    option,
-    primitive::{parse_i64, parse_u32},
-    result,
 };
 use serde::Serialize;
 use sqlx::PgPool;
@@ -34,21 +30,6 @@ pub fn service() -> impl HttpServiceFactory {
 }
 
 #[derive(Debug, Serialize)]
-struct VersionData {
-    pub name: &'static str,
-    pub authors: &'static str,
-    pub description: &'static str,
-    pub repository: &'static str,
-    pub profile: &'static str,
-    pub version: &'static str,
-    pub version_major: u32,
-    pub version_minor: u32,
-    pub version_patch: u32,
-    #[serde(with = "time::serde::rfc3339")]
-    pub build_time: time::OffsetDateTime,
-}
-
-#[derive(Debug, Serialize)]
 pub struct TravelStates {
     pub travel_time: i32,
     pub prohibited: HashMap<u16, bool>,
@@ -58,21 +39,6 @@ pub struct TravelStates {
 async fn health() -> Result<HttpResponse> {
     Ok(HttpResponse::Ok().body("OK"))
 }
-
-const VERSION_DATA: VersionData = VersionData {
-    name: env!("CARGO_PKG_NAME"),
-    authors: env!("CARGO_PKG_AUTHORS"),
-    description: env!("CARGO_PKG_DESCRIPTION"),
-    repository: env!("CARGO_PKG_REPOSITORY"),
-    profile: env!("PROFILE"),
-    version: env!("CARGO_PKG_VERSION"),
-    version_major: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MAJOR"))),
-    version_minor: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MINOR"))),
-    version_patch: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_PATCH"))),
-    build_time: option::unwrap!(result::ok!(time::OffsetDateTime::from_unix_timestamp(
-        result::unwrap_ctx!(parse_i64(env!("BUILD_TIMESTAMP")))
-    ))),
-};
 
 #[get("/version/")]
 async fn version() -> Result<HttpResponse> {

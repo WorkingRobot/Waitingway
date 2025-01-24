@@ -1,10 +1,11 @@
 use super::{
     commands::command_list,
     travel_param,
-    utils::{COLOR_ERROR, COLOR_IN_QUEUE, COLOR_SUCCESS},
+    utils::{format_duration, COLOR_ERROR, COLOR_IN_QUEUE, COLOR_SUCCESS},
 };
 use crate::{
-    config::DiscordConfig, db, discord::utils::format_duration, subscriptions::SubscriptionManager,
+    config::DiscordConfig, db, discord::utils::format_queue_duration,
+    subscriptions::SubscriptionManager,
 };
 use futures_util::future::try_join_all;
 use itertools::Itertools;
@@ -196,7 +197,7 @@ impl DiscordClient {
         self.imp.client.get().unwrap().blocking_read()
     }
 
-    async fn client(&self) -> RwLockReadGuard<Client> {
+    pub async fn client(&self) -> RwLockReadGuard<Client> {
         self.imp.client.get().unwrap().read().await
     }
 
@@ -475,14 +476,14 @@ impl DiscordClient {
                 format!(
                     "Your queue size was {}, and you were in queue for {}.",
                     queue_start_size,
-                    format_duration(duration)
+                    format_queue_duration(duration)
                 )
             } else {
                 format!(
                     "Your queue size started at {} and ended at {}, and you were in queue for {}.",
                     queue_start_size,
                     queue_end_size,
-                    format_duration(duration)
+                    format_queue_duration(duration)
                 )
             }
             .as_str(),

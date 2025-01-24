@@ -2,7 +2,7 @@ use crate::{
     config::DiscordConfig,
     discord::{
         travel_param::{get_travel_params, TravelWorldParam},
-        utils::{format_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED},
+        utils::{format_queue_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED},
     },
     models::QueueEstimate,
 };
@@ -168,7 +168,7 @@ fn format_queue_time(estimate: &QueueEstimate, add_updated: bool) -> String {
         format!(
             "Size: {}\nTime: {}",
             estimate.last_size,
-            format_duration(time::Duration::seconds_f64(estimate.last_duration))
+            format_queue_duration(time::Duration::seconds_f64(estimate.last_duration))
         )
     };
     if add_updated {

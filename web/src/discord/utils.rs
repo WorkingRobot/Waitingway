@@ -9,9 +9,17 @@ pub const COLOR_DC_ALLOWED: Color = colours::css::POSITIVE;
 pub const COLOR_DC_PROHIBITED: Color = colours::css::DANGER;
 pub const COLOR_DC_MIXED: Color = colours::css::WARNING;
 
+pub fn format_queue_duration(duration: time::Duration) -> String {
+    format_duration_default(duration, "Instant")
+}
+
 pub fn format_duration(duration: time::Duration) -> String {
+    format_duration_default(duration, "0s")
+}
+
+pub fn format_duration_default(duration: time::Duration, default: &str) -> String {
     if duration.is_zero() {
-        return "Instant".to_string();
+        return default.to_string();
     }
 
     let seconds = duration.whole_seconds();
@@ -31,6 +39,10 @@ pub fn format_duration(duration: time::Duration) -> String {
     } else {
         format!("{seconds}s")
     }
+}
+
+pub fn format_latency(duration: time::Duration) -> String {
+    format!("{:.2}ms", duration.as_seconds_f32() * 1000.)
 }
 
 pub struct Stopwatch {

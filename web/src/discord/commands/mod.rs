@@ -2,6 +2,7 @@ use super::DiscordClient;
 
 mod admin;
 mod queue_times;
+mod stats;
 mod subscribe;
 mod travel;
 mod unsubscribe;
@@ -19,6 +20,8 @@ pub enum Error {
     Serenity(#[from] serenity::Error),
     #[error("Database error")]
     Database(#[from] sqlx::Error),
+    #[error("Native error")]
+    Native(#[from] crate::natives::Error),
     #[error("Subscription error")]
     Subscription(#[from] crate::subscriptions::Error),
     #[error("Unknown world")]
@@ -35,6 +38,7 @@ pub fn command_list() -> Vec<Command> {
         queue_times::queue_times(),
         subscribe::subscribe(),
         unsubscribe::unsubscribe(),
+        stats::stats(),
         admin::admin(),
     ]
 }

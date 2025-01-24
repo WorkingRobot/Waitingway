@@ -6,6 +6,7 @@ mod db_wrappers;
 mod discord;
 mod middleware;
 mod models;
+mod natives;
 mod oauth;
 mod redis_utils;
 mod routes;
