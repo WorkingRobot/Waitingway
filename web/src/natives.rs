@@ -44,13 +44,16 @@ pub fn process_start_time() -> Result<OffsetDateTime> {
 pub fn process_start_time() -> Result<OffsetDateTime> {
     use procfs::{boot_time_secs, process::Process, ticks_per_second};
 
-    Process::myself().and_then(|p| p.stat()).and_then(|stat| {
-        let seconds_since_boot = stat.starttime as f64 / ticks_per_second() as f64;
+    Ok(Process::myself()
+        .and_then(|p| p.stat())
+        .and_then(|stat| {
+            let seconds_since_boot = stat.starttime as f64 / ticks_per_second() as f64;
 
-        Ok(OffsetDateTime::UNIX_EPOCH
-            + Duration::seconds(boot_time_secs()? as i64)
-            + Duration::seconds_f64(seconds_since_boot))
-    })
+            Ok(OffsetDateTime::UNIX_EPOCH
+                + Duration::seconds(boot_time_secs()? as i64)
+                + Duration::seconds_f64(seconds_since_boot))
+        })
+        .map_err(anyhow::Error::from)?)
 }
 
 pub fn process_uptime() -> Result<Duration> {
