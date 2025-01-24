@@ -34,7 +34,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let mut guilds: FuturesUnordered<_> = cache
         .guilds()
         .into_iter()
-        .map(async |g| {
+        .map(|g| async move {
             cache
                 .guild(g)
                 .map(|c| Ok(c.approximate_member_count.unwrap_or(c.member_count)))
