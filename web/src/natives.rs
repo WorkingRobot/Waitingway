@@ -4,7 +4,6 @@ use konst::{
     result,
 };
 use serde::Serialize;
-use std::time::SystemTime;
 use time::{Duration, OffsetDateTime};
 
 #[derive(Debug, thiserror::Error)]
@@ -16,7 +15,7 @@ pub enum Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(target_os = "windows")]
-fn process_start_time_imp() -> Result<SystemTime> {
+pub fn process_start_time() -> Result<OffsetDateTime> {
     use nt_time::FileTime;
     use windows::Win32::{
         Foundation::FILETIME,
@@ -35,28 +34,23 @@ fn process_start_time_imp() -> Result<SystemTime> {
         .map_err(anyhow::Error::from)?;
         Ok(
             FileTime::from_high_low(creation_time.dwHighDateTime, creation_time.dwLowDateTime)
-                .into(),
+                .try_into()
+                .map_err(anyhow::Error::from)?,
         )
     }
 }
 
 #[cfg(target_os = "linux")]
-fn process_start_time_imp() -> Result<SystemTime> {
-    use std::time::Duration;
-
+pub fn process_start_time() -> Result<OffsetDateTime> {
     use procfs::{boot_time_secs, process::Process, ticks_per_second};
 
     Process::myself().and_then(|p| p.stat()).and_then(|stat| {
         let seconds_since_boot = stat.starttime as f64 / ticks_per_second() as f64;
 
-        Ok(SystemTime::UNIX_EPOCH
-            + Duration::from_secs(boot_time_secs()?)
-            + Duration::from_secs_f64(seconds_since_boot))
+        Ok(OffsetDateTime::UNIX_EPOCH
+            + Duration::seconds(boot_time_secs()? as i64)
+            + Duration::seconds_f64(seconds_since_boot))
     })
-}
-
-pub fn process_start_time() -> Result<OffsetDateTime> {
-    Ok(process_start_time_imp()?.into())
 }
 
 pub fn process_uptime() -> Result<Duration> {
