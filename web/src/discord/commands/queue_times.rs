@@ -7,18 +7,20 @@ use crate::{
 };
 use poise::CreateReply;
 
-#[poise::command(slash_command, rename = "queue", subcommands("datacenter", "world"))]
+#[poise::command(
+    slash_command,
+    install_context = "Guild|User",
+    interaction_context = "Guild|BotDm|PrivateChannel",
+    rename = "queue",
+    subcommands("datacenter", "world")
+)]
 #[allow(clippy::unused_async)]
 pub async fn queue_times(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
 /// Check queue times for a datacenter
-#[poise::command(
-    slash_command,
-    install_context = "Guild|User",
-    interaction_context = "Guild|BotDm|PrivateChannel"
-)]
+#[poise::command(slash_command)]
 async fn datacenter(
     ctx: Context<'_>,
     #[description = "Datacenter to check for"] datacenter: TravelDatacenterParam,
