@@ -19,74 +19,47 @@ use super::Error;
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
     let http = ctx.http();
     let cache = ctx.cache();
-    let latency = ctx
-        .data()
-        .client()
-        .await
-        .shard_manager
-        .runners
-        .lock()
-        .await
-        .get(&ctx.serenity_context().shard_id)
-        .and_then(|r| r.latency)
-        .and_then(|r| time::Duration::try_from(r).ok());
+    let latency = time::Duration::try_from(ctx.ping().await);
     let app_info = ctx.http().get_current_application_info().await?;
+
     let mut guilds: FuturesUnordered<_> = cache
         .guilds()
         .into_iter()
         .map(|g| async move {
-            cache
-                .guild(g)
-                .map(|c| Ok(c.approximate_member_count.unwrap_or(c.member_count)))
-                .unwrap_or(
-                    g.to_partial_guild_with_counts(http)
-                        .await
-                        .map(|g| g.approximate_member_count.unwrap_or_default()),
-                )
+            let count = cache.guild(g).map(|c| c.member_count);
+            match count {
+                Some(count) => count,
+                None => g
+                    .to_partial_guild_with_counts(http)
+                    .await
+                    .ok()
+                    .and_then(|g| g.approximate_member_count)
+                    .unwrap_or_default(),
+            }
         })
         .collect();
     let mut guild_member_sum = 0;
     while let Some(count) = guilds.next().await {
-        if let Ok(count) = count {
-            guild_member_sum += count;
-        }
+        guild_member_sum += count;
     }
 
     let embed = CreateEmbed::new()
         .title("Waitingway Statistics")
         .field(
-            "Server Count",
+            "Servers",
             app_info
                 .approximate_guild_count
                 .unwrap_or_default()
                 .to_string(),
             true,
         )
-        .field("User Count", guild_member_sum.to_string(), true)
+        .field("Users", guild_member_sum.to_string(), true)
         .field(
-            "Installed User Count",
+            "Installed Users",
             app_info
                 .approximate_user_install_count
                 .unwrap_or_default()
                 .to_string(),
-            true,
-        )
-        .field(
-            "Started At",
-            FormattedTimestamp::new(
-                natives::process_start_time()?.into(),
-                Some(FormattedTimestampStyle::RelativeTime),
-            )
-            .to_string(),
-            true,
-        )
-        .field(
-            "Shard",
-            format!(
-                "{} / {}",
-                ctx.serenity_context().shard_id.get(),
-                cache.shard_count()
-            ),
             true,
         )
         .field(
@@ -98,7 +71,26 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             ),
             true,
         )
+        .field("OS Version", os_info::get().to_string(), true)
+        .field(
+            "Started At",
+            FormattedTimestamp::new(
+                natives::process_start_time()?.into(),
+                Some(FormattedTimestampStyle::RelativeTime),
+            )
+            .to_string(),
+            true,
+        )
         .field("Uptime", format_duration(natives::process_uptime()?), true)
+        .field(
+            "Shard",
+            format!(
+                "{} / {}",
+                ctx.serenity_context().shard_id.get() + 1,
+                cache.shard_count()
+            ),
+            true,
+        )
         .field(
             "Discord Latency",
             latency.map_or("Unknown".to_string(), format_latency),
