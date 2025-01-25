@@ -9,7 +9,6 @@ use crate::{
 };
 use futures_util::future::try_join_all;
 use itertools::Itertools;
-use rand::seq::SliceRandom;
 use redis::aio::ConnectionManager;
 use serenity::{
     all::{
@@ -25,10 +24,7 @@ use serenity::{
 use sqlx::PgPool;
 use std::sync::{Arc, OnceLock};
 use time::{Duration, OffsetDateTime};
-use tokio::{
-    sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
-    task::JoinHandle,
-};
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Clone)]
 pub struct DiscordClient {
@@ -52,7 +48,6 @@ struct DiscordClientImp {
     http: OnceLock<Arc<Http>>,
     shards: OnceLock<Arc<ShardManager>>,
     current_activity: RwLock<Option<ActivityData>>,
-    activity_handle: Mutex<OnceLock<JoinHandle<()>>>,
 }
 
 impl DiscordClient {
@@ -73,7 +68,6 @@ impl DiscordClient {
                 http: OnceLock::new(),
                 shards: OnceLock::new(),
                 current_activity: RwLock::new(None),
-                activity_handle: Mutex::new(OnceLock::new()),
             }),
         };
 
@@ -132,59 +126,12 @@ impl DiscordClient {
     }
 
     pub async fn start(&self) -> Result<(), serenity::Error> {
-        let client = self.clone();
-        let activity_handle = tokio::task::spawn(async move {
-            let interval = std::time::Duration::from_secs(client.config().activity_update_interval);
-            loop {
-                let next_activity: ActivityData = client
-                    .imp
-                    .config
-                    .activities
-                    .choose(&mut rand::thread_rng())
-                    .expect("No activities")
-                    .clone()
-                    .into();
-
-                let mut current_activity = client.imp.current_activity.write().await;
-
-                let should_modify = if let Some(current_activity) = current_activity.as_ref() {
-                    current_activity.kind != next_activity.kind
-                        || current_activity.name != next_activity.name
-                } else {
-                    true
-                };
-
-                if should_modify {
-                    *current_activity = Some(next_activity.clone());
-                }
-                drop(current_activity);
-                if should_modify {
-                    client.set_activity(Some(next_activity)).await;
-                }
-                tokio::time::sleep(interval).await;
-            }
-        });
-
-        self.imp
-            .activity_handle
-            .lock()
-            .await
-            .set(activity_handle)
-            .unwrap();
-
-        self.client_mut().await.start_autosharded().await?;
-
-        Ok(())
+        self.client_mut().await.start_autosharded().await
     }
 
     pub async fn stop(&self) {
         if let Err(e) = self.send_log_message("Shutting down!").await {
             log::error!("Error sending log message: {:?}", e);
-        }
-
-        if let Some(activity_handle) = self.imp.activity_handle.lock().await.take() {
-            activity_handle.abort();
-            activity_handle.await.unwrap_err();
         }
 
         self.imp.shards.get().unwrap().shutdown_all().await;
@@ -194,12 +141,16 @@ impl DiscordClient {
         self.imp.client.get().unwrap().blocking_read()
     }
 
-    pub async fn client(&self) -> RwLockReadGuard<Client> {
+    async fn client(&self) -> RwLockReadGuard<Client> {
         self.imp.client.get().unwrap().read().await
     }
 
     async fn client_mut(&self) -> RwLockWriteGuard<Client> {
         self.imp.client.get().unwrap().write().await
+    }
+
+    pub fn shards(&self) -> &ShardManager {
+        self.imp.shards.get().unwrap()
     }
 
     pub fn http(&self) -> &Http {
@@ -238,10 +189,20 @@ impl DiscordClient {
         Ok(())
     }
 
-    async fn set_activity(&self, activity: Option<ActivityData>) {
-        let runners = self.imp.shards.get().unwrap().runners.lock().await;
+    pub async fn set_activity(&self, activity: Option<ActivityData>) {
+        let mut current_activity = self.imp.current_activity.write().await;
+        match (&activity, &*current_activity) {
+            (Some(a), Some(b)) if a.kind == b.kind && a.name == b.name => return,
+            _ => {}
+        };
+        current_activity.clone_from(&activity);
+        self.broadcast_activity(activity).await;
+    }
 
-        runners.iter().for_each(|(_, runner)| {
+    async fn broadcast_activity(&self, activity: Option<ActivityData>) {
+        let runners = self.shards().runners.lock().await;
+
+        runners.values().for_each(|runner| {
             runner.runner_tx.set_activity(activity.clone());
         });
     }
@@ -532,8 +493,8 @@ impl EventHandler for DiscordClient {
             log::error!("Error sending log message: {:?}", e);
         }
 
-        if let Some(activity) = self.imp.current_activity.read().await.as_ref() {
-            ctx.set_activity(Some(activity.clone()));
+        if let Some(activity) = self.imp.current_activity.read().await.as_ref().cloned() {
+            ctx.set_activity(Some(activity));
         }
     }
 

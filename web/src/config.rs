@@ -31,7 +31,6 @@ pub struct DiscordConfig {
     pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,
     pub activities: Vec<DiscordActivity>,
-    pub activity_update_interval: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]

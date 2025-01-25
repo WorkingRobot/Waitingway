@@ -7,6 +7,9 @@ pub use refresh_travel_states::RefreshTravelStates;
 pub mod refresh_world_statuses;
 pub use refresh_world_statuses::RefreshWorldStatuses;
 
+pub mod update_activity;
+pub use update_activity::UpdateActivity;
+
 use std::time::Duration;
 
 use serenity::async_trait;

@@ -25,6 +25,7 @@ use actix_web::{
 use actix_web_prom::PrometheusMetricsBuilder;
 use cache::Cache;
 use prometheus::Registry;
+use serenity::all::ActivityData;
 use std::io;
 use subscriptions::SubscriptionManager;
 use thiserror::Error;
@@ -87,6 +88,17 @@ async fn main() -> Result<(), ServerError> {
 
     let discord_bot =
         DiscordClient::new(config.discord.clone(), db_pool.clone(), redis_conn.clone()).await;
+
+    let update_activity_token = crons::create_cron_job(crons::UpdateActivity::new(
+        discord_bot.clone(),
+        config
+            .discord
+            .activities
+            .iter()
+            .cloned()
+            .map(ActivityData::from)
+            .collect(),
+    ));
 
     let subscriptions = SubscriptionManager::new(discord_bot.clone(), config.redis.clone());
     discord_bot.set_subscriptions(subscriptions.clone());
@@ -184,6 +196,7 @@ async fn main() -> Result<(), ServerError> {
     refresh_queue_estimates_token.cancel();
     refresh_travel_states_token.cancel();
     refresh_world_states_token.cancel();
+    update_activity_token.cancel();
     discord_bot.stop().await;
     let prometheus_server_ret = prometheus_server_task.await;
     let discord_ret = discord_task.await;
