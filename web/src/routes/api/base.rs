@@ -14,7 +14,7 @@ use actix_web::{
 };
 use serde::Serialize;
 use sqlx::PgPool;
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
