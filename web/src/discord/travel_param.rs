@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
 use itertools::Itertools;
 use poise::ChoiceParameter;
@@ -68,7 +70,7 @@ impl TravelData {
                     poise::CommandParameterChoice {
                         __non_exhaustive: (),
                         name: param.name(),
-                        localizations: Default::default(),
+                        localizations: HashMap::default(),
                     },
                 )
             });

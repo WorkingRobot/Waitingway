@@ -12,7 +12,7 @@ use futures_util::{stream, StreamExt};
 use redis::{aio::ConnectionManager, AsyncCommands, Cmd};
 use serde::{Deserialize, Serialize};
 use serenity::all::{CreateMessage, UserId};
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -146,13 +146,14 @@ impl SubscriptionManager {
         &self,
         publish_data: impl Into<EndpointPublishData>,
     ) -> Result<(), Error> {
+        const CHUNK_SIZE: usize = 32;
+
         let publish_data: EndpointPublishData = publish_data.into();
         let endpoint: Endpoint = (&*publish_data.0).into();
 
         let key = endpoint.to_key(self.redis_config())?;
         let mut redis = self.redis();
 
-        const CHUNK_SIZE: usize = 32;
         loop {
             let subscribers: Vec<Vec<u8>> = Cmd::spop(key.clone())
                 .arg(CHUNK_SIZE)
@@ -177,7 +178,7 @@ impl SubscriptionManager {
                                 return;
                             }
                         };
-                        if let Err(e) = self.publish_to(&subscriber, data.0.deref()).await {
+                        if let Err(e) = self.publish_to(&subscriber, &data.0).await {
                             log::error!("Failed to publish to {:?}: {}", subscriber, e);
                         }
                     }

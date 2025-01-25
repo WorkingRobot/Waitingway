@@ -17,6 +17,7 @@ use poise::{serenity_prelude as serenity, CreateReply};
     interaction_context = "Guild|BotDm|PrivateChannel",
     subcommands("datacenter", "world")
 )]
+#[allow(clippy::unused_async)]
 pub async fn travel(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

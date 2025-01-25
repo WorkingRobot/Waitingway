@@ -23,10 +23,7 @@ use serenity::{
     async_trait, Client,
 };
 use sqlx::PgPool;
-use std::{
-    ops::Deref,
-    sync::{Arc, OnceLock},
-};
+use std::sync::{Arc, OnceLock};
 use time::{Duration, OffsetDateTime};
 use tokio::{
     sync::{Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard},
@@ -41,7 +38,7 @@ pub struct DiscordClient {
 impl std::fmt::Debug for DiscordClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DiscordClient")
-            .field("name", self.client_blocking().cache.current_user().deref())
+            .field("name", &*self.client_blocking().cache.current_user())
             .finish()
     }
 }
@@ -374,6 +371,7 @@ impl DiscordClient {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn send_queue_completion(
         &self,
         message_id: MessageId,
@@ -443,6 +441,7 @@ impl DiscordClient {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn send_queue_completion_unsuccessful(
         &self,
         channel: ChannelId,
@@ -549,7 +548,7 @@ impl EventHandler for DiscordClient {
         };
         if is_connected {
             match self.mark_user_connected(member.user.id).await {
-                Ok(_) => log::info!("Marked user {} as connected", member.user.id),
+                Ok(()) => log::info!("Marked user {} as connected", member.user.id),
                 Err(e) => log::error!(
                     "Error marking user {} as connected: {:?}",
                     member.user.id,
@@ -654,7 +653,7 @@ impl EventHandler for DiscordClient {
                 )
                 .await
             {
-                Ok(_) => {
+                Ok(()) => {
                     log::info!("Gave roles {:?} to user {}", values, interaction.user.id);
                 }
                 Err(e) => {

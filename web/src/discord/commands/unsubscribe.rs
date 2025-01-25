@@ -18,6 +18,7 @@ use poise::CreateReply;
     rename = "remindoff",
     subcommands("datacenter", "world")
 )]
+#[allow(clippy::unused_async)]
 pub async fn unsubscribe(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

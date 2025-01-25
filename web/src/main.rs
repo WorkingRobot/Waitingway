@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 mod cache;
 mod config;
 mod crons;
@@ -56,7 +58,7 @@ async fn main() -> Result<(), ServerError> {
         .add_source(File::new("config", FileFormat::Yaml))
         .add_source(Environment::default())
         .build()
-        .and_then(|v| v.try_deserialize())
+        .and_then(Config::try_deserialize)
         .unwrap();
 
     env_logger::init_from_env(

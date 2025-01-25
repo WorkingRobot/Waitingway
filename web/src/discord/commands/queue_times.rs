@@ -8,6 +8,7 @@ use crate::{
 use poise::CreateReply;
 
 #[poise::command(slash_command, rename = "queue", subcommands("datacenter", "world"))]
+#[allow(clippy::unused_async)]
 pub async fn queue_times(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

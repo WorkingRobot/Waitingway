@@ -76,7 +76,7 @@ async fn create_recap(
     let resp = db::create_recap(&pool, recap).await;
 
     match resp {
-        Ok(_) => Ok(HttpResponse::Created().finish()),
+        Ok(()) => Ok(HttpResponse::Created().finish()),
         Err(e) => Err(ErrorInternalServerError(e)),
     }
 }

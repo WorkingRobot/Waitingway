@@ -101,7 +101,7 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
         .field("Uptime", format_duration(natives::process_uptime()?), true)
         .field(
             "Discord Latency",
-            latency.map(format_latency).unwrap_or("Unknown".to_string()),
+            latency.map_or("Unknown".to_string(), format_latency),
             true,
         );
     ctx.send(CreateReply::default().embed(embed)).await?;

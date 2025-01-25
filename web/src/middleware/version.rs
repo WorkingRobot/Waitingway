@@ -40,9 +40,12 @@ impl UserAgentVersion {
             configuration,
         })
     }
+}
 
-    pub fn to_string(&self) -> String {
-        format!(
+impl std::fmt::Display for UserAgentVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "{major}.{minor}.{patch}-{configuration}",
             major = self.major,
             minor = self.minor,
