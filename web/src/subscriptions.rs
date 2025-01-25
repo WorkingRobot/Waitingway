@@ -1,15 +1,15 @@
 use crate::{
-    config::RedisConfig,
     discord::{
         commands::create_travel_embed,
         travel_param::{TravelDatacenterParam, TravelWorldParam},
         utils::COLOR_SUCCESS,
         DiscordClient,
     },
+    redis_client::RedisClient,
     redis_utils::{RedisKey, RedisValue},
 };
 use futures_util::{stream, StreamExt};
-use redis::{aio::ConnectionManager, AsyncCommands, Cmd};
+use redis::{AsyncCommands, Cmd};
 use serde::{Deserialize, Serialize};
 use serenity::all::{CreateMessage, UserId};
 use std::sync::Arc;
@@ -80,29 +80,20 @@ pub struct SubscriptionManager {
 }
 
 pub struct SubscriptionManagerImp {
-    discord_client: DiscordClient,
-    redis: ConnectionManager,
-    redis_config: RedisConfig,
+    discord: DiscordClient,
+    redis: RedisClient,
 }
 
 impl SubscriptionManager {
-    pub fn new(discord_client: DiscordClient, redis_config: RedisConfig) -> Self {
+    pub fn new(discord: DiscordClient, redis: RedisClient) -> Self {
         Self {
-            imp: Arc::new(SubscriptionManagerImp {
-                redis: discord_client.redis().clone(),
-                discord_client,
-                redis_config,
-            }),
+            imp: Arc::new(SubscriptionManagerImp { discord, redis }),
         }
     }
 
     #[must_use]
-    fn redis(&self) -> ConnectionManager {
-        self.imp.redis.clone()
-    }
-
-    fn redis_config(&self) -> &RedisConfig {
-        &self.imp.redis_config
+    fn redis(&self) -> &RedisClient {
+        &self.imp.redis
     }
 
     pub async fn subscribe(
@@ -112,8 +103,9 @@ impl SubscriptionManager {
     ) -> Result<bool, Error> {
         let ret = self
             .redis()
+            .clone()
             .sadd(
-                endpoint.to_key(self.redis_config())?,
+                endpoint.to_key(self.redis().config())?,
                 subscriber.to_value()?,
             )
             .await?;
@@ -130,8 +122,9 @@ impl SubscriptionManager {
     ) -> Result<bool, Error> {
         let ret = self
             .redis()
+            .clone()
             .srem(
-                endpoint.to_key(self.redis_config())?,
+                endpoint.to_key(self.redis().config())?,
                 subscriber.to_value()?,
             )
             .await?;
@@ -151,8 +144,8 @@ impl SubscriptionManager {
         let publish_data: EndpointPublishData = publish_data.into();
         let endpoint: Endpoint = (&*publish_data.0).into();
 
-        let key = endpoint.to_key(self.redis_config())?;
-        let mut redis = self.redis();
+        let key = endpoint.to_key(self.redis().config())?;
+        let mut redis = self.redis().clone();
 
         loop {
             let subscribers: Vec<Vec<u8>> = Cmd::spop(key.clone())
@@ -199,7 +192,7 @@ impl SubscriptionManager {
     ) -> Result<(), Error> {
         match subscriber {
             Subscriber::Discord(user_id) => {
-                let config = self.imp.discord_client.config();
+                let config = self.imp.discord.config();
                 let (name, embed) = match publish_data {
                     EndpointPublish::Datacenter {
                         id: _,
@@ -219,10 +212,7 @@ impl SubscriptionManager {
                     .color(COLOR_SUCCESS);
 
                 UserId::new(*user_id)
-                    .dm(
-                        &self.imp.discord_client.http(),
-                        CreateMessage::new().embed(embed),
-                    )
+                    .dm(&self.imp.discord.http(), CreateMessage::new().embed(embed))
                     .await?;
             }
         };

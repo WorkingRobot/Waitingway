@@ -10,6 +10,7 @@ mod middleware;
 mod models;
 mod natives;
 mod oauth;
+mod redis_client;
 mod redis_utils;
 mod routes;
 mod subscriptions;
@@ -23,8 +24,8 @@ use actix_web::{
     App, HttpServer,
 };
 use actix_web_prom::PrometheusMetricsBuilder;
-use cache::Cache;
 use prometheus::Registry;
+use redis_client::RedisClient;
 use serenity::all::ActivityData;
 use std::io;
 use subscriptions::SubscriptionManager;
@@ -64,10 +65,9 @@ async fn main() -> Result<(), ServerError> {
 
     env_logger::init_from_env(
         env_logger::Env::new()
-            .default_filter_or(config.clone().log_filter.unwrap_or("info".to_string())),
+            .default_filter_or(config.log_filter.clone().unwrap_or("info".to_string())),
     );
 
-    sqlx::any::install_default_drivers();
     let db_pool = sqlx::postgres::PgPoolOptions::new()
         .connect(&config.database_url)
         .await
@@ -75,19 +75,16 @@ async fn main() -> Result<(), ServerError> {
 
     sqlx::migrate!().run(&db_pool).await.unwrap();
 
-    let redis_conn = redis::Client::open(config.redis.url.as_ref())
-        .unwrap()
-        .get_connection_manager()
+    let redis = RedisClient::new(config.redis.clone())
         .await
-        .unwrap();
+        .expect("Error creating redis client");
 
     let web_client = reqwest::Client::builder()
         .user_agent("Waitingway")
         .build()
         .expect("Error creating reqwest client");
 
-    let discord_bot =
-        DiscordClient::new(config.discord.clone(), db_pool.clone(), redis_conn.clone()).await;
+    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
 
     let update_activity_token = crons::create_cron_job(crons::UpdateActivity::new(
         discord_bot.clone(),
@@ -100,7 +97,7 @@ async fn main() -> Result<(), ServerError> {
             .collect(),
     ));
 
-    let subscriptions = SubscriptionManager::new(discord_bot.clone(), config.redis.clone());
+    let subscriptions = SubscriptionManager::new(discord_bot.clone(), redis.clone());
     discord_bot.set_subscriptions(subscriptions.clone());
 
     let refresh_queue_estimates_token =
@@ -147,11 +144,7 @@ async fn main() -> Result<(), ServerError> {
             .app_data(Data::new(server_config.clone()))
             .app_data(Data::new(server_discord.clone()))
             .app_data(Data::new(web_client.clone()))
-            .app_data(Data::new(
-                Cache::builder()
-                    .time_to_live(core::time::Duration::from_millis(config.cache_ttl_ms))
-                    .build(),
-            ))
+            .app_data(Data::new(redis.clone()))
             .service(routes::api::service())
             .service(routes::redirects::service())
             .service(routes::assets::service())

@@ -11,7 +11,7 @@ use crate::{
 use super::Context;
 use super::Error;
 
-/// Get Waitingway Discord bot statistics.
+/// Get some statistics about Waitingway
 #[poise::command(
     slash_command,
     install_context = "Guild|User",

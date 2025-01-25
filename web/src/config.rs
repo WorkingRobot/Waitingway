@@ -49,10 +49,11 @@ pub struct StasisCache {
     pub ttl: u64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Default, Clone, Deserialize)]
 pub struct RedisConfig {
     pub url: String,
     pub namespace: String,
+    pub cache_ttl_ms: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -62,7 +63,6 @@ pub struct Config {
     pub database_url: String,
     pub redis: RedisConfig,
     pub max_connections_per_user: u32,
-    pub cache_ttl_ms: u64,
     pub discord: DiscordConfig,
     pub stasis: StasisConfig,
     #[serde(with = "hex::serde")]

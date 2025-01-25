@@ -5,8 +5,8 @@ database_url: postgresql://waitingway:waitingway_passwd@localhost:5432/waitingwa
 redis:
   url: redis://localhost:6379
   namespace: wway
+  cache_ttl_ms: 2000
 max_connections_per_user: 3
-cache_ttl_ms: 2000
 stasis:
   version_file: stasis_version.json
   lobby_hosts:

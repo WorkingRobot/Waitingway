@@ -6,10 +6,10 @@ pub trait RedisKey: Serialize {
     const PREFIX: &'static str;
 
     #[inline]
-    fn to_key(&self, config: &RedisConfig) -> postcard::Result<Vec<u8>> {
+    fn to_key<'a>(&'a self, config: impl Into<&'a RedisConfig>) -> postcard::Result<Vec<u8>> {
         // namespace:prefix:postcard-serialized-key
 
-        let mut ret = config.namespace.clone();
+        let mut ret = config.into().namespace.clone();
         ret.push(':');
         ret.push_str(Self::PREFIX);
         ret.push(':');
@@ -55,7 +55,7 @@ mod tests {
     fn test_redis_key_to_key() {
         let config = RedisConfig {
             namespace: "testnamespace".to_string(),
-            url: String::new(),
+            ..Default::default()
         };
 
         let key_a = TestKey::A(42);

@@ -9,7 +9,6 @@ use crate::{
 };
 use futures_util::future::try_join_all;
 use itertools::Itertools;
-use redis::aio::ConnectionManager;
 use serenity::{
     all::{
         ActionRowComponent, ActivityData, ChannelId, ComponentInteractionDataKind, Context,
@@ -42,7 +41,6 @@ impl std::fmt::Debug for DiscordClient {
 struct DiscordClientImp {
     config: DiscordConfig,
     db: PgPool,
-    redis: ConnectionManager,
     subscriptions: OnceLock<SubscriptionManager>,
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
@@ -51,7 +49,7 @@ struct DiscordClientImp {
 }
 
 impl DiscordClient {
-    pub async fn new(config: DiscordConfig, db: PgPool, redis: ConnectionManager) -> Self {
+    pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
         let intents = GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS;
 
         travel_param::init_travel_params(&db)
@@ -62,7 +60,6 @@ impl DiscordClient {
             imp: Arc::new(DiscordClientImp {
                 config,
                 db,
-                redis,
                 subscriptions: OnceLock::new(),
                 client: OnceLock::new(),
                 http: OnceLock::new(),
@@ -159,10 +156,6 @@ impl DiscordClient {
 
     pub fn db(&self) -> &PgPool {
         &self.imp.db
-    }
-
-    pub fn redis(&self) -> &ConnectionManager {
-        &self.imp.redis
     }
 
     pub fn set_subscriptions(&self, subscriptions: SubscriptionManager) {

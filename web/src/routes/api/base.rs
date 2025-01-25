@@ -1,5 +1,5 @@
 use crate::{
-    cache::{cached_response, Cache, CacheKey},
+    cache::{cached_response, CacheKey},
     db,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
     models::{
@@ -7,13 +7,14 @@ use crate::{
         WorldSummary, WorldSummaryInfo,
     },
     natives::VERSION_DATA,
+    redis_client::RedisClient,
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,
 };
 use serde::Serialize;
 use sqlx::PgPool;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
@@ -158,8 +159,11 @@ async fn get_world_statuses(
 }
 
 #[get("/summary/")]
-async fn get_summary(pool: web::Data<PgPool>, cache: web::Data<Cache>) -> Result<HttpResponse> {
-    cached_response(&cache, CacheKey::WorldSummary, || async {
+async fn get_summary(
+    pool: web::Data<PgPool>,
+    cache: web::Data<RedisClient>,
+) -> Result<HttpResponse> {
+    cached_response((**cache).clone(), CacheKey::WorldSummary, || async {
         let world_summaries = db::get_world_summaries(&pool);
         let travel_time = db::get_travel_time(&pool);
         match tokio::join!(world_summaries, travel_time) {
