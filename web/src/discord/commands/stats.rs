@@ -1,10 +1,13 @@
 use futures_util::{stream::FuturesUnordered, StreamExt};
 use poise::CreateReply;
-use serenity::all::{CreateEmbed, FormattedTimestamp, FormattedTimestampStyle};
+use serenity::all::{
+    Color, CreateEmbed, CreateEmbedFooter, FormattedTimestamp, FormattedTimestampStyle,
+};
+use time::OffsetDateTime;
 use titlecase::titlecase;
 
 use crate::{
-    discord::utils::{format_duration, format_latency},
+    discord::utils::{format_duration, format_latency, COLOR_SUCCESS},
     natives::{self, VERSION_DATA},
 };
 
@@ -96,7 +99,12 @@ pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
             "Discord Latency",
             latency.map_or("Unknown".to_string(), format_latency),
             true,
-        );
+        )
+        .thumbnail(cache.current_user().face())
+        .footer(CreateEmbedFooter::new("Last updated"))
+        .timestamp(OffsetDateTime::now_utc())
+        .color(Color::from(COLOR_SUCCESS));
+
     ctx.send(CreateReply::default().embed(embed)).await?;
     Ok(())
 }
