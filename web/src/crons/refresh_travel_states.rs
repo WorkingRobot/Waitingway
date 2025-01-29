@@ -117,6 +117,14 @@ impl CronJob for RefreshTravelStates {
                 Some(line) => line,
             };
 
+            if line.starts_with("[ERROR] ") {
+                log::error!("{}", &line[8..]);
+                continue;
+            }
+            if line.starts_with("[WARN] ") {
+                log::warn!("{}", &line[7..]);
+                continue;
+            }
             if line.starts_with("[INFO] ") {
                 log::info!("{}", &line[7..]);
                 continue;
@@ -125,8 +133,8 @@ impl CronJob for RefreshTravelStates {
                 log::trace!("{}", &line[10..]);
                 continue;
             }
-            if line.starts_with("[WARN] ") {
-                log::warn!("{}", &line[7..]);
+            if line.starts_with("[DEBUG] ") {
+                log::debug!("{}", &line[8..]);
                 continue;
             }
 
