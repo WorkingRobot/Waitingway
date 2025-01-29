@@ -56,12 +56,13 @@ impl RefreshTravelStates {
 
 #[async_trait]
 impl CronJob for RefreshTravelStates {
-    const NAME: &'static str = "referesh_travel_states";
+    const NAME: &'static str = "refresh_travel_states";
     const PERIOD: Duration = Duration::from_secs(60);
 
     async fn run(&self, stop_signal: CancellationToken) -> anyhow::Result<()> {
-        let mut cmd = Command::new(self.connector_path.as_os_str())
-            .args(&self.config.lobby_hosts)
+        let mut cmd = Command::new(self.connector_path.as_os_str());
+
+        cmd.args(&self.config.lobby_hosts)
             .args(["--version-file", &self.config.version_file])
             .args(["-u", &self.config.username])
             .args(["-p", &self.config.password])
@@ -73,8 +74,11 @@ impl CronJob for RefreshTravelStates {
                 &self.config.dc_token_cache.ttl.to_string(),
             ])
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
+            .stderr(Stdio::piped());
+
+        log::info!("Running: {:?}", cmd.as_std());
+
+        let mut cmd = cmd.spawn()?;
         let mut stdout = cmd.stdout.take().unwrap();
         let mut stderr = cmd.stderr.take().unwrap();
         let status = await_cancellable!(cmd.wait(), stop_signal, {
@@ -112,6 +116,25 @@ impl CronJob for RefreshTravelStates {
                 None => break,
                 Some(line) => line,
             };
+
+            if line.starts_with("[INFO] ") {
+                log::info!("{}", &line[7..]);
+                continue;
+            }
+            if line.starts_with("[VERBOSE] ") {
+                log::trace!("{}", &line[10..]);
+                continue;
+            }
+            if line.starts_with("[WARN] ") {
+                log::warn!("{}", &line[7..]);
+                continue;
+            }
+
+            if !line.starts_with("[OUTPUT] ") {
+                log::error!("Unexpected line: {}", line);
+                continue;
+            }
+            let line = &line[9..];
 
             let line = serde_json::from_str::<DCTravelResponse>(&line)?;
 
