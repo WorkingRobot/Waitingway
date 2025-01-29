@@ -1,6 +1,6 @@
 use build_target::{Arch, Env, Os};
 use copy_to_output::copy_to_output_path;
-use std::{process::Command, time::SystemTime};
+use std::{ffi::OsStr, process::Command, time::SystemTime};
 
 fn main() {
     println!("cargo:rerun-if-changed=migrations");
@@ -20,8 +20,21 @@ fn main() {
 
     println!("cargo:rustc-env=PROFILE={profile}");
 
-    // Skip building the connector if we're running in rust-analyzer
-    if !std::env::var("_NT_SYMBOL_PATH").is_ok_and(|v| v.contains("rust-analyzer")) {
+    // Skip building the connector if we're running in rust-analyzer or anywhere unnecessary
+    let is_redundant = cfg!(clippy) || cfg!(miri) || cfg!(doc) || cfg!(test) || cfg!(rustfmt);
+    let is_rust_analyzer = if cfg!(windows) {
+        std::env::var("_NT_SYMBOL_PATH").is_ok_and(|v| v.contains("rust-analyzer"))
+    } else if cfg!(unix) {
+        std::env::current_exe().is_ok_and(|v| {
+            v.ancestors()
+                .into_iter()
+                .any(|p| p == OsStr::new("rust-analyzer"))
+        })
+    } else {
+        false
+    };
+
+    if !is_redundant && !is_rust_analyzer {
         println!("cargo:rerun-if-changed=TemporalStasis");
         build_connector();
     }
