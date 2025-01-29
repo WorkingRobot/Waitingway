@@ -19,6 +19,7 @@ use tokio_util::sync::CancellationToken;
 pub trait CronJob {
     const NAME: &'static str;
     const PERIOD: Duration;
+    const TIMEOUT: Duration = Duration::from_secs(30);
 
     async fn run(&self, stop_signal: CancellationToken) -> anyhow::Result<()>;
 }
@@ -30,14 +31,22 @@ pub fn create_cron_job<T: CronJob + Send + 'static>(job: T) -> CancellationToken
         let new_job = job;
         loop {
             log::info!("Running cron job \"{}\"", T::NAME);
+            let new_token = signal.child_token();
             let timer = tokio::time::Instant::now();
-            let result = new_job.run(signal.clone()).await;
+            let result = tokio::select! {
+                r = new_job.run(new_token.clone()) => r,
+                _ = tokio::time::sleep(T::TIMEOUT) => {
+                    new_token.cancel();
+                    log::error!("Cron job \"{}\" timed out", T::NAME);
+                    Ok(())
+                }
+            };
             log::info!("Cron job \"{}\" took {:?}", T::NAME, timer.elapsed());
-            if signal.is_cancelled() {
+            if new_token.is_cancelled() {
                 log::warn!("Cron job \"{}\" was cancelled", T::NAME);
             }
             if let Err(e) = result {
-                log::error!("Cron job \"{}\" failed: {:?}", T::NAME, e);
+                log::error!("Cron job \"{}\" failed: {:?}", T::NAME, &*e);
             }
 
             tokio::select! {
