@@ -135,10 +135,7 @@ impl SubscriptionManager {
     }
 
     /// Publishing errors will be printed to the log.
-    pub async fn publish_endpoint(
-        &self,
-        publish_data: impl Into<EndpointPublishData>,
-    ) -> Result<(), Error> {
+    pub async fn publish_endpoint(&self, publish_data: EndpointPublish) -> Result<(), Error> {
         const CHUNK_SIZE: usize = 32;
 
         let publish_data: EndpointPublishData = publish_data.into();
