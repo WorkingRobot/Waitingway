@@ -86,3 +86,4 @@ opt-level = 3
 [build-dependencies]
 copy_to_output = "2.2.0"
 build-target = "0.4.0"
+rerun_except = "1.0.0"

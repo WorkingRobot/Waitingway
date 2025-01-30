@@ -3,8 +3,6 @@ use copy_to_output::copy_to_output_path;
 use std::{ffi::OsStr, process::Command, time::SystemTime};
 
 fn main() {
-    println!("cargo:rerun-if-changed=migrations");
-
     let profile = std::env::var("PROFILE").unwrap();
     if profile == "release" {
         println!(
@@ -34,10 +32,20 @@ fn main() {
         false
     };
 
+    let mut rerun_ignores = vec![
+        "config.yml",
+        "compose.dev.yaml",
+        "stasis_version.json",
+        "static/",
+    ];
+
     if !is_redundant && !is_rust_analyzer {
-        println!("cargo:rerun-if-changed=TemporalStasis");
         build_connector();
+    } else {
+        rerun_ignores.push("TemporalStasis/");
     }
+
+    rerun_except::rerun_except(&rerun_ignores).expect("rerun_except failed");
 }
 
 fn build_connector() {
