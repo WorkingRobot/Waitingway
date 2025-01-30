@@ -1,4 +1,4 @@
-use crate::{db, discord::DiscordClient, middleware::auth::BasicAuthentication};
+use crate::{discord::DiscordClient, middleware::auth::BasicAuthentication, storage::db};
 use actix_web::{
     dev::HttpServiceFactory,
     error::{ErrorInternalServerError, ErrorNotFound},

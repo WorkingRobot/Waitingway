@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
-use crate::{await_cancellable, db, models::WorldStatusResponse};
+use crate::{await_cancellable, models::WorldStatusResponse, storage::db};
 
 use super::CronJob;
 

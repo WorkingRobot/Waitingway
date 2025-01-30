@@ -2,11 +2,9 @@ use super::utils::autocomplete_world;
 use super::Context;
 use super::Error;
 use crate::{
-    discord::{
-        travel_param::{get_travel_params, TravelDatacenterParam},
-        utils::{COLOR_ERROR, COLOR_SUCCESS},
-    },
+    discord::utils::{COLOR_ERROR, COLOR_SUCCESS},
     subscriptions::{Endpoint, Subscriber},
+    worlds::{get_world_data, Datacenter},
 };
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
@@ -27,7 +25,7 @@ pub async fn unsubscribe(_: Context<'_>) -> Result<(), Error> {
 #[poise::command(slash_command)]
 async fn datacenter(
     ctx: Context<'_>,
-    #[description = "Datacenter to remind for"] datacenter: TravelDatacenterParam,
+    #[description = "Datacenter to remind for"] datacenter: Datacenter,
 ) -> Result<(), Error> {
     let client = ctx.data();
     let subscriptions = client.subscriptions();
@@ -40,12 +38,12 @@ async fn datacenter(
         .await?;
     let embed = if success {
         CreateEmbed::new()
-            .title(format!("Unsubscribed from {}", datacenter.name()))
+            .title(format!("Unsubscribed from {}", datacenter))
             .description("You will no longer be reminded when this datacenter is open for travel.")
             .color(COLOR_SUCCESS)
     } else {
         CreateEmbed::new()
-            .title(format!("No reminder for {}", datacenter.name()))
+            .title(format!("No reminder for {}", datacenter))
             .description("You don't have any reminders for this datacenter.")
             .color(COLOR_ERROR)
     };
@@ -63,7 +61,7 @@ async fn world(
     #[autocomplete = "autocomplete_world"]
     world: u16,
 ) -> Result<(), Error> {
-    let world = get_travel_params()
+    let world = get_world_data()
         .and_then(|v| v.get_world_by_id(world))
         .cloned()
         .ok_or(Error::UnknownWorld)?;
@@ -79,12 +77,12 @@ async fn world(
         .await?;
     let embed = if success {
         CreateEmbed::new()
-            .title(format!("Unsubscribed from {}", world.name()))
+            .title(format!("Unsubscribed from {}", world))
             .description("You will no longer be reminded when this world is open for travel.")
             .color(COLOR_SUCCESS)
     } else {
         CreateEmbed::new()
-            .title(format!("No reminder for {}", world.name()))
+            .title(format!("No reminder for {}", world))
             .description("You don't have any reminders for this world.")
             .color(COLOR_ERROR)
     };

@@ -1,11 +1,10 @@
 use super::{
     commands::command_list,
-    travel_param,
     utils::{format_duration, COLOR_ERROR, COLOR_IN_QUEUE, COLOR_SUCCESS},
 };
 use crate::{
-    config::DiscordConfig, db, discord::utils::format_queue_duration,
-    subscriptions::SubscriptionManager,
+    config::DiscordConfig, discord::utils::format_queue_duration, storage::db,
+    subscriptions::SubscriptionManager, worlds,
 };
 use futures_util::future::try_join_all;
 use itertools::Itertools;
@@ -52,7 +51,7 @@ impl DiscordClient {
     pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
         let intents = GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS;
 
-        travel_param::init_travel_params(&db)
+        worlds::initialize(&db)
             .await
             .expect("Error initializing travel params");
 

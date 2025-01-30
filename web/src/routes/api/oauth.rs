@@ -1,6 +1,6 @@
 use crate::{
-    config::Config, db, discord::DiscordClient, middleware::auth::BasicAuthentication, models,
-    oauth,
+    config::Config, discord::DiscordClient, middleware::auth::BasicAuthentication, models, oauth,
+    storage::db,
 };
 use actix_web::{
     dev::HttpServiceFactory,

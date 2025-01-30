@@ -1,19 +1,17 @@
-#![allow(clippy::too_many_lines)]
+#![allow(clippy::too_many_lines, clippy::redundant_closure_for_method_calls)]
 
 mod cache;
 mod config;
 mod crons;
-mod db;
-mod db_wrappers;
 mod discord;
 mod middleware;
 mod models;
 mod natives;
 mod oauth;
-mod redis_client;
-mod redis_utils;
 mod routes;
+mod storage;
 mod subscriptions;
+mod worlds;
 
 use crate::discord::DiscordClient;
 use ::config::{Config, Environment, File, FileFormat};
@@ -25,9 +23,9 @@ use actix_web::{
 };
 use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
-use redis_client::RedisClient;
 use serenity::all::ActivityData;
 use std::io;
+use storage::RedisClient;
 use subscriptions::SubscriptionManager;
 use thiserror::Error;
 

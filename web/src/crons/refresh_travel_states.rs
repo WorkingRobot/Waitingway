@@ -2,10 +2,10 @@ use super::CronJob;
 use crate::{
     await_cancellable,
     config::StasisConfig,
-    db,
-    discord::travel_param::get_travel_params,
     models::{DCTravelResponse, DCTravelWorldInfo},
+    storage::db,
     subscriptions::{EndpointPublish, SubscriptionManager},
+    worlds::get_world_data,
 };
 use anyhow::bail;
 use itertools::Itertools;
@@ -117,34 +117,36 @@ impl CronJob for RefreshTravelStates {
                 Some(line) => line,
             };
 
-            if line.starts_with("[ERROR] ") {
-                log::error!("{}", &line[8..]);
+            if let Some(line) = line.strip_prefix("[ERROR] ") {
+                log::error!("{}", line);
                 continue;
             }
-            if line.starts_with("[WARN] ") {
-                log::warn!("{}", &line[7..]);
+            if let Some(line) = line.strip_prefix("[WARN] ") {
+                log::warn!("{}", line);
                 continue;
             }
-            if line.starts_with("[INFO] ") {
-                log::info!("{}", &line[7..]);
+            if let Some(line) = line.strip_prefix("[INFO] ") {
+                log::info!("{}", line);
                 continue;
             }
-            if line.starts_with("[VERBOSE] ") {
-                log::trace!("{}", &line[10..]);
+            if let Some(line) = line.strip_prefix("[VERBOSE] ") {
+                log::trace!("{}", line);
                 continue;
             }
-            if line.starts_with("[DEBUG] ") {
-                log::debug!("{}", &line[8..]);
+            if let Some(line) = line.strip_prefix("[DEBUG] ") {
+                log::debug!("{}", line);
                 continue;
             }
 
-            if !line.starts_with("[OUTPUT] ") {
-                log::error!("Unexpected line: {}", line);
-                continue;
-            }
-            let line = &line[9..];
+            let line = match line.strip_prefix("[OUTPUT] ") {
+                None => {
+                    log::error!("Unexpected line: {}", line);
+                    continue;
+                }
+                Some(line) => line,
+            };
 
-            let line = serde_json::from_str::<DCTravelResponse>(&line)?;
+            let line = serde_json::from_str::<DCTravelResponse>(line)?;
 
             if let Some(error) = line.error {
                 bail!(
@@ -213,7 +215,7 @@ impl CronJob for RefreshTravelStates {
 
         db::add_travel_states(&self.pool, travel_states.clone(), travel_time.unwrap()).await?;
 
-        let travel_params = get_travel_params().expect("Failed to get travel params");
+        let travel_params = get_world_data().expect("Failed to get travel params");
         let mut published_datacenters = HashSet::new();
         for world in &travel_states {
             if world.prohibit == 0 {

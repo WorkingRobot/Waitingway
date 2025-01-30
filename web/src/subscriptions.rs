@@ -1,12 +1,8 @@
 use crate::{
-    discord::{
-        commands::create_travel_embed,
-        travel_param::{TravelDatacenterParam, TravelWorldParam},
-        utils::COLOR_SUCCESS,
-        DiscordClient,
-    },
-    redis_client::RedisClient,
-    redis_utils::{RedisKey, RedisValue},
+    discord::{commands::create_travel_embed, utils::COLOR_SUCCESS, DiscordClient},
+    storage::RedisClient,
+    storage::{RedisKey, RedisValue},
+    worlds::{Datacenter, World},
 };
 use futures_util::{stream, StreamExt};
 use redis::{AsyncCommands, Cmd};
@@ -56,12 +52,12 @@ impl From<EndpointPublish> for EndpointPublishData {
 pub enum EndpointPublish {
     Datacenter {
         id: u16,
-        data: &'static TravelDatacenterParam,
-        worlds: Vec<(&'static TravelWorldParam, bool)>,
+        data: &'static Datacenter,
+        worlds: Vec<(&'static World, bool)>,
     },
     World {
         id: u16,
-        data: &'static TravelWorldParam,
+        data: &'static World,
     },
 }
 
@@ -196,12 +192,12 @@ impl SubscriptionManager {
                         data,
                         worlds,
                     } => (
-                        &data.name(),
-                        create_travel_embed(&data.name(), worlds.clone(), config),
+                        &data.to_string(),
+                        create_travel_embed(&data.to_string(), worlds.clone(), config),
                     ),
                     EndpointPublish::World { id: _, data } => (
-                        &data.name(),
-                        create_travel_embed(&data.name(), vec![(data, false)], config),
+                        &data.to_string(),
+                        create_travel_embed(&data.to_string(), vec![(data, false)], config),
                     ),
                 };
                 let embed = embed

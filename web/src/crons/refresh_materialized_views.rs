@@ -4,7 +4,7 @@ use serenity::async_trait;
 use sqlx::PgPool;
 use tokio_util::sync::CancellationToken;
 
-use crate::{await_cancellable, db};
+use crate::{await_cancellable, storage::db};
 
 use super::CronJob;
 

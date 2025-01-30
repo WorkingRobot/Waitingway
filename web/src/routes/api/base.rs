@@ -1,13 +1,13 @@
 use crate::{
     cache::{cached_response, CacheKey},
-    db,
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
     models::{
         DatacenterSummary, QueueSize, Recap, RegionSummary, Summary, WorldQueryFilter,
         WorldSummary, WorldSummaryInfo,
     },
     natives::VERSION_DATA,
-    redis_client::RedisClient,
+    storage::db,
+    storage::RedisClient,
 };
 use actix_web::{
     dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web, HttpResponse, Result,

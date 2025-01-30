@@ -46,7 +46,7 @@ pub fn create_cron_job<T: CronJob + Send + 'static>(job: T) -> CancellationToken
                 log::warn!("Cron job \"{}\" was cancelled", T::NAME);
             }
             if let Err(e) = result {
-                log::error!("Cron job \"{}\" failed: {:?}", T::NAME, &*e);
+                log::error!("Cron job \"{}\" failed: {}", T::NAME, &*e);
             }
 
             tokio::select! {

@@ -1,9 +1,11 @@
+#![allow(clippy::cast_sign_loss, clippy::needless_raw_string_hashes)]
+
 use crate::{
-    db_wrappers::{DatabaseU16, DatabaseU64},
     models::{
         Connection, DbQueueEstimate, DbTravelState, DbWorldInfo, DbWorldStatus, DbWorldSummaryInfo,
         QueueEstimate, QueueSize, Recap, WorldInfo, WorldSummaryInfo,
     },
+    storage::{DatabaseU16, DatabaseU64},
 };
 use sqlx::{postgres::PgQueryResult, Error, PgPool, QueryBuilder};
 use std::{collections::HashMap, io};

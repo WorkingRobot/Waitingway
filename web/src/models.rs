@@ -1,6 +1,8 @@
+#![allow(clippy::cast_sign_loss)]
+
 use crate::{
-    db_wrappers::{DatabaseDateTime, DatabaseU16, DatabaseU64},
     middleware::version::UserAgentVersion,
+    storage::{DatabaseDateTime, DatabaseU16, DatabaseU64},
 };
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;

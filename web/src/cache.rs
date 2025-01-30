@@ -2,7 +2,7 @@ use actix_web::{error::ErrorInternalServerError, HttpResponse};
 use redis::{AsyncCommands, RedisResult, SetOptions};
 use serde::Serialize;
 
-use crate::{redis_client::RedisClient, redis_utils::RedisKey};
+use crate::storage::{RedisClient, RedisKey};
 
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CacheKey {

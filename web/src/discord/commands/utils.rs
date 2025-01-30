@@ -1,10 +1,10 @@
 use crate::{
     config::DiscordConfig,
-    discord::{
-        travel_param::{get_travel_params, TravelWorldParam},
-        utils::{format_queue_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED},
+    discord::utils::{
+        format_queue_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED,
     },
     models::QueueEstimate,
+    worlds::{get_world_data, World},
 };
 use ::serenity::all::{
     Color, CreateEmbed, CreateEmbedFooter, FormattedTimestamp, FormattedTimestampStyle,
@@ -20,16 +20,16 @@ pub async fn autocomplete_world<'a>(
     query: &'a str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
     // let _ = Stopwatch::new("autocomplete_world");
-    get_travel_params()
+    get_world_data()
         .map(|v| v.find_best_world_match(query))
         .unwrap_or_default()
         .into_iter()
-        .map(|dc| serenity::AutocompleteChoice::new(dc.name(), dc.id))
+        .map(|dc| serenity::AutocompleteChoice::new(dc.to_string(), dc.id))
 }
 
 pub fn create_travel_embed(
     name: &str,
-    worlds: Vec<(&TravelWorldParam, bool)>,
+    worlds: Vec<(&World, bool)>,
     config: &DiscordConfig,
 ) -> CreateEmbed {
     let color = match worlds.iter().filter(|(_, s)| *s).count() {
@@ -126,10 +126,7 @@ impl QueueColor {
     }
 }
 
-pub fn create_queue_embed(
-    name: &str,
-    worlds: Vec<(&TravelWorldParam, QueueEstimate)>,
-) -> CreateEmbed {
+pub fn create_queue_embed(name: &str, worlds: Vec<(&World, QueueEstimate)>) -> CreateEmbed {
     let color = worlds
         .iter()
         .map(|(_, e)| QueueColor::from_estimate(e))

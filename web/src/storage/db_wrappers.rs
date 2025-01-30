@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+
 use serde::{Deserialize, Serialize};
 use sqlx::error::BoxDynError;
 
@@ -37,6 +39,7 @@ macro_rules! define_unsigned_database_type {
         }
 
         impl $wrapper {
+            #[allow(dead_code)]
             #[inline]
             pub fn as_db(self) -> $signed {
                 self.0 as $signed
@@ -60,7 +63,7 @@ macro_rules! define_unsigned_database_type {
 }
 
 define_unsigned_database_type!(DatabaseU16, u16, i16);
-// define_unsigned_database_type!(DatabaseU32, u32, i32);
+define_unsigned_database_type!(DatabaseU32, u32, i32);
 define_unsigned_database_type!(DatabaseU64, u64, i64);
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
