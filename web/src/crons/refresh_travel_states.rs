@@ -108,6 +108,7 @@ impl CronJob for RefreshTravelStates {
             );
         }
 
+        let travel_params = get_world_data().expect("Failed to get travel params");
         let mut out = BufReader::new(stdout).lines();
         let mut travel_map: HashMap<u16, DCTravelWorldInfo> = HashMap::new();
         let mut travel_time: Option<i32> = None;
@@ -149,13 +150,27 @@ impl CronJob for RefreshTravelStates {
             let line = serde_json::from_str::<DCTravelResponse>(line)?;
 
             if let Some(error) = line.error {
-                bail!(
-                    "Response error: {} - {}; {} ({})",
-                    error,
-                    line.result.code,
-                    line.result.errcode,
-                    line.result.status
-                );
+                if line.result.errcode == "300" {
+                    // PROHIBIT: All travel is prohibited
+                    for w in &travel_params.worlds {
+                        travel_map.entry(w.id).or_insert_with(|| DCTravelWorldInfo {
+                            id: w.id,
+                            travel: 0,
+                            accept: 0,
+                            prohibit: 1,
+                        });
+                    }
+                    travel_time = Some(travel_time.unwrap_or_default());
+                    continue;
+                } else {
+                    bail!(
+                        "Response error: {} - {}; {} ({})",
+                        error,
+                        line.result.code,
+                        line.result.errcode,
+                        line.result.status
+                    );
+                }
             }
 
             let result = line.result;
@@ -215,7 +230,6 @@ impl CronJob for RefreshTravelStates {
 
         db::add_travel_states(&self.pool, travel_states.clone(), travel_time.unwrap()).await?;
 
-        let travel_params = get_world_data().expect("Failed to get travel params");
         let mut published_datacenters = HashSet::new();
         for world in &travel_states {
             if world.prohibit == 0 {
