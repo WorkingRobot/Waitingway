@@ -1,12 +1,9 @@
-use std::time::Duration;
-
+use super::CronJob;
+use crate::{await_cancellable, stopwatch::Stopwatch, storage::db};
 use serenity::async_trait;
 use sqlx::PgPool;
+use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-
-use crate::{await_cancellable, storage::db};
-
-use super::CronJob;
 
 pub struct RefreshMaterializedViews {
     pool: PgPool,
@@ -25,8 +22,14 @@ impl CronJob for RefreshMaterializedViews {
 
     async fn run(&self, stop_signal: CancellationToken) -> anyhow::Result<()> {
         let pool = &self.pool;
-        await_cancellable!(db::refresh_queue_estimates(pool), stop_signal);
-        await_cancellable!(db::refresh_world_summaries(pool), stop_signal);
+        {
+            let _s = Stopwatch::new("queue_estimates");
+            await_cancellable!(db::login::refresh_queue_estimates(pool), stop_signal);
+        }
+        {
+            let _s = Stopwatch::new("world_summaries");
+            await_cancellable!(db::summary::refresh_world_summaries(pool), stop_signal);
+        }
         Ok(())
     }
 }

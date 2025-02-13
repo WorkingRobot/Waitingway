@@ -1,4 +1,4 @@
-use rand::prelude::SliceRandom;
+use rand::prelude::IndexedRandom;
 use serenity::{all::ActivityData, async_trait};
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
@@ -24,7 +24,7 @@ impl CronJob for UpdateActivity {
     const PERIOD: Duration = Duration::from_secs(60);
 
     async fn run(&self, _stop_signal: CancellationToken) -> anyhow::Result<()> {
-        let activity = self.activities.choose(&mut rand::thread_rng());
+        let activity = self.activities.choose(&mut rand::rng());
         self.client.set_activity(activity.cloned()).await;
         Ok(())
     }

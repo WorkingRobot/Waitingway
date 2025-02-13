@@ -1,12 +1,10 @@
+use super::CronJob;
+use crate::{await_cancellable, models::world_status::WorldStatusResponse, storage::db};
 use reqwest::Client;
 use serenity::async_trait;
 use sqlx::PgPool;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-
-use crate::{await_cancellable, models::WorldStatusResponse, storage::db};
-
-use super::CronJob;
 
 pub struct RefreshWorldStatuses {
     client: Client,
@@ -39,7 +37,7 @@ impl CronJob for RefreshWorldStatuses {
             .flat_map(|region| region.dc)
             .flat_map(|dc| dc.world);
 
-        let result = db::add_world_statuses(&self.pool, worlds.collect()).await;
+        let result = db::world_status::add_world_statuses(&self.pool, worlds.collect()).await;
         if let Err(e) = result {
             log::error!("Failed to refresh world statuses: {:?}", e);
         }

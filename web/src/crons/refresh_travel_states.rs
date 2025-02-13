@@ -2,10 +2,9 @@ use super::CronJob;
 use crate::{
     await_cancellable,
     config::StasisConfig,
-    models::{DCTravelResponse, DCTravelWorldInfo},
-    storage::db,
+    models::travel::{DCTravelResponse, DCTravelWorldInfo},
+    storage::{db, game::worlds},
     subscriptions::{EndpointPublish, SubscriptionManager},
-    worlds::get_world_data,
 };
 use anyhow::bail;
 use itertools::Itertools;
@@ -108,7 +107,7 @@ impl CronJob for RefreshTravelStates {
             );
         }
 
-        let travel_params = get_world_data().expect("Failed to get travel params");
+        let travel_params = worlds::get_data();
         let mut out = BufReader::new(stdout).lines();
         let mut travel_map: HashMap<u16, DCTravelWorldInfo> = HashMap::new();
         let mut travel_time: Option<i32> = None;
@@ -228,7 +227,8 @@ impl CronJob for RefreshTravelStates {
 
         let travel_states: Vec<DCTravelWorldInfo> = travel_map.values().cloned().collect();
 
-        db::add_travel_states(&self.pool, travel_states.clone(), travel_time.unwrap()).await?;
+        db::travel::add_travel_states(&self.pool, travel_states.clone(), travel_time.unwrap())
+            .await?;
 
         let mut published_datacenters = HashSet::new();
         for world in &travel_states {

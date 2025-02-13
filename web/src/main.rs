@@ -9,9 +9,9 @@ mod models;
 mod natives;
 mod oauth;
 mod routes;
+mod stopwatch;
 mod storage;
 mod subscriptions;
-mod worlds;
 
 use crate::discord::DiscordClient;
 use ::config::{Config, Environment, File, FileFormat};
@@ -25,7 +25,7 @@ use actix_web_prom::PrometheusMetricsBuilder;
 use prometheus::Registry;
 use serenity::all::ActivityData;
 use std::io;
-use storage::RedisClient;
+use storage::redis::client::RedisClient;
 use subscriptions::SubscriptionManager;
 use thiserror::Error;
 
@@ -43,6 +43,8 @@ pub enum ServerError {
     DotenvyError(#[from] dotenvy::Error),
     #[error("Prometheus error")]
     PrometheusError(#[from] prometheus::Error),
+    #[error("Game data error")]
+    GameDataError(#[from] storage::game::GameDataError),
 }
 
 #[tokio::main]
@@ -81,6 +83,8 @@ async fn main() -> Result<(), ServerError> {
         .user_agent("Waitingway")
         .build()
         .expect("Error creating reqwest client");
+
+    storage::game::initialize(&db_pool, &web_client).await?;
 
     let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
 
