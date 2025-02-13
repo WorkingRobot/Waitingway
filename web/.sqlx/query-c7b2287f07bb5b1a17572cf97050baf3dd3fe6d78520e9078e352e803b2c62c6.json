@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "--sql\n                INSERT INTO roulette_sizes\n                (\n                    datacenter_id, languages, roulette_id, role,\n                    size_user_id, size_time, size\n                )\n                VALUES ($1, $2, $3, $4, $5, NOW() AT TIME ZONE 'UTC', $6)\n                ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET\n                    size_user_id = EXCLUDED.size_user_id,\n                    size_time = EXCLUDED.size_time,\n                    size = EXCLUDED.size\n                WHERE roulette_sizes.size_time < EXCLUDED.size_time",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2",
+        "Int2",
+        {
+          "Custom": {
+            "name": "roulette_role",
+            "kind": {
+              "Enum": [
+                "tank",
+                "healer",
+                "dps"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c7b2287f07bb5b1a17572cf97050baf3dd3fe6d78520e9078e352e803b2c62c6"
+}

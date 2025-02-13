@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "--sql\n        INSERT INTO connections\n        (user_id, conn_user_id, username, display_name)\n        SELECT $1, $2, $3, $4 WHERE (SELECT COUNT(*) FROM connections WHERE user_id = $1) < $5\n        ON CONFLICT (user_id, conn_user_id) DO UPDATE SET username = EXCLUDED.username, display_name = EXCLUDED.display_name",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "efa5970f936719fe4f31f8523e9e6bc8b7d0079a40b84e4d7167c64304b25d79"
+}

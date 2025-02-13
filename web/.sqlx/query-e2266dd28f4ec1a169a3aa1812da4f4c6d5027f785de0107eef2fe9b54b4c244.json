@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "--sql;\n        INSERT INTO duty_recaps\n        (\n            id, user_id,\n            queued_roulette, queued_content, queued_job, queued_flags,\n            world_id, is_party_leader, party_members,\n            start_time, end_time, withdraw_message, client_version\n        )\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int2",
+        "Int2Array",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Bool",
+        {
+          "Custom": {
+            "name": "duty_party_member[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "duty_party_member",
+                  "kind": {
+                    "Composite": [
+                      [
+                        "job",
+                        "Int2"
+                      ],
+                      [
+                        "level",
+                        "Int2"
+                      ],
+                      [
+                        "world",
+                        "Int2"
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Timestamp",
+        "Timestamp",
+        "Int2",
+        "Varchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e2266dd28f4ec1a169a3aa1812da4f4c6d5027f785de0107eef2fe9b54b4c244"
+}

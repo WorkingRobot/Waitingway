@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "--sql;\n        SELECT\n            datacenter_id, languages, roulette_id,\n            role AS \"role: DbRouletteRole\",\n            GREATEST(size_time, est_time_time, wait_time_time) as \"time: DatabaseDateTime\",\n            wait_time as duration, est_time as wait_time, size\n        FROM roulette_sizes",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "datacenter_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "languages",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 2,
+        "name": "roulette_id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "role: DbRouletteRole",
+        "type_info": {
+          "Custom": {
+            "name": "roulette_role",
+            "kind": {
+              "Enum": [
+                "tank",
+                "healer",
+                "dps"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "time: DatabaseDateTime",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 5,
+        "name": "duration",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "wait_time",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 7,
+        "name": "size",
+        "type_info": "Int2"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "3941ff386cc87f72d7781dcd076152517674784d4ad098b1caba69fd749320a1"
+}

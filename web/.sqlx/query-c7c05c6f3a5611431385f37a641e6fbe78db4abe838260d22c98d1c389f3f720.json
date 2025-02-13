@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, abbreviation, disciple AS \"disciple: JobDisciple\", role AS \"role: DbRouletteRole\", can_queue FROM jobs",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "abbreviation",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "disciple: JobDisciple",
+        "type_info": {
+          "Custom": {
+            "name": "job_disciple",
+            "kind": {
+              "Enum": [
+                "war",
+                "magic",
+                "hand",
+                "land"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "role: DbRouletteRole",
+        "type_info": {
+          "Custom": {
+            "name": "roulette_role",
+            "kind": {
+              "Enum": [
+                "tank",
+                "healer",
+                "dps"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "can_queue",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "c7c05c6f3a5611431385f37a641e6fbe78db4abe838260d22c98d1c389f3f720"
+}
