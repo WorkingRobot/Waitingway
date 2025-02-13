@@ -361,7 +361,7 @@ fn create_completion_embed_unsuccessful(
         Some(Either::Left(pos)) => {
             msg.push_str(
                 format!(
-                    "You were in position {}, and spent {} in queue.",
+                    "You were in position {} and spent {} in queue.",
                     format_position(pos),
                     format_queue_duration(duration)
                 )
