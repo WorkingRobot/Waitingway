@@ -1,7 +1,7 @@
 using Dalamud.Configuration;
 using Newtonsoft.Json;
 using System;
-using static Waitingway.Utils.QueueTracker;
+using static Waitingway.Api.Login.LoginQueueTracker;
 using System.Collections.Generic;
 
 namespace Waitingway;
@@ -53,6 +53,8 @@ public class Configuration : IPluginConfiguration
     public bool HideIdentifyTimer { get; set; }
     public int NotificationThreshold { get; set; }
     public bool ShowDurationInWorldSelector { get; set; }
+
+    public int? DutyNotificationThreshold { get; set; }
 
     public void AddFailedRecap(Recap recap)
     {

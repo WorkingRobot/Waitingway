@@ -3,6 +3,7 @@ using ImGuiNET;
 using System;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Waitingway.Utils;
+using Waitingway.Api.Login;
 
 namespace Waitingway.Windows;
 
@@ -25,7 +26,7 @@ public sealed unsafe class Queue : Window, IDisposable
 
     public override bool DrawConditions()
     {
-        if (Service.QueueTracker.CurrentState == QueueTracker.QueueState.NotQueued)
+        if (Service.LoginTracker.CurrentState == LoginQueueTracker.QueueState.NotQueued)
             return false;
 
         var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectOk");
@@ -52,7 +53,7 @@ public sealed unsafe class Queue : Window, IDisposable
     {
         var now = DateTime.UtcNow;
 
-        var recap = Service.QueueTracker.CurrentRecap ?? throw new InvalidOperationException("Recap is null");
+        var recap = Service.LoginTracker.CurrentRecap ?? throw new InvalidOperationException("Recap is null");
         var position = recap.CurrentPosition ?? throw new InvalidOperationException("Current position is null");
         var eta = recap.EstimatedEndTime - now;
         var elapsed = now - recap.StartTime;
@@ -67,19 +68,19 @@ public sealed unsafe class Queue : Window, IDisposable
 
         if (!Service.Configuration.HideIdentifyTimer)
         {
-            switch (Service.QueueTracker.CurrentState)
+            switch (Service.LoginTracker.CurrentState)
             {
-                case QueueTracker.QueueState.SentIdentify:
+                case LoginQueueTracker.QueueState.SentIdentify:
                     ImGui.TextUnformatted("Status: Updating position");
                     break;
-                case QueueTracker.QueueState.WaitingForNextIdentify:
-                    if (QueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
+                case LoginQueueTracker.QueueState.WaitingForNextIdentify:
+                    if (LoginQueueTracker.NextIdentifyTime is { } ttu && ttu > TimeSpan.Zero)
                         ImGui.TextUnformatted($"Next update in: {ttu.ToString(Log.GetTimeSpanFormat(ttu))}");
                     else
                         ImGui.TextUnformatted("Next update in: Unknown");
                     break;
                 default:
-                    ImGui.TextUnformatted($"Status: {Service.QueueTracker.CurrentState}");
+                    ImGui.TextUnformatted($"Status: {Service.LoginTracker.CurrentState}");
                     break;
             }
         }

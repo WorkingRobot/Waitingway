@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Threading.Tasks;
+using Waitingway.Api.Models;
 using Waitingway.Utils;
 
 namespace Waitingway.Windows;
@@ -30,10 +31,10 @@ public sealed class Settings : Window, IDisposable
     private IFontHandle SubheaderFont { get; }
     private IFontHandle MonoFont { get; }
 
-    private Task<Api.Connection[]>? ConnectionsTask { get; set; }
+    private Task<Connection[]>? ConnectionsTask { get; set; }
     private DateTime? ConnectionsLastRefresh { get; set; }
 
-    private Api.Connection[]? Connections => (ConnectionsTask?.IsCompletedSuccessfully ?? false) ? ConnectionsTask.Result : null;
+    private Connection[]? Connections => (ConnectionsTask?.IsCompletedSuccessfully ?? false) ? ConnectionsTask.Result : null;
     private bool IsLoadingConnections => !(ConnectionsTask?.IsCompleted ?? false);
     private bool IsConnectionsUnderCooldown => ConnectionsLastRefresh is { } lastRefresh && DateTime.UtcNow - lastRefresh < TimeSpan.FromSeconds(3);
 
@@ -290,7 +291,7 @@ public sealed class Settings : Window, IDisposable
         );
 
         DrawOption(
-            "Notification Threshold",
+            "Login Notification Threshold",
             "Only queue positions above this level will trigger a notification. " +
             "Keep in mind that the server also has its own threshold, so setting " +
             "this below a certain point won't have any effect.",
@@ -299,6 +300,19 @@ public sealed class Settings : Window, IDisposable
             v => Config.NotificationThreshold = v,
             ref isDirty
         );
+
+        Config.DutyNotificationThreshold = 0;
+
+        //DrawOption(
+        //    "Duty Notification Threshold",
+        //    "Only queue times above this many minutes will trigger a notification. " +
+        //    "Keep in mind that the server also has its own threshold, so setting " +
+        //    "this below a certain point won't have any effect.",
+        //    Config.DutyNotificationThreshold,
+        //    0, 30,
+        //    v => Config.DutyNotificationThreshold = v,
+        //    ref isDirty
+        //);
 
         DrawOption(
             "Server API Url",
