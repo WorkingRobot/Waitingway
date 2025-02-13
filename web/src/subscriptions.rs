@@ -1,8 +1,12 @@
 use crate::{
     discord::{commands::create_travel_embed, utils::COLOR_SUCCESS, DiscordClient},
-    storage::RedisClient,
-    storage::{RedisKey, RedisValue},
-    worlds::{Datacenter, World},
+    storage::{
+        game::worlds::{Datacenter, World},
+        redis::{
+            client::RedisClient,
+            utils::{RedisKey, RedisValue},
+        },
+    },
 };
 use futures_util::{stream, StreamExt};
 use redis::{AsyncCommands, Cmd};
