@@ -2,6 +2,8 @@ using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Waitingway.Api.Duty;
+using Waitingway.Api.Login;
 
 namespace Waitingway.Utils;
 
@@ -14,9 +16,8 @@ public sealed class IPCProvider : IDisposable
 
     public IPCProvider()
     {
-        var propProviderMethod = typeof(IDalamudPluginInterface).GetMethod("GetIpcProvider", 1, [typeof(string)]);
-        if (propProviderMethod is null)
-            throw new InvalidOperationException("GetIpcProvider method not found");
+        var propProviderMethod = typeof(IDalamudPluginInterface).GetMethod("GetIpcProvider", 1, [typeof(string)])
+            ?? throw new InvalidOperationException("GetIpcProvider method not found");
 
         foreach (var prop in typeof(IPCProvider).GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
@@ -33,9 +34,8 @@ public sealed class IPCProvider : IDisposable
             if (callGateProvider is null)
                 throw new InvalidOperationException("CallGateProvider is null");
             
-            var registerFunc = callGateProvider.GetType().GetMethod("RegisterFunc");
-            if (registerFunc is null)
-                throw new InvalidOperationException("RegisterFunc method not found");
+            var registerFunc = callGateProvider.GetType().GetMethod("RegisterFunc")
+                ?? throw new InvalidOperationException("RegisterFunc method not found");
 
             registerFunc.Invoke(callGateProvider, [Delegate.CreateDelegate(registerFunc.GetParameters()[0].ParameterType, this, prop.GetMethod)]);
 
@@ -51,43 +51,76 @@ public sealed class IPCProvider : IDisposable
         Login,
         DatacenterTravel,
         WorldTravel,
-        Roulette,
+        Duty,
     }
 
-    private IPCQueueType BaseQueueType
+    private static IPCQueueType BaseQueueType
     {
         get
         {
-            if (Service.QueueTracker.CurrentState != QueueTracker.QueueState.NotQueued)
+            if (Service.LoginTracker.CurrentState != LoginQueueTracker.QueueState.NotQueued)
                 return IPCQueueType.Login;
+            if (Service.DutyTracker.CurrentState != DutyQueueTracker.QueueState.NotQueued)
+                return IPCQueueType.Duty;
             return IPCQueueType.None;
         }
     }
 
-    [IPCGate]
-    public int? QueueType => BaseQueueType == IPCQueueType.None ? null : (int)BaseQueueType;
+    private static int? GetPosition() =>
+        BaseQueueType switch
+        {
+            IPCQueueType.Login => Service.LoginTracker.CurrentRecap?.CurrentPosition?.PositionNumber,
+            IPCQueueType.Duty => null,
+            _ => null
+        };
+
+    private static DateTime? GetStartTime() =>
+        BaseQueueType switch
+        {
+            IPCQueueType.Login => Service.LoginTracker.CurrentRecap?.StartTime,
+            IPCQueueType.Duty => null,
+            _ => null
+        };
+
+    private static DateTime? GetEstimatedEndTime() =>
+        BaseQueueType switch
+        {
+            IPCQueueType.Login => Service.LoginTracker.CurrentRecap?.EstimatedEndTime,
+            IPCQueueType.Duty => null,
+            _ => null
+        };
 
     [IPCGate]
-    public int? CurrentPosition => Service.QueueTracker.CurrentRecap?.CurrentPosition?.PositionNumber;
+    public int? QueueType =>
+        BaseQueueType == IPCQueueType.None
+        ? null
+        : (int)BaseQueueType;
 
     [IPCGate]
-    public TimeSpan? ElapsedTime => Service.QueueTracker.CurrentRecap?.StartTime is { } startTime ? DateTime.UtcNow - startTime : null;
+    public int? CurrentPosition =>
+        GetPosition();
 
     [IPCGate]
-    public TimeSpan? EstimatedTimeRemaining {
-        get {
-            var ret = Service.QueueTracker.CurrentRecap?.EstimatedEndTime - DateTime.UtcNow;
-            if (ret is { } timeSpan)
+    public TimeSpan? ElapsedTime =>
+        GetStartTime() is { } startTime
+        ? DateTime.UtcNow - startTime
+        : null;
+
+    [IPCGate]
+    public TimeSpan? EstimatedTimeRemaining
+    {
+        get
+        {
+            if (GetEstimatedEndTime() is { } endTime)
             {
-                if (timeSpan.Ticks > 0)
-                    return timeSpan;
-                else
-                    return TimeSpan.Zero;
+                var now = DateTime.UtcNow;
+                if (endTime > now)
+                    return endTime - now;
             }
             return null;
         }
     }
-    
+
     public void Dispose()
     {
         foreach(var provider in CallGateProviders)
