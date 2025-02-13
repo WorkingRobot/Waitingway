@@ -44,6 +44,12 @@ pub struct JobInfo {
     pub can_queue_for_duty: bool,
 }
 
+impl JobInfo {
+    pub fn icon_id(&self) -> u32 {
+        62000 + self.id as u32
+    }
+}
+
 impl Display for JobInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

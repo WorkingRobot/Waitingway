@@ -4,8 +4,8 @@ use crate::discord::{
 };
 use actix_web::Result;
 use serenity::all::{
-    ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, EditMessage, FormattedTimestamp,
-    FormattedTimestampStyle, Message, MessageId, Timestamp, UserId,
+    ChannelId, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage,
+    FormattedTimestamp, FormattedTimestampStyle, Message, MessageId, Timestamp, UserId,
 };
 use time::{Duration, OffsetDateTime};
 
@@ -112,7 +112,8 @@ async fn send_queue_completion_successful(
 ) -> Result<(), serenity::Error> {
     let embed = CreateEmbed::new()
             .title("Queue completed!")
-            .description(format!("{} has been logged in successfully! Thanks for using Waitingway!\n\nYour queue size was {}, which was completed in {}.", character_name, queue_start_size, format_duration(duration)))
+            .description(format!("You've been logged in successfully! Thanks for using Waitingway!\n\nYour queue size was {}, which was completed in {}.", queue_start_size, format_duration(duration)))
+            .author(CreateEmbedAuthor::new(character_name))
             .footer(CreateEmbedFooter::new("At"))
             .timestamp(OffsetDateTime::now_utc())
             .color(COLOR_SUCCESS);
@@ -138,13 +139,12 @@ async fn send_queue_completion_unsuccessful(
     let mut description = if let Some(identify_timeout) = identify_timeout {
         let identify_timeout: Timestamp = identify_timeout.into();
         format!(
-                    "{} left the queue prematurely. If you didn't mean to, try queueing again by {} ({}) to not lose your spot.\n",
-                    character_name,
+                    "You left the queue prematurely. If you didn't mean to, try queueing again by {} ({}) to not lose your spot.\n",
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::LongTime)),
                     FormattedTimestamp::new(identify_timeout, Some(FormattedTimestampStyle::RelativeTime)),
                 )
     } else {
-        format!("{character_name} left the queue prematurely. If you didn't mean to, try queueing again.\n")
+        "You left the queue prematurely. If you didn't mean to, try queueing again.\n".to_string()
     };
     if let Some(error_message) = error_message {
         if let Some(error_code) = error_code {
@@ -172,6 +172,7 @@ async fn send_queue_completion_unsuccessful(
     let embed = CreateEmbed::new()
         .title("Unsuccessful Queue")
         .description(description)
+        .author(CreateEmbedAuthor::new(character_name))
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(OffsetDateTime::now_utc())
         .color(COLOR_ERROR);
@@ -190,13 +191,14 @@ fn create_queue_embed(
 ) -> CreateEmbed {
     let estimated: Timestamp = estimated.into();
     CreateEmbed::new()
-            .title(format!("{character_name}'s Queue"))
+            .title("Login Queue")
             .description(format!(
                 "You're in position {}. You'll login {} ({})\n\nYou'll receive a DM from me when your queue completes.",
                 position,
                 FormattedTimestamp::new(estimated, Some(FormattedTimestampStyle::RelativeTime)),
                 FormattedTimestamp::new(estimated, Some(FormattedTimestampStyle::LongTime)),
             ))
+            .author(CreateEmbedAuthor::new(character_name))
             .footer(CreateEmbedFooter::new("Last updated"))
             .timestamp(now)
             .color(COLOR_IN_QUEUE)

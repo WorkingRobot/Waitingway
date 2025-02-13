@@ -36,6 +36,7 @@ struct WorldSheet;
 #[async_trait]
 impl GameSheet for WorldSheet {
     type Element = WorldInfo;
+    const USES_DATABASE: bool = true;
 
     async fn get_xivapi(client: &Client) -> Result<Vec<Self::Element>, reqwest::Error> {
         Ok(search_xivapi::<XivApiWorld>(
@@ -46,8 +47,8 @@ impl GameSheet for WorldSheet {
             "Name,DataCenter.Region,DataCenter.Name,DataCenter.IsCloud,IsPublic",
         )
         .await?
-        .results
         .into_iter()
+        .flatten()
         .map(|r| {
             let world_id = r.row_id;
             let world_name = r.fields.name;

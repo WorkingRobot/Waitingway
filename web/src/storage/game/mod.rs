@@ -9,6 +9,7 @@ pub mod jobs;
 pub mod worlds;
 
 pub use crate::impl_game_data;
+pub use api::{get_icon_url, get_icon_url_from_id};
 
 #[derive(Debug, Error)]
 pub enum GameDataError {

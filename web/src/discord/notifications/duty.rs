@@ -10,14 +10,17 @@ use crate::{
         duty::{FillParam, RecapUpdate, RecapUpdateData, RoulettePosition, WaitTime},
         job_info::JobInfo,
     },
-    storage::{db::wrappers::DatabaseU16, game::jobs},
+    storage::{
+        db::wrappers::DatabaseU16,
+        game::{content, get_icon_url, get_icon_url_from_id, jobs},
+    },
 };
 use actix_web::Result;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serenity::all::{
-    ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, EditMessage, FormattedTimestamp,
-    FormattedTimestampStyle, Message, MessageId, Timestamp, UserId,
+    ChannelId, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage,
+    FormattedTimestamp, FormattedTimestampStyle, Message, MessageId, Timestamp, UserId,
 };
 use time::{Duration, OffsetDateTime};
 
@@ -84,6 +87,10 @@ fn lookup_roulette(id: u8) -> String {
 
 fn lookup_content(id: u16) -> String {
     format!("Content {id}")
+    pub fn embed_author(&self) -> CreateEmbedAuthor {
+        CreateEmbedAuthor::new(&self.character_name)
+            .icon_url(get_icon_url_from_id(self.job().icon_id()))
+    }
 }
 
 fn format_position(pos: RoulettePosition) -> String {
@@ -208,30 +215,14 @@ fn create_pop_embed(
 ) -> CreateEmbed {
     let mut msg = String::new();
 
+    msg.push_str("This queue pop ");
     if let Some(content) = resulting_content {
-        msg.push_str(
-            format!(
-                "{}'s {} queue for {} has popped!",
-                queue_data.character_name,
-                queue_data.job().abbreviation,
-                lookup_content(content),
-            )
-            .as_str(),
-        );
-    } else {
-        msg.push_str(
-            format!(
-                "{}'s {} queue has popped!",
-                queue_data.character_name,
-                queue_data.job().abbreviation,
-            )
-            .as_str(),
-        );
+        msg.push_str(format!("for {}", content::get_data().get_content_name(content),).as_str());
     }
 
     msg.push_str(
         format!(
-            " Expires {}.",
+            " expires {}.",
             FormattedTimestamp::new(
                 (timestamp + Duration::seconds(45)).into(),
                 Some(FormattedTimestampStyle::RelativeTime)
@@ -243,7 +234,7 @@ fn create_pop_embed(
     if let Some(in_progress_timestamp) = in_progress_timestamp {
         msg.push_str(
             format!(
-                "\nYou will be joining an in-progress duty that started {}",
+                "\nYou will be joining an in-progress duty that began {}",
                 FormattedTimestamp::new(
                     in_progress_timestamp.into(),
                     Some(FormattedTimestampStyle::RelativeTime)
@@ -256,6 +247,7 @@ fn create_pop_embed(
     CreateEmbed::new()
         .title("Queue popped!")
         .description(msg)
+        .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(timestamp)
         .color(COLOR_QUEUE_POP)
@@ -292,10 +284,8 @@ fn create_completion_embed_successful(
     duration: Duration,
 ) -> CreateEmbed {
     let mut msg = format!(
-        "{} {} has entered {}! Thanks for using Waitingway!\n\n",
-        queue_data.character_name,
-        queue_data.job().abbreviation,
-        lookup_content(content)
+        "You've entered {}! Thanks for using Waitingway!\n\n",
+        content::get_data().get_content_name(content)
     );
 
     if queue_data.queued_roulette.is_some()
@@ -304,7 +294,7 @@ fn create_completion_embed_successful(
             .as_ref()
             .is_some_and(|q| q.len() > 1)
     {
-        msg.push_str(format!("You queued for {}.\n", queue_data.queue_name(true)).as_str());
+        msg.push_str(format!("You were in queue for {}.\n", queue_data.queue_name(true)).as_str());
     }
 
     if let Some(position) = start_position {
@@ -329,6 +319,7 @@ fn create_completion_embed_successful(
     CreateEmbed::new()
         .title("Queue completed!")
         .description(msg)
+        .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(OffsetDateTime::now_utc())
         .color(COLOR_SUCCESS)
@@ -340,11 +331,7 @@ fn create_completion_embed_unsuccessful(
     duration: Duration,
     error: Option<(String, u16)>,
 ) -> CreateEmbed {
-    let mut msg = format!(
-        "{} {} left the queue!\n",
-        queue_data.character_name,
-        queue_data.job().abbreviation
-    );
+    let mut msg = "You left the queue!\n".to_string();
 
     if let Some((message, _code)) = error {
         msg.push_str(format!("{}\n", message).as_str());
@@ -352,7 +339,7 @@ fn create_completion_embed_unsuccessful(
 
     msg.push('\n');
 
-    msg.push_str(format!("You were queued for {}.\n", queue_data.queue_name(true)).as_str());
+    msg.push_str(format!("You were in queue for {}.\n", queue_data.queue_name(true)).as_str());
 
     if let Some((start, end)) = position {
         if start == end {
@@ -380,6 +367,7 @@ fn create_completion_embed_unsuccessful(
     CreateEmbed::new()
         .title("Unsuccessful Queue")
         .description(msg)
+        .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(OffsetDateTime::now_utc())
         .color(COLOR_ERROR)
@@ -494,13 +482,10 @@ fn create_queue_embed(
     estimated: Option<time::OffsetDateTime>,
 ) -> CreateEmbed {
     CreateEmbed::new()
-        .title(format!(
-            "{}'s {} Queue - {}",
-            queue_data.character_name,
-            queue_data.job().abbreviation,
-            queue_data.queue_name(false)
-        ))
+        .title(queue_data.queue_name(false))
         .description(format_update(update, start_time, estimated))
+        .image(get_icon_url(&queue_data.queue_image()))
+        .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("Last updated"))
         .timestamp(Timestamp::from(update.time.0))
         .color(COLOR_IN_QUEUE)

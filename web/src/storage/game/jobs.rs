@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{
     api::{search_xivapi, GameSheet, XivApiLink},
     impl_game_data,
@@ -37,6 +39,7 @@ struct ClassJobSheet;
 #[async_trait]
 impl GameSheet for ClassJobSheet {
     type Element = JobInfo;
+    const USES_DATABASE: bool = true;
 
     async fn get_xivapi(client: &Client) -> Result<Vec<Self::Element>, reqwest::Error> {
         Ok(search_xivapi::<XivApiClassJob>(
@@ -46,8 +49,8 @@ impl GameSheet for ClassJobSheet {
             "Name,Abbreviation,ClassJobCategory.Name,Role,CanQueueForDuty",
         )
         .await?
-        .results
         .into_iter()
+        .flatten()
         .map(|r| {
             let id = r.row_id as u8;
             let name = r.fields.name;
@@ -92,19 +95,23 @@ impl GameSheet for ClassJobSheet {
 }
 
 pub struct JobData {
-    pub jobs: Vec<JobInfo>,
+    pub jobs: HashMap<u8, JobInfo>,
 }
 
 impl JobData {
     pub async fn new(pool: &PgPool, client: &Client) -> Result<Self, super::GameDataError> {
         let _s = Stopwatch::new("Job Data Init");
         Ok(JobData {
-            jobs: ClassJobSheet::get_and_upsert(pool, client).await?,
+            jobs: ClassJobSheet::get_and_upsert(pool, client)
+                .await?
+                .into_iter()
+                .map(|j| (j.id, j))
+                .collect(),
         })
     }
 
     pub fn get_job_by_id(&self, id: u8) -> Option<&JobInfo> {
-        self.jobs.iter().find(|j| j.id == id)
+        self.jobs.get(&id)
     }
 }
 
