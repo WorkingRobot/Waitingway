@@ -31,7 +31,8 @@ hex = { version = "0.4.3", features = ["serde"] }
 itertools = "0.14.0"
 konst = "0.3.16"
 log = "0.4.25"
-os_info = "3.9.2"
+num_enum = "0.7.3"
+os_info = "3.10.0"
 poise = { version = "0.6.1", default-features = false, features = [
     "cache",
 ], git = "https://github.com/serenity-rs/poise.git", rev = "80a3a9c3ca1629725f0fa4ec98372d39cf36f6b6" }
@@ -39,10 +40,11 @@ postcard = { version = "1.1.1", default-features = false, features = [
     "use-std",
 ] }
 prometheus = { version = "0.13.4", default-features = false }
-rand = "0.8.5"
+rand = "0.9.0"
 redis = { version = "0.28.2", features = ["tokio-comp", "connection-manager"] }
 serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.137"
+serde_json = "1.0.138"
+serde_repr = "0.1.19"
 serenity = { version = "0.12.4", default-features = false, features = [
     "builder",
     "framework",
@@ -69,7 +71,7 @@ tokio = { version = "1.43.0", features = [
 ] }
 tokio-util = "0.7.13"
 url = "2.5.4"
-uuid = { version = "1.12.1", features = ["serde", "fast-rng", "v7"] }
+uuid = { version = "1.13.1", features = ["serde", "fast-rng", "v7"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.59.0", features = ["Win32_System_Threading"] }
