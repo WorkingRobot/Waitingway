@@ -22,6 +22,7 @@ use serenity::all::{
     ChannelId, CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage,
     FormattedTimestamp, FormattedTimestampStyle, Message, MessageId, Timestamp, UserId,
 };
+use sqlx::Either;
 use time::{Duration, OffsetDateTime};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,18 +42,6 @@ impl QueueData {
     }
 
     pub fn queue_name(&self, expand: bool) -> String {
-        // let queue_name = match content_names {
-        //     Either::Left(name) => name.to_string(),
-        //     Either::Right(names) => {
-        //         let ret = names.join(", ");
-        //         if ret.len() > 128 {
-        //             format!("{} and more", names[0])
-        //         } else {
-        //             ret
-        //         }
-        //     }
-        // };
-
         let c = content::get_data();
 
         if let Some(names) = self
@@ -184,14 +173,6 @@ pub async fn send_delete(
     error_message: Option<String>,
     error_code: Option<u16>,
 ) -> Result<(), serenity::Error> {
-    dbg!(queue_data);
-    dbg!(position_start);
-    dbg!(position_end);
-    dbg!(duration);
-    dbg!(resulting_content);
-    dbg!(&error_message);
-    dbg!(error_code);
-
     channel_id
         .edit_message(
             discord.http(),
@@ -279,7 +260,8 @@ fn create_completion_embed(
         None => create_completion_embed_unsuccessful(
             queue_data,
             match (position_start, position_end) {
-                (Some(start), Some(end)) => Some((start, end)),
+                (Some(start), Some(end)) => Some(Either::Right((start, end))),
+                (Some(start), None) => Some(Either::Left(start)),
                 _ => None,
             },
             duration,
@@ -341,34 +323,28 @@ fn create_completion_embed_successful(
 
 fn create_completion_embed_unsuccessful(
     queue_data: &QueueData,
-    position: Option<(RoulettePosition, RoulettePosition)>,
+    // Start => Queue popped; (Start, End) => No pop yet
+    position: Option<Either<RoulettePosition, (RoulettePosition, RoulettePosition)>>,
     duration: Duration,
     error: Option<(String, u16)>,
 ) -> CreateEmbed {
-    let mut msg = "You left the queue!\n".to_string();
+    let mut msg = if let Some((message, _code)) = error {
+        message
+    } else {
+        "You left the queue!".to_string()
+    };
 
-    if let Some((message, _code)) = error {
-        msg.push_str(format!("{}\n", message).as_str());
-    }
+    msg.push_str("\n\n");
 
-    msg.push('\n');
-
-    msg.push_str(format!("You were in queue for {}.\n", queue_data.queue_name(true)).as_str());
-
-    if let Some((start, end)) = position {
-        if start == end {
+    let position = position.map(|p| match p {
+        Either::Right((pos, end)) if pos == end => Either::Left(pos),
+        _ => p,
+    });
+    match position {
+        Some(Either::Right((start, end))) => {
             msg.push_str(
                 format!(
-                    "Your queue size was {}, and you were in queue for {}.",
-                    format_position(start),
-                    format_queue_duration(duration)
-                )
-                .as_str(),
-            );
-        } else {
-            msg.push_str(
-                format!(
-                    "Your queue size started at {} and ended at {}, and you were in queue for {}.",
+                    "Your position started at {} and ended at {}, and you spent {} in queue.",
                     format_position(start),
                     format_position(end),
                     format_queue_duration(duration)
@@ -376,7 +352,24 @@ fn create_completion_embed_unsuccessful(
                 .as_str(),
             );
         }
+        Some(Either::Left(pos)) => {
+            msg.push_str(
+                format!(
+                    "You were in position {}, and spent {} in queue.",
+                    format_position(pos),
+                    format_queue_duration(duration)
+                )
+                .as_str(),
+            );
+        }
+        _ => {
+            msg.push_str(
+                format!("You spent {} in queue.", format_queue_duration(duration)).as_str(),
+            );
+        }
     }
+
+    msg.push_str(format!("\nYou were in queue for {}.", queue_data.queue_name(true)).as_str());
 
     CreateEmbed::new()
         .title("Unsuccessful Queue")
@@ -406,11 +399,7 @@ fn format_update(
         WaitTime::Hidden => "The game-reported ETA is unknown.".to_string(),
         WaitTime::Minutes(mins) => {
             format!(
-                "The game-reported ETA is {} ({}).",
-                FormattedTimestamp::new(
-                    (start_time + Duration::minutes(mins.into())).into(),
-                    Some(FormattedTimestampStyle::ShortTime)
-                ),
+                "The game-reported ETA is **{}**.",
                 format_duration_duty_eta(Duration::minutes(mins.into()))
             )
         }
@@ -422,9 +411,9 @@ fn format_update(
         _ => None,
     };
     let position_sentence = position.map(|p| match p {
-        RoulettePosition::Position(position) => format!("You're in position {}.", position),
         RoulettePosition::RetrievingInfo => "Your position is currently unknown.".to_string(),
-        RoulettePosition::After50 => "You're in position 50+.".to_string(),
+        RoulettePosition::Position(position) => format!("You're in position **{}**.", position),
+        RoulettePosition::After50 => "You're in position **50+**.".to_string(),
     });
 
     let fill_param_field = match update.update_data {
@@ -460,12 +449,20 @@ fn format_update(
         _ => None,
     };
 
-    let estimated: Option<Timestamp> = estimated.map(|e| e.into());
+    let estimated: Option<Timestamp> = estimated
+        .or_else(|| {
+            if let Some(WaitTime::Minutes(mins)) = reported_estimate {
+                Some((start_time + Duration::minutes(mins.into())).into())
+            } else {
+                None
+            }
+        })
+        .map(|e| e.into());
     let estimated_sentence = estimated.map(|e| {
         format!(
-            "Your roulette will pop {} ({})",
+            "Your queue will pop {} ({}).",
             FormattedTimestamp::new(e, Some(FormattedTimestampStyle::RelativeTime)),
-            FormattedTimestamp::new(e, Some(FormattedTimestampStyle::LongTime)),
+            FormattedTimestamp::new(e, Some(FormattedTimestampStyle::ShortTime)),
         )
     });
 
