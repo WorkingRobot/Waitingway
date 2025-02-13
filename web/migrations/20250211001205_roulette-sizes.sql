@@ -3,6 +3,7 @@ CREATE TYPE roulette_role AS ENUM ('tank', 'healer', 'dps');
 CREATE TABLE roulette_sizes
 (
     datacenter_id       SMALLINT        NOT NULL,
+    languages           SMALLINT        NOT NULL,
     roulette_id         SMALLINT        NOT NULL,
     role                roulette_role   NOT NULL,
 
@@ -18,5 +19,5 @@ CREATE TABLE roulette_sizes
     wait_time_time      TIMESTAMP,
     wait_time           DOUBLE PRECISION,
     
-    PRIMARY KEY (datacenter_id, roulette_id, role)
+    PRIMARY KEY (datacenter_id, languages, roulette_id, role)
 );

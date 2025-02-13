@@ -104,16 +104,17 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
                     r#"--sql
                     INSERT INTO roulette_sizes
                     (
-                        datacenter_id, roulette_id, role,
+                        datacenter_id, languages, roulette_id, role,
                         size_user_id, size_time, size
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (datacenter_id, roulette_id, role) DO UPDATE SET
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET
                         size_user_id = EXCLUDED.size_user_id,
                         size_time = EXCLUDED.size_time,
                         size = EXCLUDED.size
                     WHERE roulette_sizes.size_time < EXCLUDED.size_time"#r,
                     DatabaseU16(datacenter_id).as_db(),
+                    DatabaseU16(u8::from(recap.queued_languages).into()).as_db(),
                     DatabaseU16(u16::from(roulette)).as_db(),
                     role.as_db() as DbRouletteRole,
                     recap.user_id,
@@ -129,16 +130,17 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
                     r#"--sql
                     INSERT INTO roulette_sizes
                     (
-                        datacenter_id, roulette_id, role,
+                        datacenter_id, languages, roulette_id, role,
                         est_time_user_id, est_time_time, est_time
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (datacenter_id, roulette_id, role) DO UPDATE SET
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET
                         est_time_user_id = EXCLUDED.est_time_user_id,
                         est_time_time = EXCLUDED.est_time_time,
                         est_time = EXCLUDED.est_time
                     WHERE roulette_sizes.est_time_time < EXCLUDED.est_time_time"#r,
                     DatabaseU16(datacenter_id).as_db(),
+                    DatabaseU16(u8::from(recap.queued_languages).into()).as_db(),
                     DatabaseU16(u16::from(roulette)).as_db(),
                     role.as_db() as DbRouletteRole,
                     recap.user_id,
@@ -154,16 +156,17 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
                     r#"--sql
                     INSERT INTO roulette_sizes
                     (
-                        datacenter_id, roulette_id, role,
+                        datacenter_id, languages, roulette_id, role,
                         wait_time_user_id, wait_time_time, wait_time
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    ON CONFLICT (datacenter_id, roulette_id, role) DO UPDATE SET
+                    VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET
                         wait_time_user_id = EXCLUDED.wait_time_user_id,
                         wait_time_time = EXCLUDED.wait_time_time,
                         wait_time = EXCLUDED.wait_time
                     WHERE roulette_sizes.wait_time_time < EXCLUDED.wait_time_time"#r,
                     DatabaseU16(datacenter_id).as_db(),
+                    DatabaseU16(u8::from(recap.queued_languages).into()).as_db(),
                     DatabaseU16(u16::from(roulette)).as_db(),
                     role.as_db() as DbRouletteRole,
                     recap.user_id,
@@ -292,16 +295,17 @@ pub async fn create_roulette_size(pool: &PgPool, size_info: RouletteSize) -> Res
             r#"--sql
                 INSERT INTO roulette_sizes
                 (
-                    datacenter_id, roulette_id, role,
+                    datacenter_id, languages, roulette_id, role,
                     size_user_id, size_time, size
                 )
-                VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'UTC', $5)
-                ON CONFLICT (datacenter_id, roulette_id, role) DO UPDATE SET
+                VALUES ($1, $2, $3, $4, $5, NOW() AT TIME ZONE 'UTC', $6)
+                ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET
                     size_user_id = EXCLUDED.size_user_id,
                     size_time = EXCLUDED.size_time,
                     size = EXCLUDED.size
                 WHERE roulette_sizes.size_time < EXCLUDED.size_time"#r,
             DatabaseU16(datacenter_id).as_db(),
+            DatabaseU16(u8::from(size_info.languages).into()).as_db(),
             DatabaseU16(u16::from(size_info.roulette_id)).as_db(),
             size_info.role.as_db() as DbRouletteRole,
             size_info.user_id,
@@ -316,16 +320,17 @@ pub async fn create_roulette_size(pool: &PgPool, size_info: RouletteSize) -> Res
             r#"--sql
                 INSERT INTO roulette_sizes
                 (
-                    datacenter_id, roulette_id, role,
+                    datacenter_id, languages, roulette_id, role,
                     est_time_user_id, est_time_time, est_time
                 )
-                VALUES ($1, $2, $3, $4, NOW() AT TIME ZONE 'UTC', $5)
-                ON CONFLICT (datacenter_id, roulette_id, role) DO UPDATE SET
+                VALUES ($1, $2, $3, $4, $5, NOW() AT TIME ZONE 'UTC', $6)
+                ON CONFLICT (datacenter_id, languages, roulette_id, role) DO UPDATE SET
                     est_time_user_id = EXCLUDED.est_time_user_id,
                     est_time_time = EXCLUDED.est_time_time,
                     est_time = EXCLUDED.est_time
                 WHERE roulette_sizes.est_time_time < EXCLUDED.est_time_time"#r,
             DatabaseU16(datacenter_id).as_db(),
+            DatabaseU16(u8::from(size_info.languages).into()).as_db(),
             DatabaseU16(u16::from(size_info.roulette_id)).as_db(),
             size_info.role.as_db() as DbRouletteRole,
             size_info.user_id,
@@ -349,7 +354,7 @@ pub async fn get_roulette_estimates(pool: &PgPool) -> Result<Vec<RouletteEstimat
         DbRouletteEstimate,
         r#"--sql;
         SELECT
-            datacenter_id, roulette_id,
+            datacenter_id, languages, roulette_id,
             role AS "role: DbRouletteRole",
             GREATEST(size_time, est_time_time, wait_time_time) as "time: DatabaseDateTime",
             wait_time as duration, est_time as wait_time, size
@@ -363,18 +368,20 @@ pub async fn get_roulette_estimates(pool: &PgPool) -> Result<Vec<RouletteEstimat
 pub async fn get_roulette_estimates_by_datacenter_id(
     pool: &PgPool,
     datacenter_id: u16,
+    languages: QueueLanguage,
 ) -> Result<Vec<RouletteEstimate>, Error> {
     sqlx::query_as!(
         DbRouletteEstimate,
         r#"--sql;
         SELECT
-            datacenter_id, roulette_id,
+            datacenter_id, languages, roulette_id,
             role AS "role: DbRouletteRole",
             GREATEST(size_time, est_time_time, wait_time_time) as "time: DatabaseDateTime",
             wait_time as duration, est_time as wait_time, size
         FROM roulette_sizes
-        WHERE datacenter_id = $1"#,
-        DatabaseU16(datacenter_id).as_db()
+        WHERE datacenter_id = $1 AND languages = $2"#,
+        DatabaseU16(datacenter_id).as_db(),
+        DatabaseU16(u8::from(languages).into()).as_db()
     )
     .fetch_all(pool)
     .await
@@ -384,6 +391,7 @@ pub async fn get_roulette_estimates_by_datacenter_id(
 pub async fn get_roulette_estimates_by_datacenter_id_filtered(
     pool: &PgPool,
     datacenter_id: u16,
+    languages: QueueLanguage,
     roulette_ids: Vec<u8>,
 ) -> Result<Vec<RouletteEstimate>, Error> {
     let roulette_ids = roulette_ids
@@ -394,13 +402,14 @@ pub async fn get_roulette_estimates_by_datacenter_id_filtered(
         DbRouletteEstimate,
         r#"--sql;
         SELECT
-            datacenter_id, roulette_id,
+            datacenter_id, languages, roulette_id,
             role AS "role: DbRouletteRole",
             GREATEST(size_time, est_time_time, wait_time_time) as "time: DatabaseDateTime",
             wait_time as duration, est_time as wait_time, size
         FROM roulette_sizes
-        WHERE datacenter_id = $1 AND roulette_id = ANY($2)"#,
+        WHERE datacenter_id = $1 AND languages = $2 AND roulette_id = ANY($3)"#,
         DatabaseU16(datacenter_id).as_db(),
+        DatabaseU16(u8::from(languages).into()).as_db(),
         roulette_ids.as_slice()
     )
     .fetch_all(pool)

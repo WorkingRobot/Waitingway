@@ -76,11 +76,12 @@ async fn get_roulette_estimate_datacenter(
         db::duty::get_roulette_estimates_by_datacenter_id_filtered(
             &pool,
             *datacenter_id,
+            filter.lang,
             roulette_id,
         )
         .await
     } else {
-        db::duty::get_roulette_estimates_by_datacenter_id(&pool, *datacenter_id).await
+        db::duty::get_roulette_estimates_by_datacenter_id(&pool, *datacenter_id, filter.lang).await
     };
 
     match resp {

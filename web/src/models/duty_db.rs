@@ -36,6 +36,7 @@ pub enum DbRouletteRole {
 #[derive(Debug, FromRow)]
 pub struct DbRouletteEstimate {
     pub datacenter_id: i16,
+    pub languages: i16,
     pub roulette_id: i16,
     pub role: DbRouletteRole,
 

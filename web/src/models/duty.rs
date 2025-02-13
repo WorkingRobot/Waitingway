@@ -314,6 +314,7 @@ pub struct RouletteSize {
     // World id that the size is for
     pub world_id: u16,
 
+    pub languages: QueueLanguage,
     pub roulette_id: u8,
     pub role: RouletteRole,
 
@@ -324,6 +325,7 @@ pub struct RouletteSize {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouletteEstimate {
     pub datacenter_id: u16,
+    pub languages: QueueLanguage,
     pub roulette_id: u8,
     pub role: RouletteRole,
 
@@ -337,6 +339,7 @@ impl From<DbRouletteEstimate> for RouletteEstimate {
     fn from(db: DbRouletteEstimate) -> Self {
         Self {
             datacenter_id: db.datacenter_id as u16,
+            languages: u8::try_from(db.languages as u16).unwrap_or_default().into(),
             roulette_id: (db.roulette_id as u16).try_into().unwrap_or_default(),
             role: db.role.into(),
             last_update: db.time.unwrap_or_default(),
