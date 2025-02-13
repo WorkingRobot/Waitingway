@@ -163,7 +163,7 @@ public sealed class DutyNotificationTracker : IDisposable
         _ = DeleteNotificationFnf(new DeleteNotificationData
         {
             PositionStart = positions.FirstOrDefault()?.Position,
-            PositionEnd = positions.LastOrDefault()?.Position,
+            PositionEnd = obj.Pops.Count == 0 ? positions.LastOrDefault()?.Position : null,
             Duration = (uint)(obj.EndTime!.Value - obj.StartTime).TotalSeconds,
             ResultingContent = obj.LastPop?.ResultingContent,
             ErrorMessage = obj.WithdrawMessage is { } row ? LuminaSheets.LogMessage.GetRowOrDefault(row)?.Text.ExtractText() : null,
