@@ -5,6 +5,8 @@ using Dalamud.IoC;
 using Dalamud.Plugin.Services;
 using Dalamud.Plugin;
 using Waitingway.Utils;
+using Waitingway.Api.Login;
+using Waitingway.Api.Duty;
 
 namespace Waitingway;
 
@@ -34,10 +36,11 @@ public sealed class Service
     public static WindowSystem WindowSystem => Plugin.WindowSystem;
     public static IconManager IconManager => Plugin.IconManager;
     public static Versioning Version => Plugin.Version;
-    public static Hooks Hooks => Plugin.Hooks;
-    public static QueueTracker QueueTracker => Plugin.QueueTracker;
-    public static Api Api => Plugin.Api;
-    public static NotificationTracker NotificationTracker => Plugin.NotificationTracker;
+    public static Hooks.Hooks Hooks => Plugin.Hooks;
+    public static LoginQueueTracker LoginTracker => Plugin.LoginTracker;
+    public static DutyQueueTracker DutyTracker => Plugin.DutyTracker;
+    public static Api.Api Api => Plugin.Api;
+    public static LoginNotificationTracker NotificationTracker => Plugin.LoginNotificationTracker;
 #pragma warning restore CS8618
 
     internal static void Initialize(Plugin plugin, IDalamudPluginInterface iface)
