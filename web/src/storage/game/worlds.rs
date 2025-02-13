@@ -1,14 +1,91 @@
+use super::{
+    api::{search_xivapi, GameSheet, XivApiLink},
+    impl_game_data, GameData,
+};
+use crate::{models::world_info::WorldInfo, stopwatch::Stopwatch, storage::db};
+use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
+use itertools::Itertools;
+use poise::ChoiceParameter;
+use reqwest::Client;
+use serde::Deserialize;
+use serenity::async_trait;
+use sqlx::PgPool;
 use std::{
     collections::HashMap,
     fmt::{self, Display, Formatter},
 };
 
-use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
-use itertools::Itertools;
-use poise::ChoiceParameter;
-use sqlx::PgPool;
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct XivApiWorld {
+    pub is_public: bool,
+    pub name: String,
+    pub data_center: XivApiLink<XivApiDataCenter>,
+}
 
-use crate::storage::db;
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct XivApiDataCenter {
+    pub is_cloud: bool,
+    pub name: String,
+    pub region: u8,
+}
+
+struct WorldSheet;
+
+#[async_trait]
+impl GameSheet for WorldSheet {
+    type Element = WorldInfo;
+
+    async fn get_xivapi(client: &Client) -> Result<Vec<Self::Element>, reqwest::Error> {
+        Ok(search_xivapi::<XivApiWorld>(
+            client,
+            "World",
+            // Region 7 is NA Cloud Test which is public for some reason
+            "-Region=0 -DataCenter.Region=7 IsPublic=true",
+            "Name,DataCenter.Region,DataCenter.Name,DataCenter.IsCloud,IsPublic",
+        )
+        .await?
+        .results
+        .into_iter()
+        .map(|r| {
+            let world_id = r.row_id;
+            let world_name = r.fields.name;
+            let datacenter_id = r.fields.data_center.row_id;
+            let datacenter_name = r.fields.data_center.fields.name;
+            let region_id = r.fields.data_center.fields.region;
+            let (region_name, region_abbreviation) = match region_id {
+                1 => ("Japan", "JP"),
+                2 => ("North America", "NA"),
+                3 => ("Europe", "EU"),
+                4 => ("Oceania", "OC"),
+                _ => ("Unknown", "??"),
+            };
+            let is_cloud = r.fields.data_center.fields.is_cloud;
+            let hidden = !r.fields.is_public;
+            WorldInfo {
+                world_id,
+                world_name,
+                datacenter_id,
+                datacenter_name,
+                region_id: region_id.into(),
+                region_name: region_name.to_string(),
+                region_abbreviation: region_abbreviation.to_string(),
+                is_cloud,
+                hidden,
+            }
+        })
+        .collect_vec())
+    }
+
+    async fn get_db(pool: &PgPool) -> Result<Vec<Self::Element>, sqlx::Error> {
+        db::world_info::get_worlds(pool).await
+    }
+
+    async fn upsert_db(pool: &PgPool, elements: Vec<Self::Element>) -> Result<(), sqlx::Error> {
+        db::world_info::upsert_worlds(pool, elements).await
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Datacenter {
@@ -26,27 +103,21 @@ impl Display for Datacenter {
 
 impl ChoiceParameter for Datacenter {
     fn list() -> Vec<poise::CommandParameterChoice> {
-        WORLD_DATA
-            .get()
-            .map(|v| v.datacenter_choices.clone())
-            .unwrap_or_default()
+        get_data().datacenter_choices.clone()
     }
 
     fn from_index(index: usize) -> Option<Self> {
-        WORLD_DATA
-            .get()
-            .and_then(|v| v.datacenters.get(index).cloned())
+        get_data().datacenters.get(index).cloned()
     }
 
     fn from_name(name: &str) -> Option<Self> {
-        WORLD_DATA.get().and_then(|v| {
-            v.datacenters
-                .iter()
-                .find(|dc| {
-                    dc.name.eq_ignore_ascii_case(name) || dc.to_string().eq_ignore_ascii_case(name)
-                })
-                .cloned()
-        })
+        get_data()
+            .datacenters
+            .iter()
+            .find(|dc| {
+                dc.name.eq_ignore_ascii_case(name) || dc.to_string().eq_ignore_ascii_case(name)
+            })
+            .cloned()
     }
 
     fn name(&self) -> &'static str {
@@ -87,9 +158,12 @@ pub struct WorldData {
     pub matcher: SkimMatcherV2,
 }
 
-impl WorldData {
-    pub async fn new(pool: &PgPool) -> Result<Self, sqlx::Error> {
-        let worlds = db::get_worlds(pool).await?;
+#[async_trait]
+impl GameData for WorldData {
+    async fn new(pool: &PgPool, client: &Client) -> Result<Self, super::GameDataError> {
+        let _s = Stopwatch::new("World Data Init");
+
+        let worlds = WorldSheet::get_and_upsert(pool, client).await?;
 
         let datacenter_params = worlds
             .iter()
@@ -139,7 +213,9 @@ impl WorldData {
             matcher: SkimMatcherV2::default(),
         })
     }
+}
 
+impl WorldData {
     pub fn find_best_world_match(&self, query: &str) -> Vec<&World> {
         self.worlds
             .iter()
@@ -162,15 +238,4 @@ impl WorldData {
     }
 }
 
-static WORLD_DATA: tokio::sync::OnceCell<WorldData> = tokio::sync::OnceCell::const_new();
-
-pub async fn initialize(pool: &PgPool) -> Result<(), sqlx::Error> {
-    WORLD_DATA
-        .get_or_try_init(|| async { WorldData::new(pool).await })
-        .await?;
-    Ok(())
-}
-
-pub fn get_world_data() -> Option<&'static WorldData> {
-    WORLD_DATA.get()
-}
+impl_game_data!(WorldData, WORLD_DATA);
