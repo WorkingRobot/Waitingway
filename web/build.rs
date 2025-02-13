@@ -2,21 +2,32 @@ use build_target::{Arch, Env, Os};
 use copy_to_output::copy_to_output_path;
 use std::{ffi::OsStr, process::Command, time::SystemTime};
 
+const SUPPORTED_VERSION: &str = "2.2.0";
+
 fn main() {
-    let profile = std::env::var("PROFILE").unwrap();
-    if profile == "release" {
-        println!(
-            "cargo::rustc-env=BUILD_TIMESTAMP={}",
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        );
-    } else {
-        println!("cargo::rustc-env=BUILD_TIMESTAMP=0");
+    {
+        let profile = std::env::var("PROFILE").unwrap();
+        println!("cargo:rustc-env=PROFILE={profile}");
+        if profile == "release" {
+            println!(
+                "cargo::rustc-env=BUILD_TIMESTAMP={}",
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            );
+        } else {
+            println!("cargo::rustc-env=BUILD_TIMESTAMP=0");
+        }
     }
 
-    println!("cargo:rustc-env=PROFILE={profile}");
+    {
+        println!("cargo:rustc-env=SUPPORTED_VERSION={SUPPORTED_VERSION}");
+        let (major, minor, patch) = supported_version().unwrap();
+        println!("cargo:rustc-env=SUPPORTED_VERSION_MAJOR={major}");
+        println!("cargo:rustc-env=SUPPORTED_VERSION_MINOR={minor}");
+        println!("cargo:rustc-env=SUPPORTED_VERSION_PATCH={patch}");
+    }
 
     // Skip building the connector if we're running in rust-analyzer or anywhere unnecessary
     let is_redundant = cfg!(clippy) || cfg!(miri) || cfg!(doc) || cfg!(test) || cfg!(rustfmt);
@@ -101,4 +112,12 @@ fn build_connector() {
                 .expect("Could not copy connector artifact");
         }
     }
+}
+
+fn supported_version() -> Option<(u32, u32, u32)> {
+    let mut version = SUPPORTED_VERSION.split('.');
+    let major = version.next()?.parse().ok()?;
+    let minor = version.next()?.parse().ok()?;
+    let patch = version.next()?.parse().ok()?;
+    Some((major, minor, patch))
 }

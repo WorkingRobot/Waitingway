@@ -69,7 +69,7 @@ pub async fn create_recap(pool: &PgPool, recap: Recap) -> Result<(), Error> {
         recap.start_time.as_db(),
         recap.end_time.as_db(),
         recap.end_identify_time.map(|t| t.as_db()),
-        recap.client_version.to_string()
+        recap.client_version.version_cfg()
     )
     .execute(&mut *tx)
     .await?;

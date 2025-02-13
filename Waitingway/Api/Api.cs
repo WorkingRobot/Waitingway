@@ -98,7 +98,7 @@ public sealed class Api : IDisposable
         {
             if (t != ServerVersionTask)
                 return;
-            if (Service.Version.Version.Major != t.Result.VersionMajor || Service.Version.Version.Minor < t.Result.VersionMinor)
+            if (Service.Version.Version.Major != t.Result.SupportedVersionMajor || Service.Version.Version.Minor < t.Result.SupportedVersionMinor)
                 Log.WarnNotify("Waitingway is outdated and may not work correctly. Please update for the latest features and bug fixes.", "Waitingway Server Version Mismatch");
         }, TaskContinuationOptions.OnlyOnRanToCompletion);
 

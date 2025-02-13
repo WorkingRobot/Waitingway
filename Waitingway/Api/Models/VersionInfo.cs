@@ -13,5 +13,9 @@ public sealed record VersionInfo
     public required uint VersionMajor { get; init; }
     public required uint VersionMinor { get; init; }
     public required uint VersionPatch { get; init; }
+    public required string SupportedVersion { get; init; }
+    public required uint SupportedVersionMajor { get; init; }
+    public required uint SupportedVersionMinor { get; init; }
+    public required uint SupportedVersionPatch { get; init; }
     public required DateTime BuildTime { get; init; }
 }

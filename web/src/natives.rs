@@ -6,6 +6,8 @@ use konst::{
 use serde::Serialize;
 use time::{Duration, OffsetDateTime};
 
+use crate::middleware::version::UserAgentVersion;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Platform error")]
@@ -71,6 +73,10 @@ pub struct VersionData {
     pub version_major: u32,
     pub version_minor: u32,
     pub version_patch: u32,
+    pub supported_version: &'static str,
+    pub supported_version_major: u32,
+    pub supported_version_minor: u32,
+    pub supported_version_patch: u32,
     #[serde(with = "time::serde::rfc3339")]
     pub build_time: time::OffsetDateTime,
 }
@@ -85,7 +91,20 @@ pub const VERSION_DATA: VersionData = VersionData {
     version_major: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MAJOR"))),
     version_minor: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MINOR"))),
     version_patch: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_PATCH"))),
+    supported_version: env!("SUPPORTED_VERSION"),
+    supported_version_major: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_MAJOR"))),
+    supported_version_minor: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_MINOR"))),
+    supported_version_patch: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_PATCH"))),
     build_time: option::unwrap!(result::ok!(time::OffsetDateTime::from_unix_timestamp(
         result::unwrap_ctx!(parse_i64(env!("BUILD_TIMESTAMP")))
     ))),
 };
+
+pub fn version() -> UserAgentVersion {
+    UserAgentVersion {
+        major: VERSION_DATA.version_major,
+        minor: VERSION_DATA.version_minor,
+        patch: VERSION_DATA.version_patch,
+        configuration: titlecase::titlecase(VERSION_DATA.profile),
+    }
+}

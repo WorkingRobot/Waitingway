@@ -22,6 +22,7 @@ use actix_web::{
     App, HttpServer,
 };
 use actix_web_prom::PrometheusMetricsBuilder;
+use natives::version;
 use prometheus::Registry;
 use serenity::all::ActivityData;
 use std::io;
@@ -80,7 +81,7 @@ async fn main() -> Result<(), ServerError> {
         .expect("Error creating redis client");
 
     let web_client = reqwest::Client::builder()
-        .user_agent("Waitingway")
+        .user_agent(version().to_string())
         .build()
         .expect("Error creating reqwest client");
 

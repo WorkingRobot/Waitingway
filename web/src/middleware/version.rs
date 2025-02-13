@@ -12,7 +12,7 @@ pub struct UserAgentVersion {
 
 impl UserAgentVersion {
     // Waitingway/0.0.0-Debug or Waitingway/0.0.0-Release
-    pub fn from_string(value: &str) -> Option<Self> {
+    fn from_string(value: &str) -> Option<Self> {
         let mut parts = value.split('/');
 
         let name = parts.next()?;
@@ -40,18 +40,21 @@ impl UserAgentVersion {
             configuration,
         })
     }
-}
 
-impl std::fmt::Display for UserAgentVersion {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
+    pub fn version_cfg(&self) -> String {
+        format!(
             "{major}.{minor}.{patch}-{configuration}",
             major = self.major,
             minor = self.minor,
             patch = self.patch,
             configuration = self.configuration
         )
+    }
+}
+
+impl std::fmt::Display for UserAgentVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}/{}", "Waitingway", self.version_cfg())
     }
 }
 
@@ -78,7 +81,8 @@ impl FromRequest for UserAgentVersion {
                 .ok_or(ErrorUnauthorized("Invalid User-Agent"))
         });
         let version = header_str.and_then(|v| {
-            UserAgentVersion::from_string(v).ok_or(ErrorUnauthorized("Invalid User-Agent version"))
+            UserAgentVersion::try_from(v)
+                .map_err(|_| ErrorUnauthorized("Invalid User-Agent version"))
         });
         futures_util::future::ready(version)
     }
