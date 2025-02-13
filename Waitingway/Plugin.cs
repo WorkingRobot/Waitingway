@@ -116,8 +116,6 @@ public sealed class Plugin : IDalamudPlugin
                 Minimized = false
             });
         };
-
-        World.GetWorld(34);
     }
 
     public void OpenSettingsWindow(bool force = false)

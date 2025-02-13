@@ -1,4 +1,3 @@
-using Lumina.Excel.Sheets;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -14,7 +13,7 @@ public sealed class DutyNotificationTracker : IDisposable
 {
     private Api Api { get; }
 
-    private NotificationData? CurrentNotification { get; set; }
+    private Task<NotificationData?>? CurrentNotification { get; set; }
     private bool? SentRoulettePosition { get; set; }
 
     public DutyNotificationTracker()
@@ -198,33 +197,34 @@ public sealed class DutyNotificationTracker : IDisposable
         return task;
     }
 
-    private Task CreateNotificationFnf(CreateNotificationData data)
+    private async Task CreateNotificationFnf(CreateNotificationData data)
     {
         if (CurrentNotification != null)
             throw new InvalidOperationException("Notifications cannot exist");
 
-        var task = Api.Duty.CreateNotificationAsync(data);
-        _ = task.ContinueWith(t =>
+        CurrentNotification = Api.Duty.CreateNotificationAsync(data);
+        _ = CurrentNotification.ContinueWith(t =>
         {
             if (t.Exception is { } e)
                 Log.ErrorNotify(e, "Failed to create notification", "Couldn't Send Notification");
             else if (t.Result is { } notification)
-            {
-                CurrentNotification = notification;
                 Log.Debug($"Created notification ({notification.Data} ; {notification.Nonce})");
-            }
             else
                 Log.WarnNotify("Your queue is too short. You won't get any notifications.", "Queue Notification Disabled");
         });
-        return task;
+        await CurrentNotification.ConfigureAwait(false);
     }
 
-    private Task UpdateNotificationFnf(UpdateNotificationData data)
+    private async Task UpdateNotificationFnf(UpdateNotificationData data)
     {
         if (CurrentNotification == null)
             throw new InvalidOperationException("No notification to update");
 
-        var task = Api.Duty.UpdateNotificationAsync(CurrentNotification, data);
+        var notif = await CurrentNotification.ConfigureAwait(false);
+        if (notif == null)
+            return;
+
+        var task = Api.Duty.UpdateNotificationAsync(notif, data);
         _ = task.ContinueWith(t =>
         {
             if (t.Exception is { } e)
@@ -232,17 +232,20 @@ public sealed class DutyNotificationTracker : IDisposable
             else
                 Log.Debug("Updated notification");
         });
-        return task;
+        await task.ConfigureAwait(false);
     }
 
-    private Task DeleteNotificationFnf(DeleteNotificationData data)
+    private async Task DeleteNotificationFnf(DeleteNotificationData data)
     {
         if (CurrentNotification == null)
             throw new InvalidOperationException("No notification to delete");
+        (var n, CurrentNotification) = (CurrentNotification, null);
 
-        var notification = CurrentNotification;
-        CurrentNotification = null;
-        var task = Api.Duty.DeleteNotificationAsync(notification, data);
+        var notif = await n.ConfigureAwait(false);
+        if (notif == null)
+            return;
+
+        var task = Api.Duty.DeleteNotificationAsync(notif, data);
         _ = task.ContinueWith(t =>
         {
             if (t.Exception is { } e)
@@ -250,6 +253,6 @@ public sealed class DutyNotificationTracker : IDisposable
             else
                 Log.Debug("Deleted unexpected notification");
         });
-        return task;
+        await task.ConfigureAwait(false);
     }
 }
