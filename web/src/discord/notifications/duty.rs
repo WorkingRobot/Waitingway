@@ -53,40 +53,45 @@ impl QueueData {
         //     }
         // };
 
-        match (self.queued_roulette, self.queued_content.as_ref()) {
-            (Some(roulette_id), None) => lookup_roulette(roulette_id),
-            (None, Some(content_ids)) if !content_ids.is_empty() => {
-                let content_names = content_ids
-                    .iter()
-                    .map(|id| lookup_content(*id))
-                    .collect_vec();
-                if content_names.len() == 1 {
-                    content_names.into_iter().at_most_one().unwrap().unwrap()
-                } else if !expand {
-                    format!(
-                        "{} and {} more",
-                        content_names.first().unwrap(),
-                        content_ids.len() - 1
-                    )
-                } else if content_ids.len() == 2 {
-                    content_names.join(" and ")
-                } else {
-                    let mut iter = content_names.into_iter();
-                    let last = iter.next_back().unwrap();
-                    format!("{}, and {}", iter.join(", "), last)
-                }
+        let c = content::get_data();
+
+        if let Some(names) = self
+            .queued_roulette
+            .map(|r| vec![c.get_roulette_name(r)])
+            .or_else(|| {
+                self.queued_content
+                    .as_ref()
+                    .map(|v| v.iter().map(|r| c.get_content_name(*r)).collect_vec())
+            })
+            .filter(|c| !c.is_empty())
+        {
+            if names.len() == 1 {
+                names.first().unwrap().to_string()
+            } else if !expand {
+                format!("{} and {} more", names.first().unwrap(), names.len() - 1)
+            } else if names.len() == 2 {
+                names.join(" and ")
+            } else {
+                let mut iter = names.into_iter();
+                let last = iter.next_back().unwrap();
+                format!("{}, and {}", iter.join(", "), last)
             }
-            _ => panic!("QueueData must have exactly one of queued_roulette or queued_content"),
+        } else {
+            "Unknown".to_string()
         }
     }
-}
 
-fn lookup_roulette(id: u8) -> String {
-    format!("Roulette {id}")
-}
+    pub fn queue_image(&self) -> String {
+        self.queued_roulette
+            .map(|r| content::get_data().get_roulette_image(r))
+            .or_else(|| {
+                self.queued_content
+                    .as_ref()
+                    .and_then(|v| v.first().map(|r| content::get_data().get_content_image(*r)))
+            })
+            .unwrap_or_else(|| content::ContentData::DEFAULT_IMAGE.to_string())
+    }
 
-fn lookup_content(id: u16) -> String {
-    format!("Content {id}")
     pub fn embed_author(&self) -> CreateEmbedAuthor {
         CreateEmbedAuthor::new(&self.character_name)
             .icon_url(get_icon_url_from_id(self.job().icon_id()))
@@ -244,13 +249,19 @@ fn create_pop_embed(
         );
     }
 
-    CreateEmbed::new()
+    let ret = CreateEmbed::new()
         .title("Queue popped!")
         .description(msg)
         .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(timestamp)
-        .color(COLOR_QUEUE_POP)
+        .color(COLOR_QUEUE_POP);
+
+    if let Some(content) = resulting_content {
+        ret.image(content::get_data().get_content_image(content))
+    } else {
+        ret
+    }
 }
 
 fn create_completion_embed(
@@ -319,6 +330,9 @@ fn create_completion_embed_successful(
     CreateEmbed::new()
         .title("Queue completed!")
         .description(msg)
+        .image(get_icon_url(
+            &content::get_data().get_content_image(content),
+        ))
         .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(OffsetDateTime::now_utc())
@@ -367,6 +381,7 @@ fn create_completion_embed_unsuccessful(
     CreateEmbed::new()
         .title("Unsuccessful Queue")
         .description(msg)
+        .image(get_icon_url(&queue_data.queue_image()))
         .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("At"))
         .timestamp(OffsetDateTime::now_utc())

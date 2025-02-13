@@ -5,6 +5,7 @@ use thiserror::Error;
 use tokio::task::JoinSet;
 
 mod api;
+pub mod content;
 pub mod jobs;
 pub mod worlds;
 
@@ -59,6 +60,11 @@ pub async fn initialize(pool: &PgPool, client: &Client) -> Result<(), GameDataEr
         let pool = pool.clone();
         let client = client.clone();
         async move { jobs::initialize(&pool, &client).await }
+    });
+    joinset.spawn({
+        let pool = pool.clone();
+        let client = client.clone();
+        async move { content::initialize(&pool, &client).await }
     });
 
     while let Some(ret) = joinset.join_next().await {
