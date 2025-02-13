@@ -64,6 +64,7 @@ public sealed class DutyNotificationTracker : IDisposable
                     _ = SendQueueSizeFnf(new RouletteSize
                     {
                         WorldId = obj.WorldId,
+                        Languages = obj.QueuedLanguages,
                         RouletteId = obj.QueuedRoulette.Value,
                         EstimatedWaitTime = rouletteUpdate.WaitTimeMinutes,
                         Size = rouletteUpdate.RawPosition,
@@ -76,6 +77,7 @@ public sealed class DutyNotificationTracker : IDisposable
                     _ = SendQueueSizeFnf(new RouletteSize
                     {
                         WorldId = obj.WorldId,
+                        Languages = obj.QueuedLanguages,
                         RouletteId = obj.QueuedRoulette.Value,
                         EstimatedWaitTime = rouletteUpdate.WaitTimeMinutes,
                         Size = null,
@@ -89,6 +91,7 @@ public sealed class DutyNotificationTracker : IDisposable
                 _ = SendQueueSizeFnf(new RouletteSize
                 {
                     WorldId = obj.WorldId,
+                    Languages = obj.QueuedLanguages,
                     RouletteId = obj.QueuedRoulette.Value,
                     EstimatedWaitTime = null,
                     Size = rouletteUpdate.RawPosition,

@@ -21,7 +21,7 @@ public sealed class DutyApi(Api api)
     private HttpClient Client => Api.Client;
     private JsonSerializerOptions JsonOptions => Api.JsonOptions;
 
-    private Dictionary<ushort, Dictionary<byte, Task<Dictionary<RouletteRole, RouletteEstimate>>>> CachedRouletteEstimates { get; } = [];
+    private Dictionary<(ushort DatacenterId, QueueLanguage Language), Dictionary<byte, Task<Dictionary<RouletteRole, RouletteEstimate>>>> CachedRouletteEstimates { get; } = [];
 
     public const string EP_QUEUE_DUTY_SIZE = Api.EP_QUEUE_DUTY_SIZE;
     public const string EP_QUEUE_DUTY_RECAP = Api.EP_QUEUE_DUTY_RECAP;
@@ -51,10 +51,11 @@ public sealed class DutyApi(Api api)
         return await resp.Content.ReadFromJsonAsync<RouletteEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(EP_QUEUE_DUTY_GET, "Json returned null");
     }
 
-    public async Task<RouletteEstimate[]> GetDatacenterRouletteQueuesAsync(ushort datacenterId, params IEnumerable<byte> rouletteIds)
+    public async Task<RouletteEstimate[]> GetDatacenterRouletteQueuesAsync(ushort datacenterId, QueueLanguage languages, params IEnumerable<byte> rouletteIds)
     {
         var uri = new UriBuilder($"{Client.BaseAddress}{EP_QUEUE_DUTY_GET}/{datacenterId}");
         var qs = HttpUtility.ParseQueryString(string.Empty);
+        qs.Add("lang", ((byte)languages).ToString());
         foreach (var rouletteId in rouletteIds)
             qs.Add("roulette_id", rouletteId.ToString());
         uri.Query = qs.ToString();
@@ -107,7 +108,6 @@ public sealed class DutyApi(Api api)
             message.Headers.Add("X-Instance-Nonce", notificationData.Nonce);
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
-            Log.Debug($"Deleting: {await message.Content.ReadAsStringAsync()}");
 
             resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
         }
@@ -122,13 +122,13 @@ public sealed class DutyApi(Api api)
     public void ClearRouletteQueueCache() =>
         CachedRouletteEstimates.Clear();
 
-    public CachedEstimate<Dictionary<RouletteRole, RouletteEstimate>>[] GetRouletteQueuesCached(ushort datacenterId, params byte[] rouletteIds)
+    public CachedEstimate<Dictionary<RouletteRole, RouletteEstimate>>[] GetRouletteQueuesCached(ushort datacenterId, QueueLanguage languages, params byte[] rouletteIds)
     {
         var estimates = new Task<Dictionary<RouletteRole, RouletteEstimate>>[rouletteIds.Length];
         List<byte> estimatesToRetrieve = [];
 
-        if (!CachedRouletteEstimates.TryGetValue(datacenterId, out var dcCache))
-            CachedRouletteEstimates[datacenterId] = dcCache = [];
+        if (!CachedRouletteEstimates.TryGetValue((datacenterId, languages), out var dcCache))
+            CachedRouletteEstimates[(datacenterId, languages)] = dcCache = [];
         for (var i = 0; i < rouletteIds.Length; ++i)
         {
             if (dcCache.TryGetValue(rouletteIds[i], out var estimate))
@@ -139,7 +139,7 @@ public sealed class DutyApi(Api api)
         if (estimatesToRetrieve.Count > 0)
         {
             Log.Debug($"Getting roulette queues {string.Join(", ", rouletteIds)}");
-            var ret = GetDatacenterRouletteQueuesAsync(datacenterId, estimatesToRetrieve);
+            var ret = GetDatacenterRouletteQueuesAsync(datacenterId, languages, estimatesToRetrieve);
             _ = ret.ContinueWith(t =>
             {
                 if (t.Exception is { } e)

@@ -1,10 +1,12 @@
 using System;
+using static Waitingway.Hooks.DutyQueue;
 
 namespace Waitingway.Api.Duty.Models;
 
 public sealed record RouletteEstimate
 {
     public required ushort DatacenterId { get; init; }
+    public required QueueLanguage Languages { get; init; }
     public required byte RouletteId { get; init; }
     public required RouletteRole Role { get; init; }
 
