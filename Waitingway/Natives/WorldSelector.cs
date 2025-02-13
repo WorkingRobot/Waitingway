@@ -17,6 +17,8 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Waitingway.Api.Login.Models;
+using Waitingway.Api.Models;
 using Waitingway.Utils;
 
 namespace Waitingway.Natives;
@@ -33,7 +35,7 @@ public sealed unsafe class WorldSelector : IDisposable
     private List<Pointer<AtkTextNode>> CreatedTextNodes { get; } = [];
     private List<IAddonEventHandle?> EventHandles { get; } = [];
 
-    private Api.CachedQueueEstimate[]? QueueEstimates { get; set; }
+    private CachedEstimate<QueueEstimate>[]? QueueEstimates { get; set; }
 
     [StructLayout(LayoutKind.Explicit, Size = 0x78)]
     private struct WorldEntry
@@ -98,7 +100,7 @@ public sealed unsafe class WorldSelector : IDisposable
         var entryCount = Addon->WorldEntriesEnd - Addon->WorldEntriesFirst;
         var entryWorldIdx = Enumerable.Range(0, (int)entryCount).Select(i => Addon->WorldEntriesFirst[i].WorldId).ToArray();
 
-        var queues = QueueEstimates = Service.Api.GetWorldQueuesCached(entryWorldIdx);
+        var queues = QueueEstimates = Service.Api.Login.GetWorldQueuesCached(entryWorldIdx);
         for (var idx = 0; idx < entryCount; ++idx)
         {
             var item = Addon->WorldList->GetItemRenderer(idx);
@@ -178,7 +180,7 @@ public sealed unsafe class WorldSelector : IDisposable
         return GetStateColor(state);
     }
 
-    private void UpdateWorldNode(AtkComponentListItemRenderer* parentComponent, Api.CachedQueueEstimate estimate)
+    private void UpdateWorldNode(AtkComponentListItemRenderer* parentComponent, CachedEstimate<QueueEstimate> estimate)
     {
         var siblingTextNode = parentComponent->UldManager.SearchNodeById(4);
 
@@ -192,7 +194,7 @@ public sealed unsafe class WorldSelector : IDisposable
 
         switch (estimate.State)
         {
-            case Api.CachedQueueEstimate.CacheState.Found:
+            case CacheState.Found:
                 {
                     if (Service.Configuration.ShowDurationInWorldSelector)
                     {
@@ -210,16 +212,16 @@ public sealed unsafe class WorldSelector : IDisposable
                     }
                 }
                 break;
-            case Api.CachedQueueEstimate.CacheState.Failed:
+            case CacheState.Failed:
                 edgeColor = new() { R = 0xFF, G = 0x00, B = 0x00, A = 0xFF };
                 text = "!!!";
                 break;
-            case Api.CachedQueueEstimate.CacheState.InProgress:
+            case CacheState.InProgress:
                 edgeColor = new() { R = 0xCC, G = 0xCC, B = 0x00, A = 0xFF };
                 text = "...";
                 break;
             default:
-            case Api.CachedQueueEstimate.CacheState.NotFound:
+            case CacheState.NotFound:
                 edgeColor = new() { R = 0xFF, G = 0x00, B = 0x00, A = 0xFF };
                 text = "???";
                 break;
@@ -229,12 +231,12 @@ public sealed unsafe class WorldSelector : IDisposable
         textNode->SetText(text);
     }
 
-    public static ReadOnlyMemory<byte> GetWorldNodeTooltip(Api.CachedQueueEstimate estimate)
+    public static ReadOnlyMemory<byte> GetWorldNodeTooltip(CachedEstimate<QueueEstimate> estimate)
     {
         var b = new SeStringBuilder();
         switch (estimate.State)
         {
-            case Api.CachedQueueEstimate.CacheState.Found:
+            case CacheState.Found:
                 {
                     var pos = estimate.Estimate!.LastSize;
                     var posText = FormatPosition(pos);
@@ -264,14 +266,14 @@ public sealed unsafe class WorldSelector : IDisposable
                     b.Append(upText);
                 }
                 break;
-            case Api.CachedQueueEstimate.CacheState.Failed:
+            case CacheState.Failed:
                 b.Append("Failed to get estimate");
                 break;
-            case Api.CachedQueueEstimate.CacheState.InProgress:
+            case CacheState.InProgress:
                 b.Append("Obtaining queue estimate...");
                 break;
             default:
-            case Api.CachedQueueEstimate.CacheState.NotFound:
+            case CacheState.NotFound:
                 b.Append("World not found");
                 break;
         }

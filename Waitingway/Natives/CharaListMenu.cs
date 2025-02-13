@@ -10,6 +10,8 @@ using Lumina.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Waitingway.Api.Login.Models;
+using Waitingway.Api.Models;
 using Waitingway.Utils;
 
 namespace Waitingway.Natives;
@@ -35,7 +37,7 @@ public sealed unsafe class CharaListMenu : IDisposable
     private const float SettingsPadding = 4;
     private const float Settings = 1f;
 
-    private Api.CachedQueueEstimate? CachedQueueEstimate { get; set; }
+    private CachedEstimate<QueueEstimate>? CachedQueueEstimate { get; set; }
 
     public CharaListMenu()
     {
@@ -58,11 +60,11 @@ public sealed unsafe class CharaListMenu : IDisposable
     {
         Addon = (AtkUnitBase*)args.Addon;
 
-        Service.Api.ClearWorldQueueCache();
+        Service.Api.Login.ClearWorldQueueCache();
 
         // Saves an extra API call by getting all world queues at once
-        var dcId = ((AgentLobby2*)AgentLobby.Instance())->DataCenter;
-        Service.Api.GetWorldQueuesCached(World.GetWorlds().Where(w => w.DatacenterId == dcId).Select(w => w.WorldId).ToArray());
+        var dcId = AgentLobby.Instance()->DataCenter;
+        Service.Api.Login.GetWorldQueuesCached(World.GetWorlds().Where(w => w.DatacenterId == dcId).Select(w => w.WorldId).ToArray());
 
         AdjustNativeUi();
     }
@@ -76,10 +78,10 @@ public sealed unsafe class CharaListMenu : IDisposable
 
     private void OnUpdate(AddonEvent type, AddonArgs args)
     {
-        var worldId = ((AgentLobby2*)AgentLobby.Instance())->WorldId;
+        var worldId = AgentLobby.Instance()->WorldId;
         if (worldId != 0)
         {
-            CachedQueueEstimate = Service.Api.GetWorldQueuesCached(worldId)[0];
+            CachedQueueEstimate = Service.Api.Login.GetWorldQueuesCached(worldId)[0];
             UpdateWorldInfoTextNode(CachedQueueEstimate.Value);
         }
     }
@@ -93,10 +95,10 @@ public sealed unsafe class CharaListMenu : IDisposable
         var width = MathF.Round(backupBtn->Width * Settings + SettingsPadding);
         SettingsDecreasedWidth = width;
 
-        var settingsNode = Service.Hooks.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
+        var settingsNode = Service.Hooks.Atk.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
         if (settingsNode == null)
-            Service.Hooks.duplicateComponentNode(&Addon->UldManager, 6, 1, 0);
-        settingsNode = Service.Hooks.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
+            Service.Hooks.Atk.duplicateComponentNode(&Addon->UldManager, 6, 1, 0);
+        settingsNode = Service.Hooks.Atk.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
 
         SettingsButton = settingsNode->GetAsAtkComponentButton();
 
@@ -310,14 +312,14 @@ public sealed unsafe class CharaListMenu : IDisposable
         return textNode;
     }
 
-    private void UpdateWorldInfoTextNode(Api.CachedQueueEstimate estimate)
+    private void UpdateWorldInfoTextNode(CachedEstimate<QueueEstimate> estimate)
     {
         var sizeNode = GetOrCreateQueueSizeTextNode();
         var durationNode = GetOrCreateQueueDurationTextNode();
 
         switch (estimate.State)
         {
-            case Api.CachedQueueEstimate.CacheState.Found:
+            case CacheState.Found:
                 {
                     var pos = estimate.Estimate!.LastSize;
                     var dur = estimate.Estimate.LastDuration;
@@ -330,18 +332,18 @@ public sealed unsafe class CharaListMenu : IDisposable
                     durationNode->SetText(WorldSelector.FormatDuration(dur));
                 }
                 break;
-            case Api.CachedQueueEstimate.CacheState.Failed:
+            case CacheState.Failed:
                 sizeNode->EdgeColor = new() { R = 0xFF, G = 0x00, B = 0x00, A = 0xFF };
                 sizeNode->SetText("!!!");
                 durationNode->ToggleVisibility(false);
                 break;
-            case Api.CachedQueueEstimate.CacheState.InProgress:
+            case CacheState.InProgress:
                 sizeNode->EdgeColor = new() { R = 0xCC, G = 0xCC, B = 0x00, A = 0xFF };
                 sizeNode->SetText("...");
                 durationNode->ToggleVisibility(false);
                 break;
             default:
-            case Api.CachedQueueEstimate.CacheState.NotFound:
+            case CacheState.NotFound:
                 sizeNode->EdgeColor = new() { R = 0xFF, G = 0x00, B = 0x00, A = 0xFF };
                 sizeNode->SetText("???");
                 durationNode->ToggleVisibility(false);
