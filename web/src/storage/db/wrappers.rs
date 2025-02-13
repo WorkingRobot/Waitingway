@@ -5,7 +5,7 @@ use sqlx::error::BoxDynError;
 
 macro_rules! define_unsigned_database_type {
     ($wrapper:ident, $unsigned:ty, $signed:ty) => {
-        #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+        #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
         pub struct $wrapper(pub $unsigned);
 
         impl<D: sqlx::Database> sqlx::Type<D> for $wrapper
@@ -62,12 +62,19 @@ macro_rules! define_unsigned_database_type {
     };
 }
 
+// define_unsigned_database_type!(DatabaseU8, u8, i8);
 define_unsigned_database_type!(DatabaseU16, u16, i16);
 define_unsigned_database_type!(DatabaseU32, u32, i32);
 define_unsigned_database_type!(DatabaseU64, u64, i64);
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct DatabaseDateTime(#[serde(with = "time::serde::rfc3339")] pub time::OffsetDateTime);
+
+impl Default for DatabaseDateTime {
+    fn default() -> Self {
+        Self(time::OffsetDateTime::UNIX_EPOCH)
+    }
+}
 
 impl<D: sqlx::Database> sqlx::Type<D> for DatabaseDateTime
 where
