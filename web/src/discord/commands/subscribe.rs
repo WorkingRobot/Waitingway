@@ -58,7 +58,7 @@ pub async fn subscribe_datacenter(
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        create_travel_embed(&datacenter.to_string(), worlds, config)
+        create_travel_embed(&datacenter.to_string(), worlds, &config.emotes)
             .description("This datacenter is aleady open for travel.")
             .color(COLOR_ERROR)
     } else {
@@ -117,9 +117,13 @@ pub async fn subscribe_world(ctx: Context<'_>, world: World, ephemeral: bool) ->
         .copied()
         .unwrap_or_default();
     let response = if !is_prohibited {
-        create_travel_embed(&world.to_string(), vec![(&world, is_prohibited)], config)
-            .description("This world is aleady open for travel.")
-            .color(COLOR_ERROR)
+        create_travel_embed(
+            &world.to_string(),
+            vec![(&world, is_prohibited)],
+            &config.emotes,
+        )
+        .description("This world is aleady open for travel.")
+        .color(COLOR_ERROR)
     } else {
         let success = subscriptions
             .subscribe(

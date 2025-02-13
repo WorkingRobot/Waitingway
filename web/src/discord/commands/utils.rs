@@ -1,5 +1,5 @@
 use crate::{
-    config::DiscordConfig,
+    config::DiscordEmoteConfig,
     discord::utils::{
         format_queue_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED,
     },
@@ -28,7 +28,7 @@ pub async fn autocomplete_world<'a>(
 pub fn create_travel_embed(
     name: &str,
     worlds: Vec<(&World, bool)>,
-    config: &DiscordConfig,
+    config: &DiscordEmoteConfig,
 ) -> CreateEmbed {
     let color = match worlds.iter().filter(|(_, s)| *s).count() {
         0 => COLOR_DC_ALLOWED,
@@ -62,13 +62,13 @@ pub fn create_travel_embed(
         .color(color)
 }
 
-fn format_travel_status(is_prohibited: bool, config: &DiscordConfig) -> String {
+fn format_travel_status(is_prohibited: bool, config: &DiscordEmoteConfig) -> String {
     format!(
         "{} {}",
         if !is_prohibited {
-            &config.green_check_emoji
+            &config.green_check
         } else {
-            &config.red_cross_emoji
+            &config.red_cross
         },
         if !is_prohibited {
             "Allowed"

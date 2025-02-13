@@ -48,7 +48,7 @@ async fn datacenter(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    let embed = create_travel_embed(&datacenter.to_string(), worlds, config);
+    let embed = create_travel_embed(&datacenter.to_string(), worlds, &config.emotes);
 
     let components = if is_all_prohibited {
         vec![serenity::CreateActionRow::Buttons(vec![
@@ -122,7 +122,11 @@ async fn world(
         .copied()
         .unwrap_or_default();
 
-    let embed = create_travel_embed(&world.to_string(), vec![(&world, is_prohibited)], config);
+    let embed = create_travel_embed(
+        &world.to_string(),
+        vec![(&world, is_prohibited)],
+        &config.emotes,
+    );
 
     let components = if is_prohibited {
         vec![serenity::CreateActionRow::Buttons(vec![

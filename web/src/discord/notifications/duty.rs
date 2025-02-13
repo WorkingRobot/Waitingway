@@ -1,4 +1,5 @@
 use crate::{
+    config::DiscordEmoteConfig,
     discord::{
         utils::{
             format_duration_duty_eta, format_queue_duration, COLOR_ERROR, COLOR_IN_QUEUE,
@@ -108,6 +109,7 @@ pub async fn send_create(
         .send_message(
             discord.http(),
             CreateMessage::new().embed(create_queue_embed(
+                &discord.config().emotes,
                 queue_data,
                 update.time.0,
                 update,
@@ -131,7 +133,11 @@ pub async fn send_update(
             discord.http(),
             message_id,
             EditMessage::new().embed(create_queue_embed(
-                queue_data, start_time, update, estimated,
+                &discord.config().emotes,
+                queue_data,
+                start_time,
+                update,
+                estimated,
             )),
         )
         .await?;
@@ -382,6 +388,7 @@ fn create_completion_embed_unsuccessful(
 }
 
 fn format_update(
+    config: &DiscordEmoteConfig,
     update: &RecapUpdate,
     start_time: time::OffsetDateTime,
     estimated: Option<time::OffsetDateTime>,
@@ -435,8 +442,16 @@ fn format_update(
                 },
             ..
         }) => Some(format!(
-            "Tanks: {}/{}\nHealers: {}/{}\nDPS: {}/{}",
-            tanks_found, tanks_total, healers_found, healers_total, dps_found, dps_total
+            "{} {}/{} {} {}/{} {} {}/{}",
+            config.duty_tank,
+            tanks_found,
+            tanks_total,
+            config.duty_healer,
+            healers_found,
+            healers_total,
+            config.duty_dps,
+            dps_found,
+            dps_total
         )),
         Some(RecapUpdateData::Players {
             players:
@@ -445,7 +460,10 @@ fn format_update(
                     needed: DatabaseU16(players_total),
                 },
             ..
-        }) => Some(format!("Players: {}/{}", players_found, players_total)),
+        }) => Some(format!(
+            "{} {}/{}",
+            config.duty_player, players_found, players_total
+        )),
         _ => None,
     };
 
@@ -488,6 +506,7 @@ fn format_update(
 }
 
 fn create_queue_embed(
+    config: &DiscordEmoteConfig,
     queue_data: &QueueData,
     start_time: time::OffsetDateTime,
     update: &RecapUpdate,
@@ -495,7 +514,7 @@ fn create_queue_embed(
 ) -> CreateEmbed {
     CreateEmbed::new()
         .title(queue_data.queue_name(false))
-        .description(format_update(update, start_time, estimated))
+        .description(format_update(config, update, start_time, estimated))
         .image(get_icon_url(&queue_data.queue_image()))
         .author(queue_data.embed_author())
         .footer(CreateEmbedFooter::new("Last updated"))

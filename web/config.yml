@@ -30,8 +30,13 @@ stasis:
     ttl: 43200 # 12 hours
 discord:
   redirect_uri: http://localhost:3000/api/v1/oauth/callback
-  green_check_emoji: "<:green_check:1327530017315487850>"
-  red_cross_emoji: "<:red_cross:1327522180308664340>"
+  emotes:
+    green_check: "<:green_check:1327530017315487850>"
+    red_cross: "<:red_cross:1327522180308664340>"
+    duty_player: "<:player:1339553024493748274>"
+    duty_tank: "<:tank:1339553037462540298>"
+    duty_healer: "<:healer:1339553010900271134>"
+    duty_dps: "<:dps:1339552998724075550>"
   queue_size_dm_threshold: 0
   connected_role_id: 1236758675385749534
   activity_update_interval: 60

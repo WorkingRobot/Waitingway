@@ -18,6 +18,16 @@ pub struct DiscordActivity {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct DiscordEmoteConfig {
+    pub green_check: String,
+    pub red_cross: String,
+    pub duty_player: String,
+    pub duty_tank: String,
+    pub duty_healer: String,
+    pub duty_dps: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct DiscordConfig {
     pub client_id: u64,
     pub client_secret: String,
@@ -25,11 +35,10 @@ pub struct DiscordConfig {
     pub bot_token: String,
     pub guild_id: GuildId,
     pub guild_invite_code: String,
-    pub green_check_emoji: String,
-    pub red_cross_emoji: String,
     pub log_channel_id: ChannelId,
     pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,
+    pub emotes: DiscordEmoteConfig,
     pub activities: Vec<DiscordActivity>,
 }
 

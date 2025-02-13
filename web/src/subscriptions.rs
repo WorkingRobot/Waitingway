@@ -189,7 +189,7 @@ impl SubscriptionManager {
     ) -> Result<(), Error> {
         match subscriber {
             Subscriber::Discord(user_id) => {
-                let config = self.imp.discord.config();
+                let config = &self.imp.discord.config().emotes;
                 let (name, embed) = match publish_data {
                     EndpointPublish::Datacenter {
                         id: _,
