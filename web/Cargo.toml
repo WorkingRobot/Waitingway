@@ -3,7 +3,7 @@ name = "waitingway-web"
 authors = ["Asriel Camora <asriel@camora.dev>"]
 description = "Backend web server for Waitingway"
 repository = "https://github.com/WorkingRobot/Waitingway"
-version = "2.2.16"
+version = "2.2.90"
 edition = "2021"
 
 [dependencies]
