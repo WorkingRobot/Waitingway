@@ -3,9 +3,11 @@ use super::Context;
 use super::Error;
 use crate::{
     discord::utils::{COLOR_ERROR, COLOR_SUCCESS},
-    storage::db,
+    storage::{
+        db,
+        game::worlds::{self, Datacenter, World},
+    },
     subscriptions::{Endpoint, Subscriber},
-    worlds::{get_world_data, Datacenter, World},
 };
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
@@ -40,9 +42,9 @@ pub async fn subscribe_datacenter(
     let db = client.db();
     let config = client.config();
     let subscriptions = client.subscriptions();
-    let status = db::get_travel_states_by_datacenter_id(db, vec![datacenter.id]).await?;
+    let status = db::travel::get_travel_states_by_datacenter_id(db, vec![datacenter.id]).await?;
     let response = if status.iter().any(|(_, status)| !*status) {
-        let travel_data = get_world_data().ok_or(Error::UnknownWorld)?;
+        let travel_data = worlds::get_data();
         let datacenter = travel_data
             .get_datacenter_by_id(datacenter.id)
             .ok_or(Error::UnknownDatacenter)?;
@@ -97,8 +99,8 @@ async fn world(
     #[autocomplete = "autocomplete_world"]
     world: u16,
 ) -> Result<(), Error> {
-    let world = get_world_data()
-        .and_then(|v| v.get_world_by_id(world))
+    let world = worlds::get_data()
+        .get_world_by_id(world)
         .cloned()
         .ok_or(Error::UnknownWorld)?;
     subscribe_world(ctx, world, false).await
@@ -109,7 +111,7 @@ pub async fn subscribe_world(ctx: Context<'_>, world: World, ephemeral: bool) ->
     let db = client.db();
     let config = client.config();
     let subscriptions = client.subscriptions();
-    let is_prohibited = db::get_travel_states_by_world_id(db, vec![world.id])
+    let is_prohibited = db::travel::get_travel_states_by_world_id(db, vec![world.id])
         .await?
         .get(&world.id)
         .copied()

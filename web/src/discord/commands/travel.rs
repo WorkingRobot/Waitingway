@@ -4,9 +4,9 @@ use super::{
     subscribe::{subscribe_datacenter, subscribe_world},
     utils::{autocomplete_world, create_travel_embed},
 };
-use crate::{
-    storage::db,
-    worlds::{get_world_data, Datacenter},
+use crate::storage::{
+    db,
+    game::worlds::{self, Datacenter},
 };
 use ::serenity::all::{EditMessage, ReactionType};
 use poise::{serenity_prelude as serenity, CreateReply};
@@ -31,8 +31,8 @@ async fn datacenter(
     let client = ctx.data();
     let db = client.db();
     let config = client.config();
-    let status = db::get_travel_states_by_datacenter_id(db, vec![datacenter.id]).await?;
-    let travel_data = get_world_data().ok_or(Error::UnknownWorld)?;
+    let status = db::travel::get_travel_states_by_datacenter_id(db, vec![datacenter.id]).await?;
+    let travel_data = worlds::get_data();
     let datacenter = travel_data
         .get_datacenter_by_id(datacenter.id)
         .cloned()
@@ -108,15 +108,15 @@ async fn world(
     #[autocomplete = "autocomplete_world"]
     world: u16,
 ) -> Result<(), Error> {
-    let world = get_world_data()
-        .and_then(|v| v.get_world_by_id(world))
+    let world = worlds::get_data()
+        .get_world_by_id(world)
         .cloned()
         .ok_or(Error::UnknownWorld)?;
 
     let client = ctx.data();
     let db = client.db();
     let config = client.config();
-    let is_prohibited = db::get_travel_states_by_world_id(db, vec![world.id])
+    let is_prohibited = db::travel::get_travel_states_by_world_id(db, vec![world.id])
         .await?
         .get(&world.id)
         .copied()

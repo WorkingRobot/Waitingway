@@ -3,8 +3,8 @@ use crate::{
     discord::utils::{
         format_queue_duration, COLOR_DC_ALLOWED, COLOR_DC_MIXED, COLOR_DC_PROHIBITED,
     },
-    models::QueueEstimate,
-    worlds::{get_world_data, World},
+    models::login::QueueEstimate,
+    storage::game::worlds::{self, World},
 };
 use ::serenity::all::{
     Color, CreateEmbed, CreateEmbedFooter, FormattedTimestamp, FormattedTimestampStyle,
@@ -19,10 +19,8 @@ pub async fn autocomplete_world<'a>(
     _ctx: Context<'_>,
     query: &'a str,
 ) -> impl Iterator<Item = serenity::AutocompleteChoice> + 'a {
-    // let _ = Stopwatch::new("autocomplete_world");
-    get_world_data()
-        .map(|v| v.find_best_world_match(query))
-        .unwrap_or_default()
+    worlds::get_data()
+        .find_best_world_match(query)
         .into_iter()
         .map(|dc| serenity::AutocompleteChoice::new(dc.to_string(), dc.id))
 }

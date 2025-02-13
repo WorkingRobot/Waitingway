@@ -3,8 +3,8 @@ use super::Context;
 use super::Error;
 use crate::{
     discord::utils::{COLOR_ERROR, COLOR_SUCCESS},
+    storage::game::worlds::{self, Datacenter},
     subscriptions::{Endpoint, Subscriber},
-    worlds::{get_world_data, Datacenter},
 };
 use ::serenity::all::CreateEmbed;
 use poise::CreateReply;
@@ -61,8 +61,8 @@ async fn world(
     #[autocomplete = "autocomplete_world"]
     world: u16,
 ) -> Result<(), Error> {
-    let world = get_world_data()
-        .and_then(|v| v.get_world_by_id(world))
+    let world = worlds::get_data()
+        .get_world_by_id(world)
         .cloned()
         .ok_or(Error::UnknownWorld)?;
 
