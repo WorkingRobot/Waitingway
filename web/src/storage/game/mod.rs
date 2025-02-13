@@ -2,6 +2,7 @@ use reqwest::Client;
 use serenity::async_trait;
 use sqlx::PgPool;
 use thiserror::Error;
+use tokio::task::JoinSet;
 
 mod api;
 pub mod jobs;
@@ -15,6 +16,8 @@ pub enum GameDataError {
     XivApiError(#[from] reqwest::Error),
     #[error("Failed to fetch data from the database: {0}")]
     DatabaseError(#[from] sqlx::Error),
+    #[error("Tokio join error")]
+    JoinError(#[from] tokio::task::JoinError),
 }
 
 #[async_trait]
@@ -44,7 +47,21 @@ macro_rules! impl_game_data {
 }
 
 pub async fn initialize(pool: &PgPool, client: &Client) -> Result<(), GameDataError> {
-    worlds::initialize(pool, client).await?;
-    jobs::initialize(pool, client).await?;
+    let mut joinset = JoinSet::new();
+
+    joinset.spawn({
+        let pool = pool.clone();
+        let client = client.clone();
+        async move { worlds::initialize(&pool, &client).await }
+    });
+    joinset.spawn({
+        let pool = pool.clone();
+        let client = client.clone();
+        async move { jobs::initialize(&pool, &client).await }
+    });
+
+    while let Some(ret) = joinset.join_next().await {
+        ret??;
+    }
     Ok(())
 }
