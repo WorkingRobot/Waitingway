@@ -91,7 +91,7 @@ async fn callback(
         .await
         .map_err(ErrorInternalServerError)?;
 
-    let conn_result = db::create_connection(
+    let conn_result = db::connections::create_connection(
         &pool,
         models::Connection {
             user_id: username,

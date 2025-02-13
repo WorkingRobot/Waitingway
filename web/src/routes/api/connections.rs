@@ -10,24 +10,25 @@ use uuid::Uuid;
 
 pub fn service() -> impl HttpServiceFactory {
     web::scope("/connections")
+        .wrap(BasicAuthentication)
         .service(get_connections)
         .service(get_connections)
         .service(delete_connection)
 }
 
-#[route("/", method = "GET", wrap = "BasicAuthentication")]
+#[route("/", method = "GET")]
 async fn get_connections(
     pool: web::Data<PgPool>,
     username: web::ReqData<Uuid>,
 ) -> Result<HttpResponse> {
-    let connections = db::get_connections_by_user_id(pool.get_ref(), *username).await;
+    let connections = db::connections::get_connections_by_user_id(pool.get_ref(), *username).await;
     match connections {
         Ok(connections) => Ok(HttpResponse::Ok().json(connections)),
         Err(e) => Err(ErrorInternalServerError(e)),
     }
 }
 
-#[route("/{id}/", method = "DELETE", wrap = "BasicAuthentication")]
+#[route("/{id}/", method = "DELETE")]
 async fn delete_connection(
     pool: web::Data<PgPool>,
     discord: web::Data<DiscordClient>,
@@ -35,7 +36,7 @@ async fn delete_connection(
     id: web::Path<u64>,
 ) -> Result<HttpResponse> {
     let id = id.into_inner();
-    let resp = db::delete_connection(&pool, *username, id)
+    let resp = db::connections::delete_connection(&pool, *username, id)
         .await
         .map_err(ErrorInternalServerError)?;
 
@@ -43,7 +44,7 @@ async fn delete_connection(
         return Err(ErrorNotFound("Connection not found"));
     }
 
-    if !db::does_connection_id_exist(&pool, id)
+    if !db::connections::does_connection_id_exist(&pool, id)
         .await
         .map_err(ErrorInternalServerError)?
     {

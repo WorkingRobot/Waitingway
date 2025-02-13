@@ -2,9 +2,9 @@ use crate::{
     config::Config, discord::DiscordClient, middleware::auth::BasicAuthentication, storage::db,
 };
 use actix_web::{
-    dev::{HttpServiceFactory, Payload},
+    dev::HttpServiceFactory,
     error::{ErrorBadRequest, ErrorInternalServerError, ErrorUnauthorized, JsonPayloadError},
-    route, web, FromRequest, HttpMessage, HttpRequest, HttpResponse, HttpResponseBuilder, Result,
+    web, FromRequest, HttpMessage, HttpRequest, HttpResponse, HttpResponseBuilder, Result,
 };
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use chacha20poly1305::{
@@ -12,65 +12,69 @@ use chacha20poly1305::{
     AeadCore, KeyInit, XChaCha20Poly1305, XNonce,
 };
 use futures_util::future::LocalBoxFuture;
-use serde::{Deserialize, Serialize};
-use serenity::all::{ChannelId, MessageId, UserId};
+use serde::{de::DeserializeOwned, Serialize};
+use serenity::{
+    all::{ChannelId, Message, MessageId, UserId},
+    async_trait,
+};
 use sqlx::PgPool;
+use std::sync::Arc;
 use tokio::task::JoinSet;
 use uuid::Uuid;
 
-pub fn service() -> impl HttpServiceFactory {
-    web::scope("/notifications")
-        .service(create)
-        .service(update)
-        .service(delete)
-}
+pub use crate::impl_notification_instance;
 
-#[derive(Clone, Debug, Deserialize)]
-struct CreateData {
-    pub character_name: String,
-    pub home_world_id: u16,
-    pub world_id: u16,
-    #[serde(flatten)]
-    pub update_data: UpdateData,
-}
+pub type FromReqError = actix_web::Error;
+pub type FromReqFuture<T> = LocalBoxFuture<'static, Result<T, FromReqError>>;
 
-#[derive(Clone, Debug, Deserialize)]
-struct UpdateData {
-    pub position: u32,
-    #[serde(with = "time::serde::rfc3339")]
-    pub updated_at: time::OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
-    pub estimated_time: time::OffsetDateTime,
-}
+#[async_trait]
+pub trait NotificationInstance: Sync + Send + Serialize + DeserializeOwned + FromRequest
+where
+    Self: 'static,
+{
+    type CreateData: Sync + Send + DeserializeOwned + 'static;
+    type UpdateData: Sync + Send + DeserializeOwned + 'static;
+    type DeleteData: Sync + Send + DeserializeOwned + 'static;
 
-#[derive(Clone, Debug, Deserialize)]
-struct DeleteData {
-    pub successful: bool,
-    pub queue_start_size: u32,
-    pub queue_end_size: u32,
-    #[serde(rename = "duration")]
-    pub duration_secs: u32,
-    pub error_message: Option<String>,
-    pub error_code: Option<i32>,
-    #[serde(with = "time::serde::rfc3339::option")]
-    pub identify_timeout: Option<time::OffsetDateTime>,
-}
+    fn new(username: Uuid, messages: Vec<(MessageId, ChannelId)>, data: &Self::CreateData) -> Self;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct InstanceData {
-    pub username: Uuid,
-    pub character_name: String,
-    pub home_world_id: u16,
-    pub world_id: u16,
-    pub messages: Vec<(MessageId, ChannelId)>,
-}
+    fn username(&self) -> &Uuid;
 
-impl FromRequest for InstanceData {
-    type Error = actix_web::Error;
+    fn messages(&self) -> &Vec<(MessageId, ChannelId)>;
 
-    type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
+    fn passes_threshold(data: &Self::CreateData, config: &Config) -> bool;
 
-    fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+    async fn dispatch_create(
+        data: &Self::CreateData,
+        discord: &DiscordClient,
+        id: UserId,
+    ) -> Result<Message, serenity::Error>;
+
+    async fn dispatch_update(
+        &self,
+        data: &Self::UpdateData,
+        discord: &DiscordClient,
+        message: MessageId,
+        channel: ChannelId,
+    ) -> Result<(), serenity::Error>;
+
+    async fn dispatch_delete(
+        &self,
+        data: &Self::DeleteData,
+        discord: &DiscordClient,
+        message: MessageId,
+        channel: ChannelId,
+    ) -> Result<(), serenity::Error>;
+
+    fn service() -> impl HttpServiceFactory {
+        web::resource("/")
+            .wrap(BasicAuthentication)
+            .route(web::post().to(create::<Self>))
+            .route(web::patch().to(update::<Self>))
+            .route(web::delete().to(delete::<Self>))
+    }
+
+    fn from_request(req: &HttpRequest) -> FromReqFuture<Self> {
         let req = req.clone();
         Box::pin(async move {
             let config = req
@@ -101,24 +105,22 @@ impl FromRequest for InstanceData {
             let plaintext: Vec<u8> = key
                 .decrypt(&nonce, data.as_slice())
                 .map_err(|_| ErrorBadRequest("Invalid instance data (bad encryption)"))?;
-            let data: InstanceData = serde_json::from_slice(plaintext.as_slice())
+            let data: Self = serde_json::from_slice(plaintext.as_slice())
                 .map_err(|_| ErrorBadRequest("Invalid instance data (not json)"))?;
 
             let req_username = *req
                 .extensions()
                 .get::<Uuid>()
                 .ok_or(ErrorUnauthorized("No username provided"))?;
-            if data.username != req_username {
+            if *data.username() != req_username {
                 return Err(ErrorBadRequest("Invalid instance data (username mismatch)"));
             }
 
             Ok(data)
         })
     }
-}
 
-impl InstanceData {
-    pub fn append_data(
+    fn append_to_response(
         &self,
         config: &Config,
         builder: &mut HttpResponseBuilder,
@@ -143,19 +145,18 @@ impl InstanceData {
     }
 }
 
-#[route("/", method = "POST", wrap = "BasicAuthentication")]
-async fn create(
+pub async fn create<D: NotificationInstance>(
     pool: web::Data<PgPool>,
     config: web::Data<Config>,
     discord: web::Data<DiscordClient>,
     username: web::ReqData<Uuid>,
-    data: web::Json<CreateData>,
+    data: web::Json<D::CreateData>,
 ) -> Result<HttpResponse> {
-    if data.update_data.position < config.discord.queue_size_dm_threshold {
+    if !D::passes_threshold(&data, &config) {
         return Ok(HttpResponse::NoContent().finish());
     }
 
-    let connections = db::get_connection_ids_by_user_id(&pool, *username)
+    let connections = db::connections::get_connection_ids_by_user_id(&pool, *username)
         .await
         .map_err(ErrorInternalServerError)?;
 
@@ -163,21 +164,12 @@ async fn create(
     let data = data.into_inner();
 
     let mut joinset = JoinSet::new();
+    let data = Arc::new(data);
     for user_id in connections {
         let discord = discord.clone();
-        let character_name = data.character_name.clone();
-        let data = data.update_data.clone();
-        joinset.spawn(async move {
-            discord
-                .send_queue_position(
-                    UserId::new(user_id),
-                    &character_name,
-                    data.position,
-                    data.updated_at,
-                    data.estimated_time,
-                )
-                .await
-        });
+        let data = data.clone();
+        joinset
+            .spawn(async move { D::dispatch_create(&data, &discord, UserId::new(user_id)).await });
     }
 
     let mut messages = vec![];
@@ -190,47 +182,35 @@ async fn create(
         }
     }
 
-    let data = InstanceData {
-        username: *username,
-        character_name: data.character_name,
-        home_world_id: data.home_world_id,
-        world_id: data.world_id,
-        messages,
-    };
+    let data = D::new(*username, messages, &*data);
 
     let mut resp = HttpResponse::Created();
 
-    if let Err(e) = data.append_data(&config, &mut resp) {
+    if let Err(e) = data.append_to_response(&config, &mut resp) {
         return Ok(e);
     }
 
     Ok(resp.finish())
 }
 
-#[route("/", method = "PATCH", wrap = "BasicAuthentication")]
-async fn update(
-    instance_data: InstanceData,
+pub async fn update<D: NotificationInstance + 'static>(
+    instance_data: D,
     discord: web::Data<DiscordClient>,
-    data: web::Json<UpdateData>,
+    data: web::Json<D::UpdateData>,
 ) -> Result<HttpResponse> {
     let discord = discord.into_inner();
     let data = data.into_inner();
+    let data = Arc::new(data);
+    let instance_data = Arc::new(instance_data);
 
     let mut joinset = JoinSet::new();
-    for (message_id, channel_id) in instance_data.messages {
+    for (message_id, channel_id) in instance_data.messages().clone() {
         let discord = discord.clone();
-        let character_name = instance_data.character_name.clone();
+        let instance_data = instance_data.clone();
         let data = data.clone();
         joinset.spawn(async move {
-            discord
-                .update_queue_position(
-                    message_id,
-                    channel_id,
-                    &character_name,
-                    data.position,
-                    data.updated_at,
-                    data.estimated_time,
-                )
+            instance_data
+                .dispatch_update(&data, &discord, message_id, channel_id)
                 .await
         });
     }
@@ -246,34 +226,24 @@ async fn update(
     Ok(HttpResponse::NoContent().finish())
 }
 
-#[route("/", method = "DELETE", wrap = "BasicAuthentication")]
-async fn delete(
-    instance_data: InstanceData,
+pub async fn delete<D: NotificationInstance + 'static>(
+    instance_data: D,
     discord: web::Data<DiscordClient>,
-    data: web::Json<DeleteData>,
+    data: web::Json<D::DeleteData>,
 ) -> Result<HttpResponse> {
     let discord = discord.into_inner();
     let data = data.into_inner();
+    let data = Arc::new(data);
+    let instance_data = Arc::new(instance_data);
 
     let mut joinset = JoinSet::new();
-    for (message_id, channel_id) in instance_data.messages {
+    for (message_id, channel_id) in instance_data.messages().clone() {
         let discord = discord.clone();
-        let character_name = instance_data.character_name.clone();
+        let instance_data = instance_data.clone();
         let data = data.clone();
         joinset.spawn(async move {
-            discord
-                .send_queue_completion(
-                    message_id,
-                    channel_id,
-                    &character_name,
-                    data.queue_start_size,
-                    data.queue_end_size,
-                    time::Duration::new(data.duration_secs.into(), 0),
-                    data.error_message,
-                    data.error_code,
-                    data.identify_timeout,
-                    data.successful,
-                )
+            instance_data
+                .dispatch_delete(&data, &discord, message_id, channel_id)
                 .await
         });
     }
@@ -287,4 +257,19 @@ async fn delete(
     }
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+#[macro_export]
+macro_rules! impl_notification_instance {
+    ($ty:ty) => {
+        impl FromRequest for $ty {
+            type Error = $crate::routes::api::notifications::FromReqError;
+
+            type Future = $crate::routes::api::notifications::FromReqFuture<Self>;
+
+            fn from_request(req: &HttpRequest, _payload: &mut Payload) -> Self::Future {
+                <Self as NotificationInstance>::from_request(req)
+            }
+        }
+    };
 }
