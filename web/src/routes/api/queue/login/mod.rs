@@ -14,10 +14,14 @@ mod notifications;
 pub fn service() -> impl HttpServiceFactory {
     web::scope("/login")
         .service(
-            Resource::new("/size/").route(web::post().wrap(BasicAuthentication).to(create_size)),
+            Resource::new("/size/")
+                .wrap(BasicAuthentication)
+                .route(web::post().to(create_size)),
         )
         .service(
-            Resource::new("/recap/").route(web::post().wrap(BasicAuthentication).to(create_recap)),
+            Resource::new("/recap/")
+                .wrap(BasicAuthentication)
+                .route(web::post().to(create_recap)),
         )
         .service(Resource::new("/").route(web::get().to(get_queue_estimate)))
         .service(notifications::service())
@@ -25,8 +29,12 @@ pub fn service() -> impl HttpServiceFactory {
 
 pub fn service_v1() -> impl HttpServiceFactory {
     (
-        Resource::new("/queue_size/").route(web::post().wrap(BasicAuthentication).to(create_size)),
-        Resource::new("/recap/").route(web::post().wrap(BasicAuthentication).to(create_recap)),
+        Resource::new("/queue_size/")
+            .wrap(BasicAuthentication)
+            .route(web::post().to(create_size)),
+        Resource::new("/recap/")
+            .wrap(BasicAuthentication)
+            .route(web::post().to(create_recap)),
         Resource::new("/queue/").route(web::get().to(get_queue_estimate)),
         notifications::service(),
     )
