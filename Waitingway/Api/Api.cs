@@ -118,7 +118,8 @@ public sealed class Api : IDisposable
 
     public async Task<VersionInfo> GetVersionAsync()
     {
-        var resp = (await Client.GetAsync(EP_VERSION).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(EP_VERSION).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<VersionInfo>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(EP_VERSION, "Json returned null");
     }
 
@@ -126,13 +127,15 @@ public sealed class Api : IDisposable
     
     public async Task<Connection[]> GetConnectionsAsync()
     {
-        var resp = (await Client.GetAsync(EP_CONNECTIONS).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = (await Client.GetAsync(EP_CONNECTIONS).ConfigureAwait(false));
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<Connection[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(EP_CONNECTIONS, "Json returned null");
     }
 
     public async Task DeleteConnectionAsync(ulong connUserId)
     {
-        var resp = (await Client.DeleteAsync($"{EP_CONNECTIONS}/{connUserId}").ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.DeleteAsync($"{EP_CONNECTIONS}/{connUserId}").ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException($"{EP_CONNECTIONS}/{connUserId}", $"Unexpected status code {resp.StatusCode}");
     }

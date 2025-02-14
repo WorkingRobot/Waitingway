@@ -30,15 +30,16 @@ public sealed class DutyApi(Api api)
     
     public async Task SendRouletteSizeAsync(RouletteSize size)
     {
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_DUTY_SIZE, size, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_DUTY_SIZE, size, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.OK)
             throw new ApiException(EP_QUEUE_DUTY_SIZE, $"Unexpected status code {resp.StatusCode}");
     }
 
     public async Task CreateRecapAsync(DutyQueueTracker.Recap recap)
     {
-        Log.Debug($"Recap: {JsonSerializer.Serialize(recap, JsonOptions)}");
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_DUTY_RECAP, recap, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_DUTY_RECAP, recap, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.Created)
             throw new ApiException(EP_QUEUE_DUTY_RECAP, $"Unexpected status code {resp.StatusCode}");
     }
@@ -47,7 +48,8 @@ public sealed class DutyApi(Api api)
 
     public async Task<RouletteEstimate[]> GetAllRouletteQueuesAsync()
     {
-        var resp = (await Client.GetAsync(EP_QUEUE_DUTY_GET).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(EP_QUEUE_DUTY_GET).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<RouletteEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(EP_QUEUE_DUTY_GET, "Json returned null");
     }
 
@@ -60,7 +62,8 @@ public sealed class DutyApi(Api api)
             qs.Add("roulette_id", rouletteId.ToString());
         uri.Query = qs.ToString();
 
-        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(uri.Uri).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<RouletteEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(uri.ToString(), "Json returned null");
     }
 
@@ -70,7 +73,8 @@ public sealed class DutyApi(Api api)
 
     public async Task<NotificationData?> CreateNotificationAsync(CreateNotificationData data)
     {
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_DUTY_NOTIFICATIONS, data, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_DUTY_NOTIFICATIONS, data, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode == HttpStatusCode.NoContent)
             return null;
         if (resp.StatusCode == HttpStatusCode.Created)
@@ -94,8 +98,9 @@ public sealed class DutyApi(Api api)
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
-            resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
+            resp = await Client.SendAsync(message).ConfigureAwait(false);
         }
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_DUTY_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }
@@ -109,8 +114,9 @@ public sealed class DutyApi(Api api)
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
-            resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
+            resp = await Client.SendAsync(message).ConfigureAwait(false);
         }
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_DUTY_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }

@@ -29,14 +29,16 @@ public sealed class LoginApi(Api api)
 
     public async Task SendQueueSizeAsync(ushort worldId, int size)
     {
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_SIZE, new QueueSize { WorldId = worldId, Size = size }, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_SIZE, new QueueSize { WorldId = worldId, Size = size }, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.OK)
             throw new ApiException(EP_QUEUE_LOGIN_SIZE, $"Unexpected status code {resp.StatusCode}");
     }
 
     public async Task CreateRecapAsync(LoginQueueTracker.Recap recap)
     {
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_RECAP, recap, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_RECAP, recap, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.Created)
             throw new ApiException(EP_QUEUE_LOGIN_RECAP, $"Unexpected status code {resp.StatusCode}");
     }
@@ -45,7 +47,8 @@ public sealed class LoginApi(Api api)
 
     public async Task<QueueEstimate[]> GetAllQueuesAsync()
     {
-        var resp = (await Client.GetAsync(EP_QUEUE_LOGIN_GET).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(EP_QUEUE_LOGIN_GET).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(EP_QUEUE_LOGIN_GET, "Json returned null");
     }
 
@@ -57,7 +60,8 @@ public sealed class LoginApi(Api api)
             qs.Add("world_id", worldId.ToString());
         uri.Query = qs.ToString();
 
-        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(uri.Uri).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(uri.ToString(), "Json returned null");
     }
 
@@ -69,7 +73,8 @@ public sealed class LoginApi(Api api)
             qs.Add("datacenter_id", datacenterId.ToString());
         uri.Query = qs.ToString();
 
-        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(uri.Uri).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(uri.ToString(), "Json returned null");
     }
 
@@ -81,7 +86,8 @@ public sealed class LoginApi(Api api)
             qs.Add("region_id", regionId.ToString());
         uri.Query = qs.ToString();
 
-        var resp = (await Client.GetAsync(uri.Uri).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.GetAsync(uri.Uri).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         return await resp.Content.ReadFromJsonAsync<QueueEstimate[]>(JsonOptions).ConfigureAwait(false) ?? throw new ApiException(uri.ToString(), "Json returned null");
     }
 
@@ -91,7 +97,8 @@ public sealed class LoginApi(Api api)
 
     public async Task<NotificationData?> CreateNotificationAsync(CreateNotificationData data)
     {
-        var resp = (await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_NOTIFICATIONS, data, JsonOptions).ConfigureAwait(false)).EnsureSuccessStatusCode();
+        var resp = await Client.PostAsJsonAsync(EP_QUEUE_LOGIN_NOTIFICATIONS, data, JsonOptions).ConfigureAwait(false);
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode == HttpStatusCode.NoContent)
             return null;
         if (resp.StatusCode == HttpStatusCode.Created)
@@ -115,8 +122,9 @@ public sealed class LoginApi(Api api)
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
-            resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
+            resp = await Client.SendAsync(message).ConfigureAwait(false);
         }
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_LOGIN_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }
@@ -130,8 +138,9 @@ public sealed class LoginApi(Api api)
             message.Headers.Add("X-Instance-Data", notificationData.Data);
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
-            resp = (await Client.SendAsync(message).ConfigureAwait(false)).EnsureSuccessStatusCode();
+            resp = await Client.SendAsync(message).ConfigureAwait(false);
         }
+        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_LOGIN_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }
