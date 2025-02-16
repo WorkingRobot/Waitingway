@@ -83,3 +83,37 @@ discord:
       text: Waiting to notify you
     - type: Custom
       text: Waiting for the heat death of the universe
+    - type: Listening
+      text: "{users} users"
+    - type: Watching
+      text: "{servers} servers"
+    - type: Watching
+      text: "{members} server members"
+    - type: Custom
+      text: Responded to {commands} commands
+    - type: Watching
+      text: your roulette queue
+    - type: Custom
+      text: Waiting for your roulette queue to end
+    - type: Listening
+      text: "{users} queues"
+    - type: Playing
+      text: the waiting game
+    - type: Playing
+      text: the waiting game with {users} players
+    - type: Competing
+      text: speedclears
+    - type: Playing
+      text: The Vault
+    - type: Playing
+      text: The Unending Coil of Bahamut (Ultimate)
+    - type: Playing
+      text: The Weapon's Refrain (Ultimate)
+    - type: Playing
+      text: The Epic of Alexander (Ultimate)
+    - type: Playing
+      text: The Omega Protocol (Ultimate)
+    - type: Playing
+      text: Dragonsong's Reprise (Ultimate)
+    - type: Playing
+      text: Futures Rewritten (Ultimate) 
