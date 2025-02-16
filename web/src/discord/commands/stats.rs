@@ -1,13 +1,13 @@
-use futures_util::{stream::FuturesUnordered, StreamExt};
 use poise::CreateReply;
 use serenity::all::{
     Color, CreateEmbed, CreateEmbedFooter, FormattedTimestamp, FormattedTimestampStyle,
 };
+use thousands::Separable;
 use time::OffsetDateTime;
 use titlecase::titlecase;
 
 use crate::{
-    discord::utils::{format_duration, format_latency, COLOR_SUCCESS},
+    discord::utils::{format_duration, format_latency, install_stats, member_count, COLOR_SUCCESS},
     natives::{self, VERSION_DATA},
 };
 
@@ -21,51 +21,16 @@ use super::Error;
     interaction_context = "Guild|BotDm|PrivateChannel"
 )]
 pub async fn stats(ctx: Context<'_>) -> Result<(), Error> {
-    let http = ctx.http();
     let cache = ctx.cache();
     let latency = time::Duration::try_from(ctx.ping().await);
-    let app_info = ctx.http().get_current_application_info().await?;
-
-    let mut guilds: FuturesUnordered<_> = cache
-        .guilds()
-        .into_iter()
-        .map(|g| async move {
-            let count = cache.guild(g).map(|c| c.member_count);
-            match count {
-                Some(count) => count,
-                None => g
-                    .to_partial_guild_with_counts(http)
-                    .await
-                    .ok()
-                    .and_then(|g| g.approximate_member_count)
-                    .unwrap_or_default(),
-            }
-        })
-        .collect();
-    let mut guild_member_sum = 0;
-    while let Some(count) = guilds.next().await {
-        guild_member_sum += count;
-    }
+    let (servers, users) = install_stats(ctx.data()).await;
+    let members = member_count(ctx.data()).await;
 
     let embed = CreateEmbed::new()
         .title("Waitingway Statistics")
-        .field(
-            "Servers",
-            app_info
-                .approximate_guild_count
-                .unwrap_or_default()
-                .to_string(),
-            true,
-        )
-        .field("Users", guild_member_sum.to_string(), true)
-        .field(
-            "Installed Users",
-            app_info
-                .approximate_user_install_count
-                .unwrap_or_default()
-                .to_string(),
-            true,
-        )
+        .field("Servers", servers.separate_with_commas(), true)
+        .field("Users", members.separate_with_commas(), true)
+        .field("Installed Users", users.separate_with_commas(), true)
         .field(
             "Version",
             format!(

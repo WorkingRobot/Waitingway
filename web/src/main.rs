@@ -24,7 +24,6 @@ use actix_web::{
 use actix_web_prom::PrometheusMetricsBuilder;
 use natives::version;
 use prometheus::Registry;
-use serenity::all::ActivityData;
 use std::io;
 use storage::redis::client::RedisClient;
 use thiserror::Error;
@@ -88,17 +87,9 @@ async fn main() -> Result<(), ServerError> {
 
     let discord_bot =
         DiscordClient::new(config.discord.clone(), db_pool.clone(), redis.clone()).await;
-    let update_activity_token = crons::create_cron_job(crons::UpdateActivity::new(
-        discord_bot.clone(),
-        config
-            .discord
-            .activities
-            .iter()
-            .cloned()
-            .map(ActivityData::from)
-            .collect(),
-    ));
 
+    let update_activity_token =
+        crons::create_cron_job(crons::UpdateActivity::new(discord_bot.clone()));
 
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));
