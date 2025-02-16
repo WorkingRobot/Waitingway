@@ -46,7 +46,7 @@ pub struct JobInfo {
 
 impl JobInfo {
     pub fn icon_id(&self) -> u32 {
-        62000 + self.id as u32
+        62000 + u32::from(self.id)
     }
 }
 

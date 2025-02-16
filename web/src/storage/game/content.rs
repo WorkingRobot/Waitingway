@@ -139,26 +139,22 @@ impl ContentData {
 
     pub fn get_roulette_name(&self, id: u8) -> String {
         self.get_roulette_by_id(id)
-            .map(|r| r.name.clone())
-            .unwrap_or_else(|| format!("Roulette {}", id))
+            .map_or_else(|| format!("Roulette {}", id), |r| r.name.clone())
     }
 
     pub fn get_content_name(&self, id: u16) -> String {
         self.get_content_by_id(id)
-            .map(|r| r.name.clone())
-            .unwrap_or_else(|| format!("Content {}", id))
+            .map_or_else(|| format!("Content {}", id), |r| r.name.clone())
     }
 
     pub fn get_roulette_image(&self, id: u8) -> String {
         self.get_roulette_by_id(id)
-            .map(|r| r.icon_path.clone())
-            .unwrap_or_else(|| Self::DEFAULT_IMAGE.to_string())
+            .map_or_else(|| Self::DEFAULT_IMAGE.to_string(), |r| r.icon_path.clone())
     }
 
     pub fn get_content_image(&self, id: u16) -> String {
         self.get_content_by_id(id)
-            .map(|r| r.image_path.clone())
-            .unwrap_or_else(|| Self::DEFAULT_IMAGE.to_string())
+            .map_or_else(|| Self::DEFAULT_IMAGE.to_string(), |r| r.image_path.clone())
     }
 }
 

@@ -470,7 +470,7 @@ fn format_update(
     let estimated: Option<Timestamp> = estimated
         .or_else(|| {
             if let Some(WaitTime::Minutes(mins)) = reported_estimate {
-                Some((start_time + Duration::minutes(mins.into())).into())
+                Some(start_time + Duration::minutes(mins.into()))
             } else {
                 None
             }

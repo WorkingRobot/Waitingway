@@ -15,11 +15,11 @@ pub use api::{get_icon_url, get_icon_url_from_id};
 #[derive(Debug, Error)]
 pub enum GameDataError {
     #[error("Failed to fetch data from XIVAPI: {0}")]
-    XivApiError(#[from] reqwest::Error),
+    XivApi(#[from] reqwest::Error),
     #[error("Failed to fetch data from the database: {0}")]
-    DatabaseError(#[from] sqlx::Error),
+    Database(#[from] sqlx::Error),
     #[error("Tokio join error")]
-    JoinError(#[from] tokio::task::JoinError),
+    Join(#[from] tokio::task::JoinError),
 }
 
 #[async_trait]

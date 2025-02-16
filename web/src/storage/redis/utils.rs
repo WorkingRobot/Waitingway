@@ -2,6 +2,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::RedisConfig;
 
+#[inline]
+pub fn to_key<'a>(value: &str, config: impl Into<&'a RedisConfig>) -> String {
+    let mut ret = config.into().namespace.clone();
+    ret.push(':');
+    ret.push_str(value);
+    ret
+}
+
 pub trait RedisKey: Serialize {
     const PREFIX: &'static str;
 
@@ -9,9 +17,7 @@ pub trait RedisKey: Serialize {
     fn to_key<'a>(&'a self, config: impl Into<&'a RedisConfig>) -> postcard::Result<Vec<u8>> {
         // namespace:prefix:postcard-serialized-key
 
-        let mut ret = config.into().namespace.clone();
-        ret.push(':');
-        ret.push_str(Self::PREFIX);
+        let mut ret = to_key(Self::PREFIX, config);
         ret.push(':');
         postcard::to_extend(self, ret.into_bytes())
     }
