@@ -81,19 +81,18 @@ pub struct SubscriptionManager {
 
 pub struct SubscriptionManagerImp {
     discord: DiscordClient,
-    redis: RedisClient,
 }
 
 impl SubscriptionManager {
-    pub fn new(discord: DiscordClient, redis: RedisClient) -> Self {
+    pub fn new(discord: DiscordClient) -> Self {
         Self {
-            imp: Arc::new(SubscriptionManagerImp { discord, redis }),
+            imp: Arc::new(SubscriptionManagerImp { discord }),
         }
     }
 
     #[must_use]
     fn redis(&self) -> &RedisClient {
-        &self.imp.redis
+        self.imp.discord.redis()
     }
 
     pub async fn subscribe(

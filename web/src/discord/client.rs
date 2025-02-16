@@ -1,16 +1,21 @@
 use super::{
     commands::command_list,
-    utils::{COLOR_ERROR, COLOR_SUCCESS},
+    utils::{increment_command_invokes, COLOR_ERROR, COLOR_SUCCESS},
 };
-use crate::{config::DiscordConfig, storage::db, subscriptions::SubscriptionManager};
+use crate::{
+    config::DiscordConfig,
+    storage::{db, redis::client::RedisClient},
+    subscriptions::SubscriptionManager,
+};
 use futures_util::future::try_join_all;
 use itertools::Itertools;
 use serenity::{
     all::{
-        ActionRowComponent, ActivityData, ComponentInteractionDataKind, Context, CreateEmbed,
-        CreateEmbedFooter, CreateInteractionResponse, CreateInteractionResponseMessage,
-        CreateMessage, DiscordJsonError, ErrorResponse, EventHandler, GatewayIntents, Http,
-        HttpError, Interaction, Member, Mentionable, Message, RoleId, ShardManager, UserId,
+        ActionRowComponent, ActivityData, Cache, ComponentInteractionDataKind, Context,
+        CreateEmbed, CreateEmbedFooter, CreateInteractionResponse,
+        CreateInteractionResponseMessage, CreateMessage, DiscordJsonError, ErrorResponse,
+        EventHandler, GatewayIntents, Http, HttpError, Interaction, Member, Mentionable, Message,
+        RoleId, ShardManager, UserId,
     },
     async_trait, Client,
 };
@@ -27,7 +32,7 @@ pub struct DiscordClient {
 impl std::fmt::Debug for DiscordClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DiscordClient")
-            .field("name", &*self.client_blocking().cache.current_user())
+            .field("name", &*self.cache().current_user())
             .finish()
     }
 }
@@ -35,25 +40,29 @@ impl std::fmt::Debug for DiscordClient {
 struct DiscordClientImp {
     config: DiscordConfig,
     db: PgPool,
+    redis: RedisClient,
     subscriptions: OnceLock<SubscriptionManager>,
     client: OnceLock<RwLock<Client>>,
     http: OnceLock<Arc<Http>>,
     shards: OnceLock<Arc<ShardManager>>,
+    cache: OnceLock<Arc<Cache>>,
     current_activity: RwLock<Option<ActivityData>>,
 }
 
 impl DiscordClient {
-    pub async fn new(config: DiscordConfig, db: PgPool) -> Self {
+    pub async fn new(config: DiscordConfig, db: PgPool, redis: RedisClient) -> Self {
         let intents = GatewayIntents::non_privileged() | GatewayIntents::GUILD_MEMBERS;
 
         let ret = Self {
             imp: Arc::new(DiscordClientImp {
                 config,
                 db,
+                redis,
                 subscriptions: OnceLock::new(),
                 client: OnceLock::new(),
                 http: OnceLock::new(),
                 shards: OnceLock::new(),
+                cache: OnceLock::new(),
                 current_activity: RwLock::new(None),
             }),
         };
@@ -109,6 +118,16 @@ impl DiscordClient {
             .set(ret.client().await.shard_manager.clone())
             .unwrap_or_else(|_| unreachable!());
 
+        ret.imp
+            .cache
+            .set(ret.client().await.cache.clone())
+            .unwrap_or_else(|_| unreachable!());
+
+        ret.imp
+            .subscriptions
+            .set(SubscriptionManager::new(ret.clone()))
+            .unwrap_or_else(|_| unreachable!());
+
         ret
     }
 
@@ -122,10 +141,6 @@ impl DiscordClient {
         }
 
         self.imp.shards.get().unwrap().shutdown_all().await;
-    }
-
-    fn client_blocking(&self) -> RwLockReadGuard<Client> {
-        self.imp.client.get().unwrap().blocking_read()
     }
 
     async fn client(&self) -> RwLockReadGuard<Client> {
@@ -144,20 +159,20 @@ impl DiscordClient {
         self.imp.http.get().unwrap()
     }
 
+    pub fn cache(&self) -> &Cache {
+        self.imp.cache.get().unwrap()
+    }
+
     pub fn db(&self) -> &PgPool {
         &self.imp.db
     }
 
-    pub fn set_subscriptions(&self, subscriptions: SubscriptionManager) {
-        self.imp
-            .subscriptions
-            .set(subscriptions)
-            .map_err(|_| ())
-            .expect("Subscriptions already set");
+    pub fn redis(&self) -> &RedisClient {
+        &self.imp.redis
     }
 
     pub fn subscriptions(&self) -> &SubscriptionManager {
-        self.imp.subscriptions.get().expect("Subscriptions not set")
+        self.imp.subscriptions.get().unwrap()
     }
 
     pub fn config(&self) -> &DiscordConfig {
@@ -311,6 +326,11 @@ impl EventHandler for DiscordClient {
     }
 
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        if interaction.as_command().is_some() {
+            increment_command_invokes(self).await;
+            return;
+        }
+
         let Some(interaction) = interaction.into_message_component() else {
             return;
         };

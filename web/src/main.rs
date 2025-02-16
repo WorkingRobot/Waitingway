@@ -27,7 +27,6 @@ use prometheus::Registry;
 use serenity::all::ActivityData;
 use std::io;
 use storage::redis::client::RedisClient;
-use subscriptions::SubscriptionManager;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -87,8 +86,8 @@ async fn main() -> Result<(), ServerError> {
 
     storage::game::initialize(&db_pool, &web_client).await?;
 
-    let discord_bot = DiscordClient::new(config.discord.clone(), db_pool.clone()).await;
-
+    let discord_bot =
+        DiscordClient::new(config.discord.clone(), db_pool.clone(), redis.clone()).await;
     let update_activity_token = crons::create_cron_job(crons::UpdateActivity::new(
         discord_bot.clone(),
         config
@@ -100,8 +99,6 @@ async fn main() -> Result<(), ServerError> {
             .collect(),
     ));
 
-    let subscriptions = SubscriptionManager::new(discord_bot.clone(), redis.clone());
-    discord_bot.set_subscriptions(subscriptions.clone());
 
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));
