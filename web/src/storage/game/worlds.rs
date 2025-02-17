@@ -42,8 +42,9 @@ impl GameSheet for WorldSheet {
         Ok(search_xivapi::<XivApiWorld>(
             client,
             "World",
-            // Region 7 is NA Cloud Test which is public for some reason
-            "-Region=0 -DataCenter.Region=7 IsPublic=true",
+            // UserType 9 is NA Cloud Test which is public for some reason
+            // 101 is China, 201 is Korea
+            "-UserType=9 +(IsPublic=1 UserType=101 UserType=201)",
             "Name,DataCenter.Region,DataCenter.Name,DataCenter.IsCloud,IsPublic",
         )
         .await?
@@ -60,6 +61,9 @@ impl GameSheet for WorldSheet {
                 2 => ("North America", "NA"),
                 3 => ("Europe", "EU"),
                 4 => ("Oceania", "OC"),
+                5 => ("China", "CN"),
+                6 => ("Korea", "KR"),
+                7 => ("Cloud", "CL"),
                 _ => ("Unknown", "??"),
             };
             let is_cloud = r.fields.data_center.fields.is_cloud;
