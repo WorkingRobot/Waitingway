@@ -46,13 +46,13 @@ pub async fn search_xivapi<T: DeserializeOwned>(
     let mut ret = vec![];
     let mut cursor = None;
     loop {
-        let mut builder = client.get("https://v2.xivapi.com/api/search").query(&[
-            ("sheets", sheet),
-            ("query", query),
-            ("fields", fields),
-        ]);
+        let mut builder = client
+            .get("https://v2.xivapi.com/api/search")
+            .query(&[("fields", fields)]);
         if let Some(cursor) = &cursor {
             builder = builder.query(&[("cursor", cursor)]);
+        } else {
+            builder = builder.query(&[("sheets", sheet), ("query", query)]);
         }
         let resp: XivApiSearch<T> = builder.send().await?.json().await?;
         ret.push(resp.results);
