@@ -36,7 +36,7 @@ pub async fn add_travel_states(
         OR t.accept IS DISTINCT FROM n.accept 
         OR t.prohibit IS DISTINCT FROM n.prohibit
     )
-    INSERT INTO world_statuses (world_id, travel, accept, prohibit)
+    INSERT INTO travel_states (world_id, travel, accept, prohibit)
     SELECT n.world_id, n.travel, n.accept, n.prohibit
     FROM new_data n
     JOIN filtered_ids f USING (world_id);"#;
