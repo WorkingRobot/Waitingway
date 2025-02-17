@@ -6,21 +6,41 @@ pub async fn add_world_statuses(
     pool: &PgPool,
     worlds: Vec<WorldStatusWorldInfo>,
 ) -> Result<PgQueryResult, Error> {
-    let mut query_builder = QueryBuilder::new(
-        r#"INSERT INTO world_statuses (world_id, status, category, can_create)
-        SELECT worlds.world_id, data.status, data.category, data.can_create
-        FROM ("#,
-    );
+    let prefix = "WITH input_data (world_name, status, category, can_create) AS (";
+    let suffix = r#"
+    ),
+    new_data AS (
+        SELECT w.world_id, i.status, i.category, i.can_create
+        FROM input_data i
+        JOIN worlds w ON w.world_name = i.world_name
+    ),
+    filtered_ids AS (
+        SELECT DISTINCT n.world_id
+        FROM new_data n
+        CROSS JOIN LATERAL (
+            SELECT status, category, can_create
+            FROM world_statuses t
+            WHERE t.world_id = n.world_id
+            ORDER BY t.time DESC
+            LIMIT 1
+        ) t
+        WHERE t.status IS DISTINCT FROM n.status
+        OR t.category IS DISTINCT FROM n.category 
+        OR t.can_create IS DISTINCT FROM n.can_create
+    )
+    INSERT INTO world_statuses (world_id, status, category, can_create)
+    SELECT n.world_id, n.status, n.category, n.can_create
+    FROM new_data n
+    JOIN filtered_ids f USING (world_id);"#;
+
+    let mut query_builder = QueryBuilder::new(prefix);
     query_builder.push_values(worlds, |mut b, world| {
         b.push_bind(world.name)
             .push_bind(world.status)
             .push_bind(world.category)
             .push_bind(world.create);
     });
-    query_builder.push(
-        r#") AS data(name, status, category, can_create)
-        JOIN worlds ON worlds.world_name = data.name"#,
-    );
+    query_builder.push(suffix);
     query_builder.build().execute(pool).await
 }
 

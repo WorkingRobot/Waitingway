@@ -19,14 +19,36 @@ pub async fn add_travel_states(
     .execute(&mut *tx)
     .await?;
 
-    let mut query_builder =
-        QueryBuilder::new("INSERT INTO travel_states (world_id, travel, accept, prohibit) ");
+    let prefix = "WITH new_data (world_id, travel, accept, prohibit) AS (";
+    let suffix = r#"
+    ),
+    filtered_ids AS (
+        SELECT DISTINCT n.world_id
+        FROM new_data n
+        CROSS JOIN LATERAL (
+            SELECT travel, accept, prohibit
+            FROM travel_states t
+            WHERE t.world_id = n.world_id
+            ORDER BY t.time DESC
+            LIMIT 1
+        ) t
+        WHERE t.travel IS DISTINCT FROM n.travel
+        OR t.accept IS DISTINCT FROM n.accept 
+        OR t.prohibit IS DISTINCT FROM n.prohibit
+    )
+    INSERT INTO world_statuses (world_id, travel, accept, prohibit)
+    SELECT n.world_id, n.travel, n.accept, n.prohibit
+    FROM new_data n
+    JOIN filtered_ids f USING (world_id);"#;
+
+    let mut query_builder = QueryBuilder::new(prefix);
     query_builder.push_values(worlds, |mut b, world| {
         b.push_bind(DatabaseU16(world.id).as_db())
             .push_bind(world.travel != 0)
             .push_bind(world.accept != 0)
             .push_bind(world.prohibit != 0);
     });
+    query_builder.push(suffix);
     query_builder.build().execute(&mut *tx).await?;
 
     tx.commit().await
