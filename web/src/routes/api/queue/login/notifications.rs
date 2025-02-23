@@ -83,7 +83,7 @@ impl NotificationInstance for InstanceData {
     }
 
     fn passes_threshold(data: &CreateData, config: &Config) -> bool {
-        data.update_data.position < config.discord.queue_size_dm_threshold
+        data.update_data.position >= config.discord.queue_size_dm_threshold
     }
 
     async fn dispatch_create(
