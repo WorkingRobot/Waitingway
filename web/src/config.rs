@@ -38,6 +38,8 @@ pub struct DiscordConfig {
     pub log_channel_id: ChannelId,
     pub connected_role_id: RoleId,
     pub queue_size_dm_threshold: u32,
+    pub duty_wait_time_dm_threshold: u8,
+    pub duty_allow_hidden_wait_time_dm: bool,
     pub emotes: DiscordEmoteConfig,
     pub activities: Vec<DiscordActivity>,
 }

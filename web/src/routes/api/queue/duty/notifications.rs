@@ -4,7 +4,7 @@ use crate::{
         notifications::duty::{self as notifs, QueueData},
         DiscordClient,
     },
-    models::duty::RecapUpdate,
+    models::duty::{RecapUpdate, RecapUpdateData, WaitTime},
     routes::api::notifications::{impl_notification_instance, NotificationInstance},
     storage::db::wrappers::DatabaseDateTime,
 };
@@ -88,9 +88,22 @@ impl NotificationInstance for InstanceData {
         &self.messages
     }
 
-    fn passes_threshold(_data: &CreateData, _config: &Config) -> bool {
-        true
-        // data.update_data.position < config.discord.queue_size_dm_threshold
+    fn passes_threshold(data: &CreateData, config: &Config) -> bool {
+        if data.update.is_reserving_server {
+            return false;
+        }
+        let wait_time = match data.update.update_data {
+            Some(RecapUpdateData::Roulette { wait_time, .. }) => wait_time,
+            Some(RecapUpdateData::Thd { wait_time, .. }) => wait_time,
+            Some(RecapUpdateData::Players { wait_time, .. }) => wait_time,
+            Some(RecapUpdateData::WaitTime { wait_time }) => wait_time,
+            None => return false,
+        };
+        match wait_time {
+            WaitTime::Minutes(min) => min >= config.discord.duty_wait_time_dm_threshold,
+            WaitTime::Over30Minutes => 31 >= config.discord.duty_wait_time_dm_threshold,
+            WaitTime::Hidden => config.discord.duty_allow_hidden_wait_time_dm,
+        }
     }
 
     async fn dispatch_create(
