@@ -1,3 +1,5 @@
+using Dalamud.Interface.ImGuiNotification;
+using ImGuiNET;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -14,6 +16,7 @@ public sealed class DutyNotificationTracker : IDisposable
     private Api Api { get; }
 
     private Task<NotificationData?>? CurrentNotification { get; set; }
+    private IActiveNotification? CurrentConfirmationNotification { get; set; }
     private bool? SentRoulettePosition { get; set; }
 
     public DutyNotificationTracker()
@@ -99,9 +102,23 @@ public sealed class DutyNotificationTracker : IDisposable
                 SentRoulettePosition = true;
             }
         }
-        
-        Task CreateNotificationFnf() =>
-            this.CreateNotificationFnf(new CreateNotificationData
+
+        Task CreateNotificationFnf(byte waitTime)
+        {
+            CurrentConfirmationNotification?.DismissNow();
+
+            if (!Service.Configuration.DutyNotificationEnabled)
+                return Task.CompletedTask;
+            var allowNotification = waitTime switch
+            {
+                0 => Service.Configuration.DutyNotificationThreshold <= 30,
+                255 => Service.Configuration.DutyNotificationAllowHidden,
+                _ => Service.Configuration.DutyNotificationThreshold <= waitTime,
+            };
+            if (!allowNotification)
+                return Task.CompletedTask;
+
+            var data = new CreateNotificationData
             {
                 CharacterName = obj.CharacterName,
                 HomeWorldId = (ushort)Service.ClientState.LocalPlayer!.HomeWorld.RowId,
@@ -110,19 +127,47 @@ public sealed class DutyNotificationTracker : IDisposable
                 QueuedContent = obj.QueuedContent,
                 Update = update,
                 EstimatedTime = null,
+            };
+
+            if (!Service.Configuration.DutyNotificationRequireConfirmation)
+                return this.CreateNotificationFnf(data);
+
+            var notif = Log.Notify(new Notification
+            {
+                MinimizedText = "Waitingway Queue Pop Confirmation",
+                Content = "Should I notify you when your queue pops?",
+                Minimized = false,
+                InitialDuration = TimeSpan.FromSeconds(60),
+                ExtensionDurationSinceLastInterest = TimeSpan.Zero,
+                HardExpiry = DateTime.MaxValue,
+                UserDismissable = false,
+                ShowIndeterminateIfNoExpiry = false,
             });
+            notif.DrawActions += args =>
+            {
+                var width = ImGui.GetContentRegionAvail().X;
+                var buttonWidth = (width - ImGui.GetStyle().ItemSpacing.X) / 2;
+                var buttonHeight = ImGui.GetFrameHeight();
+                if (ImGui.Button("Yes", new(buttonWidth, buttonHeight)))
+                {
+                    _ = this.CreateNotificationFnf(data);
+                    notif.DismissNow();
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("Dismiss", new(buttonWidth, buttonHeight)))
+                    notif.DismissNow();
+            };
+            CurrentConfirmationNotification = notif;
+            return Task.CompletedTask;
+        }
 
         if (obj.Updates.Count == 1)
         {
-            if (Service.Configuration.DutyNotificationThreshold is { } threshold
-                && threshold <= waitUpdate.WaitTimeMinutes)
-                _ = CreateNotificationFnf();
+            _ = CreateNotificationFnf(waitUpdate.WaitTimeMinutes);
         }
         else if (CurrentNotification == null && obj.Updates.Count > 1)
         {
-            if (Service.Configuration.DutyNotificationThreshold is { } threshold
-                && threshold <= ((WaitTimeUpdate)obj.Updates.First(u => u is WaitTimeUpdate)).WaitTimeMinutes)
-                _ = CreateNotificationFnf();
+            _ = CreateNotificationFnf(((WaitTimeUpdate)obj.Updates.First(u => u is WaitTimeUpdate)).WaitTimeMinutes);
         }
         else if (CurrentNotification != null)
         {
@@ -136,6 +181,8 @@ public sealed class DutyNotificationTracker : IDisposable
 
     private void OnPopQueue()
     {
+        CurrentConfirmationNotification?.DismissNow();
+
         if (CurrentNotification == null)
             return;
 
@@ -152,6 +199,8 @@ public sealed class DutyNotificationTracker : IDisposable
 
     private void OnFinalizeQueue()
     {
+        CurrentConfirmationNotification?.DismissNow();
+
         var obj = Service.DutyTracker.CurrentRecap ?? throw new UnreachableException("No recap available");
 
         _ = CreateRecapFnf(obj);

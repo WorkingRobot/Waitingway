@@ -365,16 +365,43 @@ public sealed class Settings : Window, IDisposable
 
         var isDirty = false;
 
-        //DrawOption(
-        //    "Duty Notification Threshold",
-        //    "Only queue times above this many minutes will trigger a notification. " +
-        //    "Keep in mind that the server also has its own threshold, so setting " +
-        //    "this below a certain point won't have any effect.",
-        //    Config.DutyNotificationThreshold,
-        //    0, 30,
-        //    v => Config.DutyNotificationThreshold = v,
-        //    ref isDirty
-        //);
+        DrawOption(
+            "Enable Duty Notifications",
+            "Enables discord notifications for duty queues.",
+            Config.DutyNotificationEnabled,
+            v => Config.DutyNotificationEnabled = v,
+            ref isDirty
+        );
+
+        using var _ = ImRaii.Disabled(!Config.DutyNotificationEnabled);
+
+        DrawOption(
+            "Require Confirmation",
+            "Requires you to confirm before sending notifications for a " +
+            "duty queue.",
+            Config.DutyNotificationRequireConfirmation,
+            v => Config.DutyNotificationRequireConfirmation = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Allow Hidden Wait Times",
+            "Allows notifications for queues with hidden wait times.",
+            Config.DutyNotificationAllowHidden,
+            v => Config.DutyNotificationAllowHidden = v,
+            ref isDirty
+        );
+
+        DrawOption(
+            "Notification Threshold (Minutes)",
+            "Only queue that are estimated to be at least this many minutes will " +
+            "trigger a notification. Keep in mind that the server also has its own " +
+            "threshold, so setting this below a certain point won't have any effect.",
+            Config.DutyNotificationThreshold,
+            0, 30,
+            v => Config.DutyNotificationThreshold = v,
+            ref isDirty
+        );
 
         //ImGui.Separator();
 

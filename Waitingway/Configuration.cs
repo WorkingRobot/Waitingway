@@ -54,7 +54,10 @@ public class Configuration : IPluginConfiguration
     public int NotificationThreshold { get; set; }
     public bool ShowDurationInWorldSelector { get; set; }
 
-    public int? DutyNotificationThreshold { get; set; }
+    public bool DutyNotificationEnabled { get; set; } = true;
+    public bool DutyNotificationRequireConfirmation { get; set; } = true;
+    public bool DutyNotificationAllowHidden { get; set; }
+    public int DutyNotificationThreshold { get; set; } = 10;
 
     public void AddFailedRecap(Recap recap)
     {

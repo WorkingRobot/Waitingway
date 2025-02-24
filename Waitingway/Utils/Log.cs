@@ -61,13 +61,13 @@ public static class Log
         });
     }
 
-    public static void Notify(Notification n) =>
+    public static IActiveNotification Notify(Notification n) =>
         DisplayNotification(n);
 
     private static Exception FlattenException(Exception e)
     {
         if (e is AggregateException { } aggExc)
-            return aggExc.Flatten().GetBaseException();
+            return aggExc.Flatten().InnerExceptions[0];
         return e;
     }
 
