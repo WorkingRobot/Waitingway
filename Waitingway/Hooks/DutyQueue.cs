@@ -224,7 +224,7 @@ public sealed unsafe class DutyQueue : IDisposable
                     RawWaitTime = state.AverageWaitTime,
                     IsReservingServer = state.IsReservingServer
                 },
-                QueueInfoState.QueueContentType.None4 | QueueInfoState.QueueContentType.None5 => new BaseQueueUpdate
+                QueueInfoState.QueueContentType.None4 or QueueInfoState.QueueContentType.None5 => new BaseQueueUpdate
                 {
                     Timestamp = DateTime.UtcNow,
                     IsReservingServer = state.IsReservingServer
@@ -405,7 +405,14 @@ public sealed unsafe class DutyQueue : IDisposable
         //Log.Debug($"All: {newInfoState->PlayersFound} / {newInfoState->PlayersNeeded}");
         //Log.Debug($"Reserving: {newInfoState->IsReservingServer}");
 
-        OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*newInfoState));
+        try
+        {
+            OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*newInfoState));
+        }
+        catch (Exception e)
+        {
+            Log.ErrorNotify(e, "Error invoking QueueInfoProcessInfoStateDetour", "Please report this as a bug");
+        }
 
         queueInfoProcessInfoStateHook.Original(@this, newState, newInfoState);
     }
@@ -421,12 +428,19 @@ public sealed unsafe class DutyQueue : IDisposable
         //Log.Debug($"Roulette: {packet->RouletteId}");
         //Log.Debug($"Conditions: {string.Join(", ", new Span<int>(packet->ContentFinderConditions, 5).ToArray())}");
 
-        if (packet->BeganQueue)
+        try
         {
-            var makeup = PartyMakeup.TryCreate();
-            var queueInfo = new QueueInfo(packet);
-            var languages = packet->LanguageFlags;
-            OnEnterQueue?.Invoke(queueInfo, languages, LuminaSheets.CreateRowRef<ClassJob>(packet->ClassJobId), makeup);
+            if (packet->BeganQueue)
+            {
+                var makeup = PartyMakeup.TryCreate();
+                var queueInfo = new QueueInfo(packet);
+                var languages = packet->LanguageFlags;
+                OnEnterQueue?.Invoke(queueInfo, languages, LuminaSheets.CreateRowRef<ClassJob>(packet->ClassJobId), makeup);
+            }
+        }
+        catch (Exception e)
+        {
+            Log.ErrorNotify(e, "Error invoking ProcessContentsFinderUpdatePacket2Detour", "Please report this as a bug");
         }
         processContentsFinderUpdatePacket2Hook.Original(packet);
     }
@@ -437,7 +451,14 @@ public sealed unsafe class DutyQueue : IDisposable
         //Log.Debug($"Log: {LuminaSheets.LogMessage.GetRow(logMessageId).Text.ExtractText()} ({logMessageId})");
         //Log.Debug($"Content: {contentId:X16}");
 
-        OnWithdrawQueue?.Invoke(LuminaSheets.CreateRowRef<LogMessage>(logMessageId));
+        try
+        {
+            OnWithdrawQueue?.Invoke(LuminaSheets.CreateRowRef<LogMessage>(logMessageId));
+        }
+        catch (Exception e)
+        {
+            Log.ErrorNotify(e, "Error invoking QueueInfoWithdrawQueueDetour", "Please report this as a bug");
+        }
         queueInfoWithdrawQueueHook.Original(@this, logMessageId, contentId);
     }
 
@@ -458,26 +479,33 @@ public sealed unsafe class DutyQueue : IDisposable
         //Log.Debug($"Synced: {isSynced}");
         //Log.Debug($"LimitedLeveling: {isLimitedLeveling}");
 
-        var rouletteId = ContentsFinder.Instance()->QueueInfo.QueuedContentRouletteId;
-        var queueInfo = new QueueInfo()
+        try
         {
-            Content = rouletteId != 0
-                ? ([(RowRef)LuminaSheets.CreateRowRef<ContentRoulette>(rouletteId)])
-                : ([(RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(contentId)]),
-            Flags = new()
+            var rouletteId = ContentsFinder.Instance()->QueueInfo.QueuedContentRouletteId;
+            var queueInfo = new QueueInfo()
             {
-                LootRule = (LootRuleFlags)lootRule,
-                IsUnrestrictedParty = isUnrestricted != 0,
-                IsMinIlvl = isMinIlvl != 0,
-                IsSilenceEcho = isSilenceEcho != 0,
-                IsExplorer = isExplorer != 0,
-                IsLevelSynced = isSynced != 0,
-                IsLimitedLeveling = isLimitedLeveling != 0,
-                InProgressParty = isInProgressParty != 0
-            }
-        };
-        DateTime? inProgressStartTimestamp = inProgressPartyStartTimestamp == 0 ? null : DateTimeOffset.FromUnixTimeSeconds((long)inProgressPartyStartTimestamp).UtcDateTime;
-        OnPopQueue?.Invoke(queueInfo, inProgressStartTimestamp);
+                Content = rouletteId != 0
+                    ? ([(RowRef)LuminaSheets.CreateRowRef<ContentRoulette>(rouletteId)])
+                    : ([(RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(contentId)]),
+                Flags = new()
+                {
+                    LootRule = (LootRuleFlags)lootRule,
+                    IsUnrestrictedParty = isUnrestricted != 0,
+                    IsMinIlvl = isMinIlvl != 0,
+                    IsSilenceEcho = isSilenceEcho != 0,
+                    IsExplorer = isExplorer != 0,
+                    IsLevelSynced = isSynced != 0,
+                    IsLimitedLeveling = isLimitedLeveling != 0,
+                    InProgressParty = isInProgressParty != 0
+                }
+            };
+            DateTime? inProgressStartTimestamp = inProgressPartyStartTimestamp == 0 ? null : DateTimeOffset.FromUnixTimeSeconds((long)inProgressPartyStartTimestamp).UtcDateTime;
+            OnPopQueue?.Invoke(queueInfo, inProgressStartTimestamp);
+        }
+        catch (Exception e)
+        {
+            Log.ErrorNotify(e, "Error invoking QueueInfoDutyPopDetour", "Please report this as a bug");
+        }
 
         queueInfoDutyPopHook.Original(@this, newState, contentId, a4, isInProgressParty, lootRule, inProgressPartyStartTimestamp, a8, isUnrestricted, isMinIlvl, isSilenceEcho, isExplorer, isSynced, isLimitedLeveling);
     }
@@ -494,8 +522,15 @@ public sealed unsafe class DutyQueue : IDisposable
         //Log.Debug($"A8: {a8:X16}");
         //Log.Debug($"A9: {a9:X16}");
 
-        if (conditionId != 0)
-            OnEnterContent?.Invoke(LuminaSheets.CreateRowRef<ContentFinderCondition>(conditionId));
+        try
+        {
+            if (conditionId != 0)
+                OnEnterContent?.Invoke(LuminaSheets.CreateRowRef<ContentFinderCondition>(conditionId));
+        }
+        catch (Exception e)
+        {
+            Log.ErrorNotify(e, "Error invoking GameMainStartTerritoryTransitionDetour", "Please report this as a bug");
+        }
 
         gameMainStartTerritoryTransitionHook.Original(a1, localPlayerEntityId, nextTerritoryTypeId, a4, a5, a6, conditionId, a8, a9);
     }
