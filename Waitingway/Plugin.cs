@@ -102,20 +102,6 @@ public sealed class Plugin : IDalamudPlugin
 
         DutyTracker.OnFinalizeQueue += () =>
             Log.Debug($"EVENT: FINALIZE: {JsonSerializer.Serialize(DutyTracker.CurrentRecap!, Api.JsonOptions)}");
-
-        DutyTracker.OnFinalizeQueue += () =>
-        {
-            var recap = DutyTracker.CurrentRecap!;
-            var elapsed = recap.EndTime!.Value - recap.StartTime;
-            var world = World.GetWorld(recap.WorldId);
-            Log.Notify(new Notification
-            {
-                Type = recap.Successful ? NotificationType.Success : NotificationType.Warning,
-                Title = $"Queue {(recap.Successful ? "Successful" : "Unsuccessful")}",
-                Content = $"Queued for {elapsed.ToString(Log.GetTimeSpanFormat(elapsed))}",
-                Minimized = false
-            });
-        };
     }
 
     public void OpenSettingsWindow(bool force = false)
