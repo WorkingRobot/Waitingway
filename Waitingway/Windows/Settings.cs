@@ -181,7 +181,9 @@ public sealed class Settings : Window, IDisposable
     {
         if (ImGui.BeginTabBar("settingsTabBar"))
         {
-            DrawTabGeneral();
+            DrawTabConnections();
+            DrawTabLogin();
+            DrawTabDuty();
             DrawTabAdvanced();
             DrawTabAbout();
 
@@ -189,9 +191,9 @@ public sealed class Settings : Window, IDisposable
         }
     }
 
-    private void DrawTabGeneral()
+    private void DrawTabConnections()
     {
-        using var tab = TabItem("General");
+        using var tab = TabItem("Connections");
         if (!tab)
             return;
 
@@ -200,27 +202,10 @@ public sealed class Settings : Window, IDisposable
         var isDirty = false;
 
         var frameWidth = ImGui.GetContentRegionAvail().X;
-
-        var pos = ImGui.GetCursorPosX();
-
-        ImGui.AlignTextToFramePadding();
-
-        ImGuiUtils.TextCentered("Connections", frameWidth);
-
-        ImGui.SameLine();
-
+        var frameHeight = ImGui.GetContentRegionAvail().Y - ImGui.GetFrameHeightWithSpacing();
         var buttonWidth = ImGui.GetFrameHeight();
-        ImGuiUtils.AlignRight(buttonWidth, frameWidth - (ImGui.GetCursorPosX() - pos));
-        var isUnderCooldown = IsConnectionsUnderCooldown;
-        using (ImRaii.Disabled(isUnderCooldown))
-        {
-            if (ImGuiUtils.IconButtonSquare(FontAwesomeIcon.Sync, buttonWidth) || ConnectionsTask == null)
-                UpdateConnections();
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && isUnderCooldown)
-                ImGuiUtils.TooltipWrapped("Please wait a moment before refreshing");
-        }
 
-        using (var frame = ImRaii.Child("connectionsFrame", new Vector2(frameWidth, 200), true))
+        using (var frame = ImRaii.Child("connectionsFrame", new Vector2(frameWidth, frameHeight), true))
         {
             if (IsLoadingConnections)
                 ImGuiUtils.TextCentered("Loading...");
@@ -254,7 +239,8 @@ public sealed class Settings : Window, IDisposable
             }
         }
 
-        if (ImGui.Button("Connect Discord Account", OptionButtonSize.WithX(frameWidth)))
+        var connectWidth = frameWidth - buttonWidth - ImGui.GetStyle().ItemSpacing.X;
+        if (ImGui.Button("Connect Discord Account", OptionButtonSize.WithX(connectWidth)))
         {
             var task = Service.Api.OpenOAuthInBrowserAsync();
             _ = task.ContinueWith(t =>
@@ -264,15 +250,25 @@ public sealed class Settings : Window, IDisposable
             });
         }
         if (ImGui.IsItemHovered())
-            ImGuiUtils.TooltipWrapped("Connecting your Discord account will add you to the official Waitingway Discord server. Due to the nature of Discord's API, you must stay in this server to recieve notifications.");
+            ImGuiUtils.TooltipWrapped("Connecting your Discord account will allow you to recieve queue notifications from the Waitingway discord bot.");
+        
+        ImGui.SameLine();
+        var isUnderCooldown = IsConnectionsUnderCooldown;
+        using (ImRaii.Disabled(isUnderCooldown))
+        {
+            if (ImGuiUtils.IconButtonSquare(FontAwesomeIcon.Sync, buttonWidth) || ConnectionsTask == null)
+                UpdateConnections();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGuiUtils.TooltipWrapped(isUnderCooldown ? "Please wait a moment before refreshing" : "Refresh connections");
 
         if (isDirty)
             Config.Save();
     }
 
-    private void DrawTabAdvanced()
+    private void DrawTabLogin()
     {
-        using var tab = TabItem("Advanced");
+        using var tab = TabItem("Login");
         if (!tab)
             return;
 
@@ -291,37 +287,13 @@ public sealed class Settings : Window, IDisposable
         );
 
         DrawOption(
-            "Login Notification Threshold",
+            "Notification Threshold",
             "Only queue positions above this level will trigger a notification. " +
             "Keep in mind that the server also has its own threshold, so setting " +
             "this below a certain point won't have any effect.",
             Config.NotificationThreshold,
             0, 1000,
             v => Config.NotificationThreshold = v,
-            ref isDirty
-        );
-
-        Config.DutyNotificationThreshold = 0;
-
-        //DrawOption(
-        //    "Duty Notification Threshold",
-        //    "Only queue times above this many minutes will trigger a notification. " +
-        //    "Keep in mind that the server also has its own threshold, so setting " +
-        //    "this below a certain point won't have any effect.",
-        //    Config.DutyNotificationThreshold,
-        //    0, 30,
-        //    v => Config.DutyNotificationThreshold = v,
-        //    ref isDirty
-        //);
-
-        DrawOption(
-            "Server API Url",
-            "The URL of the server API to use for queue tracking. Keep this " +
-            "as the default unless you're hosting a private server.",
-            Config.ServerUri,
-            v => v.AbsoluteUri,
-            v => Uri.TryCreate(v, UriKind.Absolute, out var ret) ? ret : null,
-            v => Config.ServerUri = v,
             ref isDirty
         );
 
@@ -383,6 +355,67 @@ public sealed class Settings : Window, IDisposable
             Config.Save();
     }
 
+    private void DrawTabDuty()
+    {
+        using var tab = TabItem("Duty");
+        if (!tab)
+            return;
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        var isDirty = false;
+
+        //DrawOption(
+        //    "Duty Notification Threshold",
+        //    "Only queue times above this many minutes will trigger a notification. " +
+        //    "Keep in mind that the server also has its own threshold, so setting " +
+        //    "this below a certain point won't have any effect.",
+        //    Config.DutyNotificationThreshold,
+        //    0, 30,
+        //    v => Config.DutyNotificationThreshold = v,
+        //    ref isDirty
+        //);
+
+        //ImGui.Separator();
+
+        //DrawOption(
+        //    "Show Queue Info in Duty Finder",
+        //    "TODO",
+        //    Config.ShowDurationInWorldSelector,
+        //    v => Config.ShowDurationInWorldSelector = v,
+        //    ref isDirty
+        //);
+
+        if (isDirty)
+            Config.Save();
+    }
+
+    private void DrawTabAdvanced()
+    {
+        using var tab = TabItem("Advanced");
+        if (!tab)
+            return;
+
+        ImGuiHelpers.ScaledDummy(5);
+
+        var isDirty = false;
+
+        DrawOption(
+            "Server API Url",
+            "The URL of the server API to use for queue tracking. Keep this " +
+            "as the default unless you're hosting a private server for some " +
+            "reason.",
+            Config.ServerUri,
+            v => v.AbsoluteUri,
+            v => Uri.TryCreate(v, UriKind.Absolute, out var ret) && ret.Scheme is "http" or "https" ? ret : null,
+            v => Config.ServerUri = v,
+            ref isDirty
+        );
+
+        if (isDirty)
+            Config.Save();
+    }
+
     private void DrawTabAbout()
     {
         using var tab = TabItem("About");
@@ -409,7 +442,7 @@ public sealed class Settings : Window, IDisposable
                 using (HeaderFont.Push())
                 {
                     ImGuiUtils.AlignCentered(ImGui.CalcTextSize("Waitingway").X);
-                    ImGuiUtils.Hyperlink("Waitingway", "https://github.com/WorkingRobot/Waitingway", false);
+                    ImGuiUtils.Hyperlink("Waitingway", "https://waiting.camora.dev", false);
                 }
 
                 using (SubheaderFont.Push())
@@ -422,10 +455,18 @@ public sealed class Settings : Window, IDisposable
                 ImGui.SameLine(0, 0);
                 ImGui.Text(")");
 
-                ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"Discord").X + ImGui.GetStyle().ItemSpacing.X + ImGui.CalcTextSize($"Ko-fi").X);
+                ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"Discord").X);
                 ImGuiUtils.Hyperlink("Discord", "https://waiting.camora.dev/discord");
-                ImGui.SameLine();
-                ImGuiUtils.Hyperlink("Ko-fi", "https://waiting.camora.dev/funding");
+
+                using (ImRaii.PushColor(ImGuiCol.Text, new Vector4(0.07f, 0.76f, 1.00f, 1f)))
+                {
+                    ImGuiUtils.AlignCentered(ImGui.CalcTextSize($"Support me on Ko-fi!").X);
+                    ImGui.TextUnformatted($"Support me on ");
+                    ImGui.SameLine(0, 0);
+                    ImGuiUtils.Hyperlink("Ko-fi", "https://waiting.camora.dev/funding");
+                    ImGui.SameLine(0, 0);
+                    ImGui.TextUnformatted("!");
+                }
             }
         }
 
