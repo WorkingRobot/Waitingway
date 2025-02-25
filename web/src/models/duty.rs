@@ -157,6 +157,7 @@ pub struct PartyMakeup {
 pub struct PartyMember {
     pub job: DatabaseU16,
     pub level: DatabaseU16,
+    #[serde(rename = "world_id")]
     pub world: DatabaseU16,
 }
 
