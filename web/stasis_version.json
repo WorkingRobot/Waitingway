@@ -3,18 +3,18 @@
     "BlowfishVersion": 7000,
     "LoginVersion": 7000,
     "BootVersion": "2025.01.10.0000.0001",
-    "GameVersion": "2025.01.28.0000.0000",
+    "GameVersion": "2025.02.19.0000.0000",
     "ExVersions": [
         "2025.01.09.0000.0000",
         "2025.01.14.0000.0000",
-        "2025.01.28.0000.0000",
-        "2025.01.28.0000.0000",
-        "2025.01.28.0000.0000"
+        "2025.02.19.0000.0000",
+        "2025.02.19.0000.0000",
+        "2025.02.19.0000.0000"
     ],
     "GameExe": {
         "FileName": "ffxiv_dx11.exe",
-        "FileSize": 48601360,
-        "Sha1Hash": "lAsFJcpk+27CkkA5MpjdAtfi7rU="
+        "FileSize": 48682256,
+        "Sha1Hash": "sUp6cg62HJret8K3BKW7nVQrDdI="
     },
     "BootHashes": [
         {
