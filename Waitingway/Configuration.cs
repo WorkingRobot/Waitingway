@@ -57,7 +57,7 @@ public class Configuration : IPluginConfiguration
     public bool DutyNotificationEnabled { get; set; } = true;
     public bool DutyNotificationRequireConfirmation { get; set; } = true;
     public bool DutyNotificationAllowHidden { get; set; }
-    public int DutyNotificationThreshold { get; set; } = 10;
+    public int DutyNotificationThresholdMinutes { get; set; } = 10;
 
     public void AddFailedRecap(Recap recap)
     {

@@ -111,9 +111,9 @@ public sealed class DutyNotificationTracker : IDisposable
                 return Task.CompletedTask;
             var allowNotification = waitTime switch
             {
-                0 => Service.Configuration.DutyNotificationThreshold <= 30,
+                0 => Service.Configuration.DutyNotificationThresholdMinutes <= 30,
                 255 => Service.Configuration.DutyNotificationAllowHidden,
-                _ => Service.Configuration.DutyNotificationThreshold <= waitTime,
+                _ => Service.Configuration.DutyNotificationThresholdMinutes <= waitTime,
             };
             if (!allowNotification)
                 return Task.CompletedTask;
