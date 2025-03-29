@@ -245,7 +245,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         textNode->CharSpacing = 0;
         textNode->LineSpacing = 14;
         textNode->SetPositionShort(39, 84);
-        textNode->SetWidth(130);
+        textNode->SetWidth(200);
         textNode->SetHeight(14);
 
         var tooltipHandler = WorldSelector.CreateTooltipHandler(() =>
