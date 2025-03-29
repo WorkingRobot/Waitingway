@@ -1,10 +1,10 @@
 use crate::{
     middleware::{auth::BasicAuthentication, version::UserAgentVersion},
-    models::{login::QueueSize, login::Recap, WorldQueryFilter},
+    models::{WorldQueryFilter, login::QueueSize, login::Recap},
     storage::db,
 };
 use actix_web::{
-    dev::HttpServiceFactory, error::ErrorInternalServerError, web, HttpResponse, Resource, Result,
+    HttpResponse, Result, dev::HttpServiceFactory, error::ErrorInternalServerError, get, route, web,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -13,34 +13,13 @@ mod notifications;
 
 pub fn service() -> impl HttpServiceFactory {
     web::scope("/login")
-        .service(
-            Resource::new("/size/")
-                .wrap(BasicAuthentication)
-                .route(web::post().to(create_size)),
-        )
-        .service(
-            Resource::new("/recap/")
-                .wrap(BasicAuthentication)
-                .route(web::post().to(create_recap)),
-        )
-        .service(Resource::new("/").route(web::get().to(get_queue_estimate)))
+        .service(create_size)
+        .service(create_recap)
+        .service(get_queue_estimate)
         .service(notifications::service())
 }
 
-pub fn service_v1() -> impl HttpServiceFactory {
-    (
-        Resource::new("/queue_size/")
-            .wrap(BasicAuthentication)
-            .route(web::post().to(create_size)),
-        Resource::new("/recap/")
-            .wrap(BasicAuthentication)
-            .route(web::post().to(create_recap)),
-        Resource::new("/queue/").route(web::get().to(get_queue_estimate)),
-        notifications::service(),
-    )
-}
-
-//#[route("/size/", method = "POST", wrap = "BasicAuthentication")]
+#[route("/size/", method = "POST", wrap = "BasicAuthentication")]
 async fn create_size(
     pool: web::Data<PgPool>,
     username: web::ReqData<Uuid>,
@@ -56,7 +35,7 @@ async fn create_size(
     }
 }
 
-//#[route("/recap/", method = "POST", wrap = "BasicAuthentication")]
+#[route("/recap/", method = "POST", wrap = "BasicAuthentication")]
 async fn create_recap(
     pool: web::Data<PgPool>,
     username: web::ReqData<Uuid>,
@@ -76,7 +55,7 @@ async fn create_recap(
     }
 }
 
-//#[get("/")]
+#[get("/")]
 async fn get_queue_estimate(
     pool: web::Data<PgPool>,
     filter: actix_web_lab::extract::Query<WorldQueryFilter>,
