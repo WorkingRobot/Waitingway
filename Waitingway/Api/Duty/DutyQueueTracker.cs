@@ -173,7 +173,7 @@ public sealed class DutyQueueTracker : IDisposable
     {
         if (CurrentRecap is not { } recap)
         {
-            Log.ErrorNotify($"Queue popped without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            Log.Warn($"Queue popped without prior knowlege of queue. Did you install/enable Waitingway while queued?");
             return;
         }
 
@@ -186,7 +186,7 @@ public sealed class DutyQueueTracker : IDisposable
     {
         if (CurrentRecap is not { } recap)
         {
-            Log.ErrorNotify($"Received new queue update without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            Log.Warn($"Received new queue update without prior knowlege of queue. Did you install/enable Waitingway while queued?");
             return;
         }
 

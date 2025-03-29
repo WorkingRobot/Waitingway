@@ -203,7 +203,7 @@ public sealed class LoginQueueTracker : IDisposable
     {
         if (CurrentRecap is not { } recap)
         {
-            Log.ErrorNotify($"Cancelled queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            Log.Warn($"Cancelled queue without prior knowlege of queue. Did you install/enable Waitingway while queued?");
             return;
         }
 
@@ -239,7 +239,7 @@ public sealed class LoginQueueTracker : IDisposable
         if (CurrentRecap is not { } recap)
         {
             LastIdentifyTime = null;
-            Log.ErrorNotify($"Exited queue without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            Log.Warn($"Exited queue without prior knowlege of queue. Did you install/enable Waitingway while queued?");
             return;
         }
 
@@ -261,7 +261,7 @@ public sealed class LoginQueueTracker : IDisposable
         if (CurrentRecap is not { } recap)
         {
             LastIdentifyTime = null;
-            Log.ErrorNotify($"Received new queue position ({newPosition}) without prior knowlege of queue. Did you install/enable Waitingway while queued?", "Unexpected Queue Update");
+            Log.Warn($"Received new queue position ({newPosition}) without prior knowlege of queue. Did you install/enable Waitingway while queued?");
             return;
         }
 
