@@ -107,7 +107,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         var createdAsset = AtkUtils.Calloc<AtkUldAsset>();
         createdAsset->Id = 99899;
         createdAsset->AtkTexture.Ctor();
-        createdAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, (uint)TextureFormat.B8G8R8A8_UNORM, 0, 0);
+        createdAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, TextureFormat.B8G8R8A8_UNORM, (TextureFlags)0, 0);
 
         CachedTexture = createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView;
         createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.ImGuiHandle;
