@@ -17,9 +17,9 @@ use crate::discord::DiscordClient;
 use ::config::{Config, Environment, File, FileFormat};
 use actix_cors::Cors;
 use actix_web::{
+    App, HttpServer,
     middleware::{Logger, NormalizePath, TrailingSlash},
     web::Data,
-    App, HttpServer,
 };
 use actix_web_prom::PrometheusMetricsBuilder;
 use natives::version;
