@@ -22,7 +22,6 @@ fn v1() -> impl HttpServiceFactory {
         .service(summary::service())
         .service(oauth::service())
         .service(connections::service())
-        .service(queue::login::service())
 }
 
 fn v2() -> impl HttpServiceFactory {
