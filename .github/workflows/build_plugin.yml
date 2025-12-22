@@ -1,7 +1,6 @@
 name: Build Plugin
 
-on:
-  push
+on: push
 
 env:
   PLUGIN_REPO: WorkingRobot/MyDalamudPlugins
@@ -24,7 +23,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0'
+          dotnet-version: "10.0"
 
       - name: Download Dalamud
         run: |
