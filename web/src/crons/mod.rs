@@ -10,6 +10,9 @@ pub use refresh_world_statuses::RefreshWorldStatuses;
 pub mod update_activity;
 pub use update_activity::UpdateActivity;
 
+pub mod update_stasis;
+pub use update_stasis::UpdateStasis;
+
 use std::time::Duration;
 
 use serenity::async_trait;

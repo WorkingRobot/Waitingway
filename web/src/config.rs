@@ -52,6 +52,10 @@ pub struct StasisConfig {
     pub uid_cache: StasisCache,
     pub dc_token_cache: StasisCache,
     pub version_file: String,
+
+    pub blowfish_phrase: String,
+    pub blowfish_version: u32,
+    pub login_version: u16,
 }
 
 #[derive(Debug, Clone, Deserialize)]

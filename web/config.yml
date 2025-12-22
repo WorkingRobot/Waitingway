@@ -9,6 +9,17 @@ redis:
 max_connections_per_user: 3
 stasis:
   version_file: stasis_version.json
+
+  # Blowfish phrase is from 48 89 5C 24 ?? 57 48 83 EC 20 0F 57 C0 48 8B FA
+  blowfish_phrase: 8f5c725967ded4972fcd50ab397fff1b
+  # Version is after the 0x12345678 magic
+  # from E8 ?? ?? ?? ?? 48 8B F8 48 8B CF 48 89 7B 10 E8 ?? ?? ?? ?? 48 8D 8B
+  blowfish_version: 7201
+  # Login version is somewhere
+  # in 48 89 5C 24 ?? 55 56 57 41 56 41 57 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 27 48 8B 41 08
+  # or after a call to E8 ?? ?? ?? ?? 48 8B 6C 24 ?? 89 86 (xref #2)
+  login_version: 7201
+
   lobby_hosts:
     - neolobby01.ffxiv.com # Elemental
     - neolobby03.ffxiv.com # Gaia
@@ -22,6 +33,7 @@ stasis:
     - neolobby10.ffxiv.com # Meteor
     - neolobby11.ffxiv.com # Dynamis
     # - neolobby12.ffxiv.com # Shadow
+
   uid_cache:
     path: uid.json
     ttl: 86400 # 24 hours

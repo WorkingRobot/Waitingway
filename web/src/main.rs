@@ -91,6 +91,12 @@ async fn main() -> Result<(), ServerError> {
     let update_activity_token =
         crons::create_cron_job(crons::UpdateActivity::new(discord_bot.clone()));
 
+    let update_stasis_token = crons::create_cron_job(
+        crons::UpdateStasis::new(config.stasis.clone())
+            .await
+            .expect("Error creating update stasis cron job"),
+    );
+
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));
 
@@ -180,6 +186,7 @@ async fn main() -> Result<(), ServerError> {
     refresh_queue_estimates_token.cancel();
     refresh_travel_states_token.cancel();
     refresh_world_states_token.cancel();
+    update_stasis_token.cancel();
     update_activity_token.cancel();
     discord_bot.stop().await;
     let prometheus_server_ret = prometheus_server_task.await;

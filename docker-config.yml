@@ -12,11 +12,68 @@ metrics_server_addr: 0.0.0.0:4000
 # In the format of postgresql://<username>:<password>@<host>:<port>/<database>
 database_url: postgresql://waitingway:waitingway_passwd@db:5432/waitingway
 
+# Redis configuration
+redis:
+  # Supports Valkey, Redis, KeyDB, etc
+  url: redis://localhost:6379
+  namespace: wway
+  # Cache TTL in milliseconds
+  cache_ttl_ms: 2000
+
 # Number of Discord accounts that can be connected to a single user
 max_connections_per_user: 3
 
 # 256-bit key used to sign and encrypt update data. Insecure values will allow an attacker to send fake updates.
+# You can set this via the "UPDATES_KEY" environment variable as well (like with any other config value)
 updates_key: 7756BF80511B89041CA7DAB8335D1C6B8515F2A93167828EAD6351219C420869
+
+# TemporalStasis configuration
+stasis:
+  # Must be writable by the server process
+  version_file: stasis_version.json
+
+  # Blowfish phrase is from 48 89 5C 24 ?? 57 48 83 EC 20 0F 57 C0 48 8B FA
+  blowfish_phrase: 8f5c725967ded4972fcd50ab397fff1b
+  # Version is after the 0x12345678 magic
+  # from E8 ?? ?? ?? ?? 48 8B F8 48 8B CF 48 89 7B 10 E8 ?? ?? ?? ?? 48 8D 8B
+  blowfish_version: 7201
+  # Login version is somewhere
+  # in 48 89 5C 24 ?? 55 56 57 41 56 41 57 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 27 48 8B 41 08
+  # or after a call to E8 ?? ?? ?? ?? 48 8B 6C 24 ?? 89 86 (xref #2)
+  login_version: 7201
+
+  # List of lobby hosts to support
+  # https://exd.camora.dev/sheet/WorldDCGroupType
+  # Use the Neolobbyid column as the number in neolobbyXX.ffxiv.com
+  lobby_hosts:
+    - neolobby01.ffxiv.com # Elemental
+    - neolobby03.ffxiv.com # Gaia
+    - neolobby05.ffxiv.com # Mana
+    - neolobby02.ffxiv.com # Aether
+    - neolobby04.ffxiv.com # Primal
+    - neolobby06.ffxiv.com # Chaos
+    - neolobby07.ffxiv.com # Light
+    - neolobby08.ffxiv.com # Crystal
+    - neolobby09.ffxiv.com # Materia
+    - neolobby10.ffxiv.com # Meteor
+    - neolobby11.ffxiv.com # Dynamis
+    # - neolobby12.ffxiv.com # Shadow
+
+  # Cache for UIDs (used in login process and passed to the game server)
+  uid_cache:
+    path: uid.json
+    ttl: 86400 # 24 hours
+  # Cache for data center tokens (used to get data center travel status)
+  dc_token_cache:
+    path: dc_token.json
+    ttl: 43200 # 12 hours
+
+  # SQEX login credentials for the user that will log into FFXIV
+  # Make sure this user has an account on every lobby host listed above
+  # This user doesn't need an active subscription. You can just make a free trial account.
+  # You should prefer using STASIS.USERNAME and STASIS.PASSWORD environment variables
+  username: stasis_user
+  password: stasis_passwd
 
 discord:
   # Discord OAuth2 configuration
@@ -24,6 +81,15 @@ discord:
   redirect_uri: https://waiting.example.com/api/v1/oauth/callback
   client_id: 123456789012345678
   client_secret: client_secret
+
+  # Custom emotes for use in bot messages
+  emotes:
+    green_check: "<:green_check:1327530017315487850>"
+    red_cross: "<:red_cross:1327522180308664340>"
+    duty_player: "<:player:1339553024493748274>"
+    duty_tank: "<:tank:1339553037462540298>"
+    duty_healer: "<:healer:1339553010900271134>"
+    duty_dps: "<:dps:1339552998724075550>"
 
   # Discord bot token
   bot_token: bot_token_here
