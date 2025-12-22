@@ -7,6 +7,7 @@ using System.Numerics;
 using System.Threading.Tasks;
 using System.Threading;
 using Dalamud.Utility;
+using Dalamud.Bindings.ImGui;
 
 namespace Waitingway.Utils;
 
@@ -18,7 +19,7 @@ public interface ITextureIcon
 
     float? AspectRatio => Dimensions is { } d ? d.X / d.Y : null;
 
-    nint ImGuiHandle { get; }
+    ImTextureID ImGuiHandle { get; }
 
     IDalamudTextureWrap GetWrap();
 }
@@ -36,7 +37,7 @@ public sealed class IconManager : IDisposable
 
         public Vector2? Dimensions => GetWrap()?.Size;
 
-        public nint ImGuiHandle => GetWrapOrEmpty().ImGuiHandle;
+        public ImTextureID ImGuiHandle => GetWrapOrEmpty().Handle;
 
         private Task<IDalamudTextureWrap> TextureWrapTask { get; }
         private CancellationTokenSource DisposeToken { get; }
@@ -76,7 +77,7 @@ public sealed class IconManager : IDisposable
 
         public Vector2? Dimensions => Base.Dimensions;
 
-        public nint ImGuiHandle => Base.ImGuiHandle;
+        public ImTextureID ImGuiHandle => Base.ImGuiHandle;
 
         public CachedIcon(ISharedImmediateTexture source)
         {

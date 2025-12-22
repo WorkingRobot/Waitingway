@@ -46,13 +46,13 @@ public sealed unsafe class LoginQueue : IDisposable
 
     private readonly Hook<AgentLobby.Delegates.ReceiveEvent> agentLobbyReceiveEventHook = null!;
 
-    [Signature("40 57 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
+    [Signature("40 53 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
     private readonly Hook<StatusCodeHandlerLoginDelegate> statusCodeHandlerLoginHook = null!;
 
-    [Signature("40 55 53 56 57 41 54 48 8D AC 24 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 ?? ?? ?? ?? 8B B1", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
+    [Signature("40 53 56 57 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 8B 99", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
     private readonly Hook<AgentLobbyUpdatePositionDelegate> agentLobbyUpdatePositionHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B B4 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
+    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
     private readonly Hook<AgentLobbySendIdentify6Delegate> agentLobbySendIdentify6Hook = null!;
 
     private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;

@@ -1,9 +1,9 @@
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
 using System;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using Waitingway.Utils;
 using Waitingway.Api.Login;
+using Dalamud.Bindings.ImGui;
 
 namespace Waitingway.Windows;
 
@@ -29,11 +29,11 @@ public sealed unsafe class Queue : Window, IDisposable
         if (Service.LoginTracker.CurrentState == LoginQueueTracker.QueueState.NotQueued)
             return false;
 
-        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectOk");
+        var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectOk").Address;
         if (addon == null)
             return false;
 
-        var addon2 = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectYesno");
+        var addon2 = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectYesno").Address;
         if (addon2 != null)
             addon = addon2;
 

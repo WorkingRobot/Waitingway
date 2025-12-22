@@ -82,7 +82,7 @@ public sealed unsafe class DutyQueue : IDisposable
         public QueueInfo(ContentsFinderUpdatePacket2* packet) : this()
         {
             Content = packet->RouletteId != 0
-                ? ([(RowRef)LuminaSheets.CreateRowRef<ContentRoulette>(packet->RouletteId)])
+                ? ([(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(packet->RouletteId)])
                 : new ReadOnlySpan<uint>(packet->ContentFinderConditions, 5).ToArray().Where(c => c != 0).Select(c => (RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(c)).ToArray();
 
             Flags = new(packet->Flags);
@@ -99,7 +99,7 @@ public sealed unsafe class DutyQueue : IDisposable
         public PartyMakeup()
         {
             IsPartyLeader = Service.Hooks.Duty.isLocalPlayerPartyLeader() == 1;
-            var currentWorld = (ushort)Service.ClientState.LocalPlayer!.CurrentWorld.RowId;
+            var currentWorld = (ushort)Service.Objects.LocalPlayer!.CurrentWorld.RowId;
             var numberArrayPartyMember = RaptureAtkModule.Instance()->GetNumberArrayData(InfoProxyPartyMember.Instance()->NumberArrayIndex);
             HashSet<ulong> memberContentIds = [];
             List<PartyMember> members = [];
@@ -368,7 +368,7 @@ public sealed unsafe class DutyQueue : IDisposable
     [Signature("48 89 5C 24 ?? 57 48 83 EC 20 80 79 55 00", DetourName = nameof(QueueInfoDutyPopDetour))]
     private readonly Hook<QueueInfoDutyPopDelegate> queueInfoDutyPopHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 45 84 E4 75 56", DetourName = nameof(GameMainStartTerritoryTransitionDetour))]
+    [Signature("E8 ?? ?? ?? ?? 45 84 ED 75 57", DetourName = nameof(GameMainStartTerritoryTransitionDetour))]
     private readonly Hook<GameMainStartTerritoryTransitionDelegate> gameMainStartTerritoryTransitionHook = null!;
 
     [Signature("E8 ?? ?? ?? ?? 88 9F ?? ?? ?? ?? 0F B6 F0")]
@@ -485,7 +485,7 @@ public sealed unsafe class DutyQueue : IDisposable
             var queueInfo = new QueueInfo()
             {
                 Content = rouletteId != 0
-                    ? ([(RowRef)LuminaSheets.CreateRowRef<ContentRoulette>(rouletteId)])
+                    ? ([(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(rouletteId)])
                     : ([(RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(contentId)]),
                 Flags = new()
                 {

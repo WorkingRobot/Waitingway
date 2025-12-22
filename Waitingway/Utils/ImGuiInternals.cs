@@ -1,4 +1,4 @@
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Waitingway.Utils;
+
 internal static unsafe class ImGuiInternals
 {
     // https://github.com/ImGuiNET/ImGui.NET/blob/069363672fed940ebdaa02f9b032c282b66467c7/src/CodeGenerator/definitions/cimgui/definitions.json#L25394
@@ -171,43 +172,43 @@ internal static unsafe class ImGuiInternals
     public static unsafe ImGuiItemFlags GetItemFlags() =>
         igGetItemFlags();
 
-    public static unsafe int? CalcWordWrapPositionA(this ImFontPtr font, float scale, ReadOnlySpan<char> text, float wrap_width)
-    {
-        var utf8TextByteCount = Encoding.UTF8.GetByteCount(text);
-        byte* utf8TextBytes;
-        if (utf8TextByteCount > StackAllocationSizeLimit)
-        {
-            utf8TextBytes = Allocate(utf8TextByteCount + 1);
-        }
-        else
-        {
-            var stackPtr = stackalloc byte[utf8TextByteCount + 1];
-            utf8TextBytes = stackPtr;
-        }
-        GetUtf8(text, utf8TextBytes, utf8TextByteCount);
+    // public static unsafe int? CalcWordWrapPositionA(this ImFontPtr font, float scale, ReadOnlySpan<char> text, float wrap_width)
+    // {
+    //     var utf8TextByteCount = Encoding.UTF8.GetByteCount(text);
+    //     byte* utf8TextBytes;
+    //     if (utf8TextByteCount > StackAllocationSizeLimit)
+    //     {
+    //         utf8TextBytes = Allocate(utf8TextByteCount + 1);
+    //     }
+    //     else
+    //     {
+    //         var stackPtr = stackalloc byte[utf8TextByteCount + 1];
+    //         utf8TextBytes = stackPtr;
+    //     }
+    //     GetUtf8(text, utf8TextBytes, utf8TextByteCount);
 
-        var ret = ImGuiNative.ImFont_CalcWordWrapPositionA(font.NativePtr, scale, utf8TextBytes, utf8TextBytes + utf8TextByteCount, wrap_width);
+    //     var ret = font.CalcWordWrapPositionA(scale, utf8TextBytes, utf8TextBytes + utf8TextByteCount, wrap_width);
 
-        int? retVal = null;
-        if (utf8TextBytes <= ret && ret <= utf8TextBytes + utf8TextByteCount)
-        {
-            var retIndex = (int)(ret - utf8TextBytes);
-            retVal = Encoding.UTF8.GetCharCount(utf8TextBytes, retIndex);
-        }
+    //     int? retVal = null;
+    //     if (utf8TextBytes <= ret && ret <= utf8TextBytes + utf8TextByteCount)
+    //     {
+    //         var retIndex = (int)(ret - utf8TextBytes);
+    //         retVal = Encoding.UTF8.GetCharCount(utf8TextBytes, retIndex);
+    //     }
 
-        if (utf8TextByteCount > StackAllocationSizeLimit)
-            Free(utf8TextBytes);
+    //     if (utf8TextByteCount > StackAllocationSizeLimit)
+    //         Free(utf8TextBytes);
 
-        return retVal;
-    }
+    //     return retVal;
+    // }
 
-    public static unsafe bool SetDragDropPayload<T>(string type, T data) where T : unmanaged =>
-        ImGui.SetDragDropPayload(type, (nint)(&data), (uint)sizeof(T));
+    public static bool SetDragDropPayload<T>(string type, T data) where T : unmanaged =>
+        ImGui.SetDragDropPayload(type, MemoryMarshal.AsBytes(MemoryMarshal.CreateReadOnlySpan(ref data, 1)));
 
-    public static unsafe bool AcceptDragDropPayload<T>(string type, out T data) where T : unmanaged
+    public static bool AcceptDragDropPayload<T>(string type, out T data) where T : unmanaged
     {
         var payload = ImGui.AcceptDragDropPayload(type);
-        if (payload.NativePtr == null || payload.DataSize != sizeof(T))
+        if (payload.Handle == null || payload.DataSize != sizeof(T))
         {
             data = default;
             return false;

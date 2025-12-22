@@ -41,7 +41,7 @@ public sealed unsafe class CharaListMenu : IDisposable
 
     public CharaListMenu()
     {
-        var isHr = AtkStage.Instance()->AtkTextureResourceManager->DefaultTextureVersion == 2;
+        var isHr = AtkStage.Instance()->AtkTextureResourceManager->DefaultTextureScale == 2;
         SettingsImage = IconManager.GetAssemblyTexture(isHr ? "Graphics.settings_hr1.png" : "Graphics.settings.png");
         SettingsImageWrap = SettingsImage.GetWrap();
 
@@ -51,14 +51,14 @@ public sealed unsafe class CharaListMenu : IDisposable
         var addonPtr = Service.GameGui.GetAddonByName("_CharaSelectListMenu");
         if (addonPtr != 0)
         {
-            Addon = (AtkUnitBase*)addonPtr;
+            Addon = (AtkUnitBase*)addonPtr.Address;
             AdjustNativeUi();
         }
     }
 
     private void OnSetup(AddonEvent type, AddonArgs args)
     {
-        Addon = (AtkUnitBase*)args.Addon;
+        Addon = (AtkUnitBase*)args.Addon.Address;
 
         Service.Api.Login.ClearWorldQueueCache();
 
@@ -110,10 +110,10 @@ public sealed unsafe class CharaListMenu : IDisposable
         createdAsset->AtkTexture.KernelTexture = Texture.CreateTexture2D(36, 36, 3, TextureFormat.B8G8R8A8_UNORM, (TextureFlags)0, 0);
 
         CachedTexture = createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView;
-        createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.ImGuiHandle;
+        createdAsset->AtkTexture.KernelTexture->D3D11ShaderResourceView = (void*)SettingsImageWrap.Handle.Handle;
 
         createdAsset->AtkTexture.TextureType = TextureType.KernelTexture;
-        
+
         var createdPart = AtkUtils.Calloc<AtkUldPart>();
         createdPart->Width = 36;
         createdPart->Height = 36;
@@ -123,18 +123,18 @@ public sealed unsafe class CharaListMenu : IDisposable
         CreatedParts->Id = 9999;
         CreatedParts->PartCount = 1;
         CreatedParts->Parts = createdPart;
-        
+
         imageNode->AddRed = 0;
         imageNode->AddGreen = 0;
         imageNode->AddBlue = 0;
         imageNode->PartId = 0;
         imageNode->PartsList = CreatedParts;
-        
+
         var tooltipHandler = WorldSelector.CreateTooltipHandler("Open Waitingway Settings"u8);
         EventHandles.AddRange([
             Service.AddonEventManager.AddEvent((nint)Addon, (nint)settingsNode, AddonEventType.MouseOver, tooltipHandler),
             Service.AddonEventManager.AddEvent((nint)Addon, (nint)settingsNode, AddonEventType.MouseOut, tooltipHandler),
-            Service.AddonEventManager.AddEvent((nint)Addon, (nint)settingsNode, AddonEventType.ButtonClick, (_, _, _) => Service.Plugin.OpenSettingsWindow())
+            Service.AddonEventManager.AddEvent((nint)Addon, (nint)settingsNode, AddonEventType.ButtonClick, (_, _) => Service.Plugin.OpenSettingsWindow())
         ]);
 
         GetOrCreateQueueSizeTextNode();
@@ -240,7 +240,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         textNode->TextColor = new() { R = 0xFF, G = 0xFF, B = 0xFF, A = 0xFF };
         textNode->EdgeColor = new() { G = 0x99, B = 0xFF, A = 0xFF };
         textNode->BackgroundColor = new();
-        textNode->TextFlags = 8;
+        textNode->TextFlags = TextFlags.Edge;
         textNode->FontSize = 14;
         textNode->CharSpacing = 0;
         textNode->LineSpacing = 14;
@@ -276,7 +276,7 @@ public sealed unsafe class CharaListMenu : IDisposable
     {
         if (QueueDurationTextNode != null)
             return QueueDurationTextNode;
-        
+
         var siblingTextNode = GetOrCreateQueueSizeTextNode();
 
         if (siblingTextNode->PrevSiblingNode != null && siblingTextNode->PrevSiblingNode->NodeId == 5001)
@@ -292,7 +292,7 @@ public sealed unsafe class CharaListMenu : IDisposable
         textNode->TextColor = new() { R = 0xFF, G = 0xFF, B = 0xFF, A = 0xFF };
         textNode->EdgeColor = new() { G = 0x99, B = 0xFF, A = 0xFF };
         textNode->BackgroundColor = new();
-        textNode->TextFlags = 8;
+        textNode->TextFlags = TextFlags.Edge;
         textNode->FontSize = 18;
         textNode->CharSpacing = 0;
         textNode->LineSpacing = 18;

@@ -153,7 +153,7 @@ public sealed class DutyQueueTracker : IDisposable
 
     private void CbOnEnterQueue(QueueInfo queueInfo, QueueLanguage languages, RowRef<ClassJob> classJob, PartyMakeup? party)
     {
-        CurrentRecap = new(Service.ClientState.LocalPlayer!.Name.TextValue, (ushort)Service.ClientState.LocalPlayer!.CurrentWorld.RowId, (byte)classJob.RowId, languages, queueInfo, party, DateTime.UtcNow);
+        CurrentRecap = new(Service.Objects.LocalPlayer!.Name.TextValue, (ushort)Service.Objects.LocalPlayer!.CurrentWorld.RowId, (byte)classJob.RowId, languages, queueInfo, party, DateTime.UtcNow);
         CurrentState = QueueState.Queued;
         OnBeginQueue?.Invoke();
     }

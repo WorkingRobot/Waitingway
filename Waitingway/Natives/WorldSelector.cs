@@ -70,7 +70,7 @@ public sealed unsafe class WorldSelector : IDisposable
         Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_CharaSelectWorldServer", OnSetup);
         Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_CharaSelectWorldServer", OnFinalize);
         Service.AddonLifecycle.RegisterListener(AddonEvent.PreUpdate, "_CharaSelectWorldServer", OnUpdate);
-        var addonPtr = Service.GameGui.GetAddonByName("_CharaSelectWorldServer");
+        var addonPtr = Service.GameGui.GetAddonByName("_CharaSelectWorldServer").Address;
         if (addonPtr != 0)
         {
             Addon = (AddonCharaSelectWorldServer*)addonPtr;
@@ -80,7 +80,7 @@ public sealed unsafe class WorldSelector : IDisposable
 
     private void OnSetup(AddonEvent type, AddonArgs args)
     {
-        Addon = (AddonCharaSelectWorldServer*)args.Addon;
+        Addon = (AddonCharaSelectWorldServer*)args.Addon.Address;
 
         AdjustNativeUi();
     }
@@ -298,7 +298,7 @@ public sealed unsafe class WorldSelector : IDisposable
         textNode->TextColor = new() { R = 0xFF, G = 0xFF, B = 0xFF, A = 0xFF };
         textNode->EdgeColor = new() { G = 0x99, B = 0xFF, A = 0xFF };
         textNode->BackgroundColor = new();
-        textNode->TextFlags = 8;
+        textNode->TextFlags = TextFlags.Edge;
         textNode->FontSize = 20;
         textNode->CharSpacing = 0;
         textNode->LineSpacing = 20;
@@ -393,26 +393,27 @@ public sealed unsafe class WorldSelector : IDisposable
         CreateHeaderImageNodeIfNeeded();
     }
 
-    public static IAddonEventManager.AddonEventHandler CreateTooltipHandler(ReadOnlySpan<byte> tooltip)
+    public static IAddonEventManager.AddonEventDelegate CreateTooltipHandler(ReadOnlySpan<byte> tooltip)
     {
         var tooltipPtr = (byte*)Unsafe.AsPointer(ref Unsafe.AsRef(in tooltip.GetPinnableReference()));
-        return (type, atkUnitBase, atkResNode) =>
+        return (type, data) =>
         {
+
             if (type == AddonEventType.MouseOver)
-                AtkStage.Instance()->TooltipManager.ShowTooltip(((AtkUnitBase*)atkUnitBase)->Id, (AtkResNode*)atkResNode, tooltipPtr);
+                AtkStage.Instance()->TooltipManager.ShowTooltip(((AtkUnitBase*)data.AddonPointer)->Id, (AtkResNode*)data.NodeTargetPointer, tooltipPtr);
             else if (type == AddonEventType.MouseOut)
-                AtkStage.Instance()->TooltipManager.HideTooltip(((AtkUnitBase*)atkUnitBase)->Id);
+                AtkStage.Instance()->TooltipManager.HideTooltip(((AtkUnitBase*)data.AddonPointer)->Id);
         };
     }
 
-    public static IAddonEventManager.AddonEventHandler CreateTooltipHandler(Func<ReadOnlyMemory<byte>> tooltip)
+    public static IAddonEventManager.AddonEventDelegate CreateTooltipHandler(Func<ReadOnlyMemory<byte>> tooltip)
     {
-        return (type, atkUnitBase, atkResNode) =>
+        return (type, data) =>
         {
             if (type == AddonEventType.MouseOver)
-                AtkStage.Instance()->TooltipManager.ShowTooltip(((AtkUnitBase*)atkUnitBase)->Id, (AtkResNode*)atkResNode, tooltip().Span);
+                AtkStage.Instance()->TooltipManager.ShowTooltip(((AtkUnitBase*)data.AddonPointer)->Id, (AtkResNode*)data.NodeTargetPointer, tooltip().Span);
             else if (type == AddonEventType.MouseOut)
-                AtkStage.Instance()->TooltipManager.HideTooltip(((AtkUnitBase*)atkUnitBase)->Id);
+                AtkStage.Instance()->TooltipManager.HideTooltip(((AtkUnitBase*)data.AddonPointer)->Id);
         };
     }
 
@@ -477,7 +478,7 @@ public sealed unsafe class WorldSelector : IDisposable
                 component->UldManager.UpdateDrawNodeList();
             else
                 Addon->Base.UldManager.UpdateDrawNodeList();
-            
+
             IMemorySpace.Free(CreatedImageNode);
 
             CreatedImageNode = null;

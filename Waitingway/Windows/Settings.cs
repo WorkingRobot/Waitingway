@@ -1,11 +1,11 @@
 using Dalamud;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Utility.Numerics;
-using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -117,7 +117,7 @@ public sealed class Settings : Window, IDisposable
     private static void DrawOption<T>(string label, string tooltip, T value, T min, T max, Action<T> setter, ref bool isDirty) where T : struct, INumber<T>
     {
         ImGui.SetNextItemWidth(OptionWidth);
-        var text = value.ToString();
+        var text = value.ToString() ?? string.Empty;
         if (ImGui.InputText(label, ref text, 8, ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.CharsDecimal))
         {
             if (T.TryParse(text, null, out var newValue))
@@ -251,7 +251,7 @@ public sealed class Settings : Window, IDisposable
         }
         if (ImGui.IsItemHovered())
             ImGuiUtils.TooltipWrapped("Connecting your Discord account will allow you to recieve queue notifications from the Waitingway discord bot.");
-        
+
         ImGui.SameLine();
         var isUnderCooldown = IsConnectionsUnderCooldown;
         using (ImRaii.Disabled(isUnderCooldown))

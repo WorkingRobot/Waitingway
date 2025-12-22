@@ -1,5 +1,5 @@
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.ImGuiNotification;
-using ImGuiNET;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -121,7 +121,7 @@ public sealed class DutyNotificationTracker : IDisposable
             var data = new CreateNotificationData
             {
                 CharacterName = obj.CharacterName,
-                HomeWorldId = (ushort)Service.ClientState.LocalPlayer!.HomeWorld.RowId,
+                HomeWorldId = (ushort)Service.Objects.LocalPlayer!.HomeWorld.RowId,
                 QueuedJob = obj.QueuedJob,
                 QueuedRoulette = obj.QueuedRoulette,
                 QueuedContent = obj.QueuedContent,

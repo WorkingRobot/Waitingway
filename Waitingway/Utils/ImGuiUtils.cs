@@ -1,10 +1,10 @@
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface;
-using ImGuiNET;
 using System.Numerics;
 using System.Diagnostics;
 using System;
 using Dalamud.Interface.ManagedFontAtlas;
+using Dalamud.Bindings.ImGui;
 
 namespace Waitingway.Utils;
 
@@ -141,7 +141,7 @@ public static class ImGuiUtils
             currentWrapWidth = wrapPosX - currentPos;
 
         var textBuf = text.AsSpan();
-        var lineSize = font.CalcWordWrapPositionA(1, textBuf, currentWrapWidth) ?? textBuf.Length;
+        var lineSize = font.CalcWordWrapPositionA(1, textBuf, currentWrapWidth);
         var lineBuf = textBuf[..lineSize];
         ImGui.Text(lineBuf.ToString());
         var remainingBuf = textBuf[lineSize..].TrimStart();
