@@ -1,8 +1,4 @@
-use konst::{
-    option,
-    primitive::{parse_i64, parse_u32},
-    result,
-};
+use konst::result;
 use serde::Serialize;
 use time::{Duration, OffsetDateTime};
 
@@ -88,17 +84,22 @@ pub const VERSION_DATA: VersionData = VersionData {
     repository: env!("CARGO_PKG_REPOSITORY"),
     profile: env!("PROFILE"),
     version: env!("CARGO_PKG_VERSION"),
-    version_major: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MAJOR"))),
-    version_minor: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_MINOR"))),
-    version_patch: result::unwrap_ctx!(parse_u32(env!("CARGO_PKG_VERSION_PATCH"))),
+    version_major: parse_u32(env!("CARGO_PKG_VERSION_MAJOR")),
+    version_minor: parse_u32(env!("CARGO_PKG_VERSION_MINOR")),
+    version_patch: parse_u32(env!("CARGO_PKG_VERSION_PATCH")),
     supported_version: env!("SUPPORTED_VERSION"),
-    supported_version_major: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_MAJOR"))),
-    supported_version_minor: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_MINOR"))),
-    supported_version_patch: result::unwrap_ctx!(parse_u32(env!("SUPPORTED_VERSION_PATCH"))),
-    build_time: option::unwrap!(result::ok!(time::OffsetDateTime::from_unix_timestamp(
-        result::unwrap_ctx!(parse_i64(env!("BUILD_TIMESTAMP")))
-    ))),
+    supported_version_major: parse_u32(env!("SUPPORTED_VERSION_MAJOR")),
+    supported_version_minor: parse_u32(env!("SUPPORTED_VERSION_MINOR")),
+    supported_version_patch: parse_u32(env!("SUPPORTED_VERSION_PATCH")),
+    build_time: result::ok!(time::OffsetDateTime::from_unix_timestamp(result::unwrap!(
+        i64::from_str_radix(env!("BUILD_TIMESTAMP"), 10)
+    )))
+    .unwrap(),
 };
+
+const fn parse_u32(s: &str) -> u32 {
+    result::ok!(u32::from_str_radix(s, 10)).unwrap()
+}
 
 pub fn version() -> UserAgentVersion {
     UserAgentVersion {

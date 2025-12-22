@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{
-    api::{search_xivapi, GameSheet, XivApiIcon},
+    api::{GameSheet, XivApiIcon, search_xivapi},
     impl_game_data,
 };
 use crate::stopwatch::Stopwatch;
@@ -14,7 +14,7 @@ use sqlx::PgPool;
 #[serde(rename_all = "PascalCase")]
 struct XivApiContentRoulette {
     pub category: String,
-    pub icon: XivApiIcon,
+    pub image: XivApiIcon,
     pub name: String,
 }
 
@@ -38,7 +38,7 @@ impl GameSheet for ContentRouletteSheet {
             client,
             "ContentRoulette",
             "IsInDutyFinder=1",
-            "Name,Icon,Category",
+            "Name,Image,Category",
         )
         .await?
         .into_iter()
@@ -47,12 +47,12 @@ impl GameSheet for ContentRouletteSheet {
             let id = r.row_id as u8;
             let name = r.fields.name;
             let _category = r.fields.category;
-            let icon_path = r.fields.icon.path_hr1;
+            let image_path = r.fields.image.path_hr1;
             ContentRouletteInfo {
                 id,
                 name,
                 // category,
-                icon_path,
+                image_path,
             }
         })
         .collect())
@@ -96,7 +96,7 @@ impl GameSheet for ContentFinderConditionSheet {
 pub struct ContentRouletteInfo {
     pub id: u8,
     pub name: String,
-    pub icon_path: String,
+    pub image_path: String,
 }
 
 pub struct ContentFinderInfo {
@@ -149,7 +149,7 @@ impl ContentData {
 
     pub fn get_roulette_image(&self, id: u8) -> String {
         self.get_roulette_by_id(id)
-            .map_or_else(|| Self::DEFAULT_IMAGE.to_string(), |r| r.icon_path.clone())
+            .map_or_else(|| Self::DEFAULT_IMAGE.to_string(), |r| r.image_path.clone())
     }
 
     pub fn get_content_image(&self, id: u16) -> String {

@@ -1,6 +1,6 @@
 use super::{
     commands::command_list,
-    utils::{increment_command_invokes, COLOR_ERROR, COLOR_SUCCESS},
+    utils::{COLOR_ERROR, COLOR_SUCCESS, increment_command_invokes},
 };
 use crate::{
     config::DiscordConfig,
@@ -10,6 +10,7 @@ use crate::{
 use futures_util::future::try_join_all;
 use itertools::Itertools;
 use serenity::{
+    Client,
     all::{
         ActionRowComponent, ActivityData, Cache, ComponentInteractionDataKind, Context,
         CreateEmbed, CreateEmbedFooter, CreateInteractionResponse,
@@ -17,7 +18,7 @@ use serenity::{
         EventHandler, GatewayIntents, Http, HttpError, Interaction, Member, Mentionable, Message,
         RoleId, ShardManager, UserId,
     },
-    async_trait, Client,
+    async_trait,
 };
 use sqlx::PgPool;
 use std::sync::{Arc, OnceLock};
@@ -143,11 +144,11 @@ impl DiscordClient {
         self.imp.shards.get().unwrap().shutdown_all().await;
     }
 
-    async fn client(&self) -> RwLockReadGuard<Client> {
+    async fn client(&self) -> RwLockReadGuard<'_, Client> {
         self.imp.client.get().unwrap().read().await
     }
 
-    async fn client_mut(&self) -> RwLockWriteGuard<Client> {
+    async fn client_mut(&self) -> RwLockWriteGuard<'_, Client> {
         self.imp.client.get().unwrap().write().await
     }
 

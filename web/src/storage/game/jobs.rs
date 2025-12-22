@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{
-    api::{search_xivapi, GameSheet, XivApiLink},
+    api::{GameSheet, XivApiLink, search_xivapi},
     impl_game_data,
 };
 use crate::{
@@ -45,7 +45,7 @@ impl GameSheet for ClassJobSheet {
         Ok(search_xivapi::<XivApiClassJob>(
             client,
             "ClassJob",
-            "-ExpArrayIndex=-1",
+            "-ClassJobParent=0",
             "Name,Abbreviation,ClassJobCategory.Name,Role,CanQueueForDuty",
         )
         .await?

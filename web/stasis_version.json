@@ -1,41 +1,41 @@
 {
-    "BlowfishPhrase": "06c67fb0bb427f0e2f12433b9172f12e",
-    "BlowfishVersion": 7000,
-    "LoginVersion": 7000,
-    "BootVersion": "2025.01.10.0000.0001",
-    "GameVersion": "2025.02.19.0000.0000",
+    "BlowfishPhrase": "8f5c725967ded4972fcd50ab397fff1b",
+    "BlowfishVersion": 7201,
+    "LoginVersion": 7201,
+    "BootVersion": "2025.11.25.0000.0001",
+    "GameVersion": "2025.12.18.0000.0000",
     "ExVersions": [
-        "2025.01.09.0000.0000",
-        "2025.01.14.0000.0000",
-        "2025.02.19.0000.0000",
-        "2025.02.19.0000.0000",
-        "2025.02.19.0000.0000"
+        "2025.12.01.0000.0000",
+        "2025.12.01.0000.0000",
+        "2025.12.18.0000.0000",
+        "2025.12.18.0000.0000",
+        "2025.12.18.0000.0000"
     ],
     "GameExe": {
         "FileName": "ffxiv_dx11.exe",
-        "FileSize": 48682256,
-        "Sha1Hash": "sUp6cg62HJret8K3BKW7nVQrDdI="
+        "FileSize": 50776392,
+        "Sha1Hash": "Bqt4Z20eiRr+Bk01I7urzOxSvLQ="
     },
     "BootHashes": [
         {
             "FileName": "ffxivboot.exe",
-            "FileSize": 1089296,
-            "Sha1Hash": "omtuIUGVYIA+bCfOvY996k+LV0I="
+            "FileSize": 1130824,
+            "Sha1Hash": "CipdaUKoGKaLjYF6xBDIOyn/Z8g="
         },
         {
             "FileName": "ffxivboot64.exe",
-            "FileSize": 1282320,
-            "Sha1Hash": "N2tYFkKYym07b521cdVwj6gMSKA="
+            "FileSize": 1326408,
+            "Sha1Hash": "TL57kc0/R1klUg9wCMn4lYUrwLQ="
         },
         {
             "FileName": "ffxivlauncher64.exe",
-            "FileSize": 13871376,
-            "Sha1Hash": "ujg80luOosg6I5vNvaZWECIh/Ew="
+            "FileSize": 13981000,
+            "Sha1Hash": "9/YNHvqR9Wgtz09BcArqAXkxDZI="
         },
         {
             "FileName": "ffxivupdater64.exe",
-            "FileSize": 1338128,
-            "Sha1Hash": "Efc68YT0SVA7iWJGNzLq83Oxkyw="
+            "FileSize": 1379144,
+            "Sha1Hash": "MPqO3BZw1MGyVzXwHIWEs9Fdobc="
         }
     ]
 }
