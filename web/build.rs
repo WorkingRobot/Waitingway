@@ -2,7 +2,7 @@ use build_target::{Arch, Env, Os};
 use copy_to_output::copy_to_output_path;
 use std::{ffi::OsStr, process::Command, time::SystemTime};
 
-const SUPPORTED_VERSION: &str = "2.3.0";
+const SUPPORTED_VERSION: &str = "2.4.0";
 
 fn main() {
     {

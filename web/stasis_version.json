@@ -1,41 +1,41 @@
 {
-    "BlowfishPhrase": "8f5c725967ded4972fcd50ab397fff1b",
-    "BlowfishVersion": 7201,
-    "LoginVersion": 7201,
-    "BootVersion": "2025.11.25.0000.0001",
-    "GameVersion": "2025.12.18.0000.0000",
-    "ExVersions": [
-        "2025.12.01.0000.0000",
-        "2025.12.01.0000.0000",
-        "2025.12.18.0000.0000",
-        "2025.12.18.0000.0000",
-        "2025.12.18.0000.0000"
-    ],
-    "GameExe": {
-        "FileName": "ffxiv_dx11.exe",
-        "FileSize": 50776392,
-        "Sha1Hash": "Bqt4Z20eiRr+Bk01I7urzOxSvLQ="
+  "BlowfishPhrase": "8f5c725967ded4972fcd50ab397fff1b",
+  "BlowfishVersion": 7201,
+  "LoginVersion": 7201,
+  "BootVersion": "2025.11.25.0000.0001",
+  "GameVersion": "2025.12.18.0000.0000",
+  "ExVersions": [
+    "2025.12.01.0000.0000",
+    "2025.12.01.0000.0000",
+    "2025.12.18.0000.0000",
+    "2025.12.18.0000.0000",
+    "2025.12.18.0000.0000"
+  ],
+  "GameExe": {
+    "FileName": "ffxiv_dx11.exe",
+    "FileSize": 50776392,
+    "Sha1Hash": "Bqt4Z20eiRr+Bk01I7urzOxSvLQ="
+  },
+  "BootHashes": [
+    {
+      "FileName": "ffxivboot.exe",
+      "FileSize": 1130824,
+      "Sha1Hash": "CipdaUKoGKaLjYF6xBDIOyn/Z8g="
     },
-    "BootHashes": [
-        {
-            "FileName": "ffxivboot.exe",
-            "FileSize": 1130824,
-            "Sha1Hash": "CipdaUKoGKaLjYF6xBDIOyn/Z8g="
-        },
-        {
-            "FileName": "ffxivboot64.exe",
-            "FileSize": 1326408,
-            "Sha1Hash": "TL57kc0/R1klUg9wCMn4lYUrwLQ="
-        },
-        {
-            "FileName": "ffxivlauncher64.exe",
-            "FileSize": 13981000,
-            "Sha1Hash": "9/YNHvqR9Wgtz09BcArqAXkxDZI="
-        },
-        {
-            "FileName": "ffxivupdater64.exe",
-            "FileSize": 1379144,
-            "Sha1Hash": "MPqO3BZw1MGyVzXwHIWEs9Fdobc="
-        }
-    ]
+    {
+      "FileName": "ffxivboot64.exe",
+      "FileSize": 1326408,
+      "Sha1Hash": "TL57kc0/R1klUg9wCMn4lYUrwLQ="
+    },
+    {
+      "FileName": "ffxivlauncher64.exe",
+      "FileSize": 13981000,
+      "Sha1Hash": "9/YNHvqR9Wgtz09BcArqAXkxDZI="
+    },
+    {
+      "FileName": "ffxivupdater64.exe",
+      "FileSize": 1379144,
+      "Sha1Hash": "MPqO3BZw1MGyVzXwHIWEs9Fdobc="
+    }
+  ]
 }
