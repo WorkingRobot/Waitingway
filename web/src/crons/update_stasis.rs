@@ -29,7 +29,7 @@ impl UpdateStasis {
     pub async fn new(config: StasisConfig) -> anyhow::Result<Self> {
         let server = ServerBuilder::default()
             .clut_ram_capacity(32)
-            .slug_update_interval_secs(u64::MAX) // Disable internal slug updates
+            .slug_update_interval_secs(u32::MAX.into()) // Disable internal slug updates
             .ram_entry_capacity(1024 * 1024) // 1 million entries
             .storage_capacity_bytes(
                 1024 * 1024, // 1 GiB
