@@ -86,25 +86,26 @@ impl CronJob for RefreshTravelStates {
         let mut stdout = cmd.stdout.take().unwrap();
         let mut stderr = cmd.stderr.take().unwrap();
         log::info!("Waiting");
-        let status = await_cancellable!(cmd.wait(), stop_signal, {
-            log::error!("Killing connector process...");
-            let kill_err = cmd.kill().await;
-            log::warn!("Stdout:");
-            let mut out_buf = String::new();
-            if let Err(e) = stdout.read_to_string(&mut out_buf).await {
-                log::error!("Failed to read stdout: {}", e);
-            } else {
-                log::warn!("{out_buf}");
-            }
-            log::warn!("Stderr:");
-            let mut err_buf = String::new();
-            if let Err(e) = stderr.read_to_string(&mut err_buf).await {
-                log::error!("Failed to read stderr: {}", e);
-            } else {
-                log::warn!("{err_buf}");
-            }
-            kill_err?;
-        });
+        let status = cmd.wait().await?;
+        // let status = await_cancellable!(cmd.wait(), stop_signal, {
+        //     log::error!("Killing connector process...");
+        //     let kill_err = cmd.kill().await;
+        //     log::warn!("Stdout:");
+        //     let mut out_buf = String::new();
+        //     if let Err(e) = stdout.read_to_string(&mut out_buf).await {
+        //         log::error!("Failed to read stdout: {}", e);
+        //     } else {
+        //         log::warn!("{out_buf}");
+        //     }
+        //     log::warn!("Stderr:");
+        //     let mut err_buf = String::new();
+        //     if let Err(e) = stderr.read_to_string(&mut err_buf).await {
+        //         log::error!("Failed to read stderr: {}", e);
+        //     } else {
+        //         log::warn!("{err_buf}");
+        //     }
+        //     kill_err?;
+        // });
         log::info!("Waited");
         log::info!("Connector process exited with: {}", status);
         drop(cmd);
