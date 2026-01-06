@@ -72,21 +72,20 @@ impl CronJob for RefreshTravelStates {
                 "--dc-token-ttl",
                 &self.config.dc_token_cache.ttl.to_string(),
             ])
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit());
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
 
         log::info!(
             "Running: {}",
             format!("{:?}", cmd.as_std()).replace(self.config.password.as_str(), "***")
         );
 
+        log::info!("Spawning");
         let mut cmd = cmd.spawn()?;
-        log::info!("waiting");
-        cmd.wait().await?;
-        log::info!("waited");
-        return Ok(());
+        log::info!("Spawned");
         let mut stdout = cmd.stdout.take().unwrap();
         let mut stderr = cmd.stderr.take().unwrap();
+        log::info!("Waiting");
         let status = await_cancellable!(cmd.wait(), stop_signal, {
             log::error!("Killing connector process...");
             let kill_err = cmd.kill().await;
@@ -106,6 +105,7 @@ impl CronJob for RefreshTravelStates {
             }
             kill_err?;
         });
+        log::info!("Waited");
         log::info!("Connector process exited with: {}", status);
         drop(cmd);
 
