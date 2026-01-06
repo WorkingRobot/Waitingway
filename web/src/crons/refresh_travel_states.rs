@@ -12,7 +12,7 @@ use serenity::async_trait;
 use sqlx::PgPool;
 use std::{
     collections::{HashMap, HashSet},
-    process::Stdio,
+    process::{Output, Stdio},
     time::Duration,
 };
 use tokio::{
@@ -81,69 +81,44 @@ impl CronJob for RefreshTravelStates {
         );
 
         log::info!("Spawning");
-        let mut cmd = cmd.spawn()?;
+        let cmd = cmd.spawn()?;
         log::info!("Spawned");
-        let mut stdout = cmd.stdout.take().unwrap();
-        let mut stderr = cmd.stderr.take().unwrap();
         log::info!("Waiting");
-        let status = cmd.wait().await?;
-        // let status = await_cancellable!(cmd.wait(), stop_signal, {
-        //     log::error!("Killing connector process...");
-        //     let kill_err = cmd.kill().await;
-        //     log::warn!("Stdout:");
-        //     let mut out_buf = String::new();
-        //     if let Err(e) = stdout.read_to_string(&mut out_buf).await {
-        //         log::error!("Failed to read stdout: {}", e);
-        //     } else {
-        //         log::warn!("{out_buf}");
-        //     }
-        //     log::warn!("Stderr:");
-        //     let mut err_buf = String::new();
-        //     if let Err(e) = stderr.read_to_string(&mut err_buf).await {
-        //         log::error!("Failed to read stderr: {}", e);
-        //     } else {
-        //         log::warn!("{err_buf}");
-        //     }
-        //     kill_err?;
-        // });
+        // let Output {
+        //     status,
+        //     stdout,
+        //     stderr,
+        // } = cmd.wait_with_output().await?;
+        let Output {
+            status,
+            stdout,
+            stderr,
+        } = await_cancellable!(cmd.wait_with_output(), stop_signal, {
+            log::error!("Killing connector process...");
+            // cmd.kill().await?;
+        });
         log::info!("Waited");
         log::info!("Connector process exited with: {}", status);
-        drop(cmd);
+        //drop(cmd);
+
+        let stdout = String::from_utf8_lossy(&stdout);
+        let stderr = String::from_utf8_lossy(&stderr);
 
         if !status.success() {
-            let mut stdout_buf = String::new();
-            let mut stderr_buf = String::new();
-
-            if let Err(e) = stdout.read_to_string(&mut stdout_buf).await {
-                log::error!("Failed to read stdout: {}", e);
-                stdout_buf = "<failed to read stdout>".to_string();
-            }
-
-            if let Err(e) = stderr.read_to_string(&mut stderr_buf).await {
-                log::error!("Failed to read stderr: {}", e);
-                stderr_buf = "<failed to read stderr>".to_string();
-            }
-
             bail!(
                 "non-zero exit code: {}\nstdout:\n{}\nstderr:\n{}",
                 status,
-                stdout_buf,
-                stderr_buf
+                stdout,
+                stderr
             );
         }
 
         log::info!("Getting travel parameters...");
         let travel_params = worlds::get_data();
-        let mut out = BufReader::new(stdout).lines();
         let mut travel_map: HashMap<u16, DCTravelWorldInfo> = HashMap::new();
         let mut travel_time: Option<i32> = None;
         log::info!("Parsing connector output...");
-        loop {
-            let line = match out.next_line().await? {
-                None => break,
-                Some(line) => line,
-            };
-
+        for line in stdout.lines() {
             if let Some(line) = line.strip_prefix("[ERROR] ") {
                 log::error!("{}", line);
                 continue;
