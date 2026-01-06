@@ -72,8 +72,8 @@ impl CronJob for RefreshTravelStates {
                 "--dc-token-ttl",
                 &self.config.dc_token_cache.ttl.to_string(),
             ])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
 
         log::info!(
             "Running: {}",
@@ -81,6 +81,10 @@ impl CronJob for RefreshTravelStates {
         );
 
         let mut cmd = cmd.spawn()?;
+        log::info!("waiting");
+        cmd.wait().await?;
+        log::info!("waited");
+        return Ok(());
         let mut stdout = cmd.stdout.take().unwrap();
         let mut stderr = cmd.stderr.take().unwrap();
         let status = await_cancellable!(cmd.wait(), stop_signal, {
