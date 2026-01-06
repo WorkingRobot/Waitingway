@@ -36,14 +36,14 @@ function format_relative_past(time) {
     if (diff < 1000) {
         return 'Just now';
     }
-    return humanizeDuration(diff, { largest: 2, round: true }) + ' ago';
+    return `${humanizeDuration(diff, { largest: 2, round: true })} ago`;
 }
 
 function format_future_duration(diff) {
     if (diff < 500) {
         return 'soon';
     }
-    return 'in ' + humanizeDuration(diff, { largest: 2, round: true });
+    return `in ${humanizeDuration(diff, { largest: 2, round: true })}`;
 }
 
 function update_global_row(row, text) {
@@ -52,11 +52,11 @@ function update_global_row(row, text) {
 }
 
 function get_region_section_a(region_id) {
-    let ret = region_hyperlinks.querySelector('#region-a-' + region_id);
+    let ret = region_hyperlinks.querySelector(`#region-a-${region_id}`);
     if (ret === null) {
         ret = create_hierarchy({
             "tag": "li",
-            "id": "region-a-" + region_id,
+            "id": `region-a-${region_id}`,
             "class_name": "hide-mobile",
             "children": [
                 {
@@ -72,11 +72,11 @@ function get_region_section_a(region_id) {
     return ret.querySelector('a');
 }
 function get_region_section_b(region_id) {
-    let ret = region_dropdown.querySelector('#region-b-' + region_id);
+    let ret = region_dropdown.querySelector(`#region-b-${region_id}`);
     if (ret === null) {
         ret = create_hierarchy({
             "tag": "li",
-            "id": "region-b-" + region_id,
+            "id": `region-b-${region_id}`,
             "children": [
                 {
                     "tag": "a",
@@ -94,11 +94,11 @@ function get_region_section_b(region_id) {
 }
 
 function get_dc_section(datacenter_id) {
-    let ret = main.querySelector('#dc-' + datacenter_id);
+    let ret = main.querySelector(`#dc-${datacenter_id}`);
     if (ret === null) {
         ret = create_hierarchy({
             "tag": "section",
-            "id": "dc-" + datacenter_id,
+            "id": `dc-${datacenter_id}`,
             "children": [
                 {
                     "tag": "hgroup",
@@ -127,7 +127,7 @@ function get_dc_section(datacenter_id) {
 function get_world_row(datacenter_id, world_id) {
     let dc_section = get_dc_section(datacenter_id);
 
-    let ret = dc_section.querySelector('#world-' + world_id);
+    let ret = dc_section.querySelector(`#world-${world_id}`);
     if (ret === null) {
         ret = create_hierarchy({
             "tag": "div",
@@ -135,7 +135,7 @@ function get_world_row(datacenter_id, world_id) {
             "children": [
                 {
                     "tag": "article",
-                    "id": "world-" + world_id,
+                    "id": `world-${world_id}`,
                     "children": [
                         {
                             "tag": "header",
@@ -368,7 +368,8 @@ function update_dc_data(data, regions) {
 function update_region_data(data, datacenters) {
     for (let section of [get_region_section_a(data.id), get_region_section_b(data.id)]) {
         section.textContent = data.name;
-        section.setAttribute('href', '#dc-' + datacenters.find(dc => dc.region_id === data.id).id);
+        let dc_id = datacenters.find(dc => dc.region_id === data.id).id;
+        section.setAttribute('href', `#dc-${dc_id}`);
     }
 }
 
@@ -444,6 +445,7 @@ function update_from_url(url) {
 }
 
 function queue_url_update(url) {
+    const REFRESH_INTERVAL = 15000;
     let now = Date.now();
     let timerId = setInterval(() => {
         // Don't update in the background
@@ -451,16 +453,16 @@ function queue_url_update(url) {
             return;
         }
         let diff = Date.now() - now;
-        if (diff >= 30000) {
+        if (diff >= REFRESH_INTERVAL) {
             timer_circle.removeAttribute('stroke-dashoffset');
             timer_container.setAttribute('data-tooltip', `Reloading`);
             clearInterval(timerId);
             update_from_url(url);
         }
         else {
-            let percent = diff / 30000;
+            let percent = diff / REFRESH_INTERVAL;
             timer_circle.setAttribute('stroke-dashoffset', -9 * 2 * Math.PI * percent);
-            timer_container.setAttribute('data-tooltip', `Reloading ${format_future_duration(30000 - diff)}`);
+            timer_container.setAttribute('data-tooltip', `Reloading ${format_future_duration(REFRESH_INTERVAL - diff)}`);
         }
     }, 100);
     timer_group.classList.remove('timer-reloading');
