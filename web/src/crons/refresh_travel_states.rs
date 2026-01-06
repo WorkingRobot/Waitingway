@@ -102,6 +102,7 @@ impl CronJob for RefreshTravelStates {
             }
             kill_err?;
         });
+        log::info!("Connector process exited with: {}", status);
         drop(cmd);
 
         if !status.success() {
@@ -126,10 +127,12 @@ impl CronJob for RefreshTravelStates {
             );
         }
 
+        log::info!("Getting travel parameters...");
         let travel_params = worlds::get_data();
         let mut out = BufReader::new(stdout).lines();
         let mut travel_map: HashMap<u16, DCTravelWorldInfo> = HashMap::new();
         let mut travel_time: Option<i32> = None;
+        log::info!("Parsing connector output...");
         loop {
             let line = match out.next_line().await? {
                 None => break,
