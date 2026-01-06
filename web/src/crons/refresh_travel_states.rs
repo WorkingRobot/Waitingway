@@ -15,10 +15,7 @@ use std::{
     process::{Output, Stdio},
     time::Duration,
 };
-use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
-    process::Command,
-};
+use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
 
 pub struct RefreshTravelStates {
@@ -80,44 +77,24 @@ impl CronJob for RefreshTravelStates {
             format!("{:?}", cmd.as_std()).replace(self.config.password.as_str(), "***")
         );
 
-        log::info!("Spawning");
         let cmd = cmd.spawn()?;
-        log::info!("Spawned");
-        log::info!("Waiting");
-        // let Output {
-        //     status,
-        //     stdout,
-        //     stderr,
-        // } = cmd.wait_with_output().await?;
         let Output {
             status,
             stdout,
             stderr,
-        } = await_cancellable!(cmd.wait_with_output(), stop_signal, {
-            log::error!("Killing connector process...");
-            // cmd.kill().await?;
-        });
-        log::info!("Waited");
+        } = await_cancellable!(cmd.wait_with_output(), stop_signal);
         log::info!("Connector process exited with: {}", status);
-        //drop(cmd);
 
         let stdout = String::from_utf8_lossy(&stdout);
         let stderr = String::from_utf8_lossy(&stderr);
 
         if !status.success() {
-            bail!(
-                "non-zero exit code: {}\nstdout:\n{}\nstderr:\n{}",
-                status,
-                stdout,
-                stderr
-            );
+            bail!("non-zero exit code: {status}\nstdout:\n{stdout}\nstderr:\n{stderr}");
         }
 
-        log::info!("Getting travel parameters...");
         let travel_params = worlds::get_data();
         let mut travel_map: HashMap<u16, DCTravelWorldInfo> = HashMap::new();
         let mut travel_time: Option<i32> = None;
-        log::info!("Parsing connector output...");
         for line in stdout.lines() {
             if let Some(line) = line.strip_prefix("[ERROR] ") {
                 log::error!("{}", line);
