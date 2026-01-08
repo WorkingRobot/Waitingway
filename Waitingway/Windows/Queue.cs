@@ -29,6 +29,9 @@ public sealed unsafe class Queue : Window, IDisposable
         if (Service.LoginTracker.CurrentState == LoginQueueTracker.QueueState.NotQueued)
             return false;
 
+        if (Service.LoginTracker.CurrentRecap?.CurrentPosition is null)
+            return false;
+
         var addon = (AtkUnitBase*)Service.GameGui.GetAddonByName("SelectOk").Address;
         if (addon == null)
             return false;
