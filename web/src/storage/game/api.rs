@@ -1,5 +1,5 @@
 use reqwest::Client;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{Deserialize, de::DeserializeOwned};
 use serenity::async_trait;
 use sqlx::PgPool;
 
@@ -54,7 +54,15 @@ pub async fn search_xivapi<T: DeserializeOwned>(
         } else {
             builder = builder.query(&[("sheets", sheet), ("query", query)]);
         }
-        let resp: XivApiSearch<T> = builder.send().await?.json().await?;
+        let req = builder.build()?;
+        let resp: XivApiSearch<T> = client
+            .execute(req.try_clone().unwrap())
+            .await?
+            .json()
+            .await
+            .inspect_err(|e| {
+                log::error!("Failed {} due to {:?}", req.url(), e);
+            })?;
         ret.push(resp.results);
         cursor = resp.next;
         if cursor.is_none() {

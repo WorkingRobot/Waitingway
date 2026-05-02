@@ -11,14 +11,14 @@ stasis:
   version_file: stasis_version.json
 
   # Blowfish phrase is from 48 89 5C 24 ?? 57 48 83 EC 20 0F 57 C0 48 8B FA
-  blowfish_phrase: 8f5c725967ded4972fcd50ab397fff1b
+  blowfish_phrase: fdbc958225e28b8d71a86233546c090f
   # Version is after the 0x12345678 magic
   # from E8 ?? ?? ?? ?? 48 8B F8 48 8B CF 48 89 7B 10 E8 ?? ?? ?? ?? 48 8D 8B
-  blowfish_version: 7201
+  blowfish_version: 7500
   # Login version is somewhere
   # in 48 89 5C 24 ?? 55 56 57 41 56 41 57 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 27 48 8B 41 08
   # or after a call to E8 ?? ?? ?? ?? 48 8B 6C 24 ?? 89 86 (xref #2)
-  login_version: 7201
+  login_version: 7500
 
   lobby_hosts:
     - neolobby01.ffxiv.com # Elemental
@@ -52,7 +52,7 @@ discord:
   queue_size_dm_threshold: 0
   duty_wait_time_dm_threshold: 0
   duty_allow_hidden_wait_time_dm: true
-  connected_role_id: 1236758675385749534
+  connected_role_id: 1236758675385749500
   activity_update_interval: 60
   activities:
     - type: Watching

@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: waitingway_passwd
       POSTGRES_DB: waitingway
     volumes:
-      - wway-pg-data:/var/lib/postgresql/data
+      - wway-pg-data:/var/lib/postgresql
     ports:
       - 5432:5432
 
@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
     image: eqalpha/keydb:alpine
     healthcheck:
-      test: ['CMD', 'keydb-cli', 'ping']
+      test: [ "CMD", "keydb-cli", "ping" ]
     volumes:
       - wway-keydb-data:/data
     ports:

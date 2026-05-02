@@ -1,9 +1,10 @@
 use super::{
-    api::{search_xivapi, GameSheet, XivApiLink},
-    impl_game_data, GameData,
+    GameData,
+    api::{GameSheet, XivApiLink, search_xivapi},
+    impl_game_data,
 };
 use crate::{models::world_info::WorldInfo, stopwatch::Stopwatch, storage::db};
-use fuzzy_matcher::{skim::SkimMatcherV2, FuzzyMatcher};
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
 use itertools::Itertools;
 use poise::ChoiceParameter;
 use reqwest::Client;
@@ -28,6 +29,7 @@ struct XivApiWorld {
 struct XivApiDataCenter {
     pub is_cloud: bool,
     pub name: String,
+    #[serde(rename = "Region@as(raw)")]
     pub region: u8,
 }
 
@@ -45,7 +47,7 @@ impl GameSheet for WorldSheet {
             // UserType 9 is NA Cloud Test which is public for some reason
             // 101 is China, 201 is Korea
             "-UserType=9 +(IsPublic=1 UserType=101 UserType=201)",
-            "Name,DataCenter.Region,DataCenter.Name,DataCenter.IsCloud,IsPublic",
+            "Name,DataCenter.Region@as(raw),DataCenter.Name,DataCenter.IsCloud,IsPublic",
         )
         .await?
         .into_iter()
