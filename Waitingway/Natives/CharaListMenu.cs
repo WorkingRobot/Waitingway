@@ -1,6 +1,7 @@
 using Dalamud.Game.Addon.Events;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
+using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Kernel;
 using FFXIVClientStructs.FFXIV.Client.System.Memory;
@@ -20,7 +21,7 @@ public sealed unsafe class CharaListMenu : IDisposable
 {
     private AtkUnitBase* Addon { get; set; }
 
-    private ILoadedTextureIcon SettingsImage { get; }
+    private ISharedImmediateTexture SettingsImage { get; }
     private IDalamudTextureWrap SettingsImageWrap { get; }
 
     private AtkComponentButton* SettingsButton { get; set; }
@@ -43,7 +44,7 @@ public sealed unsafe class CharaListMenu : IDisposable
     {
         var isHr = AtkStage.Instance()->AtkTextureResourceManager->DefaultTextureScale == 2;
         SettingsImage = IconManager.GetAssemblyTexture(isHr ? "Graphics.settings_hr1.png" : "Graphics.settings.png");
-        SettingsImageWrap = SettingsImage.GetWrap();
+        SettingsImageWrap = SettingsImage.RentAsync().GetAwaiter().GetResult();
 
         Service.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "_CharaSelectListMenu", OnSetup);
         Service.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "_CharaSelectListMenu", OnFinalize);
@@ -64,7 +65,7 @@ public sealed unsafe class CharaListMenu : IDisposable
 
         // Saves an extra API call by getting all world queues at once
         var dcId = AgentLobby.Instance()->DataCenter;
-        Service.Api.Login.GetWorldQueuesCached(World.GetWorlds().Where(w => w.DatacenterId == dcId).Select(w => w.WorldId).ToArray());
+        Service.Api.Login.GetWorldQueuesCached([.. World.GetWorlds().Where(w => w.DatacenterId == dcId).Select(w => w.WorldId)]);
 
         AdjustNativeUi();
     }
@@ -102,7 +103,7 @@ public sealed unsafe class CharaListMenu : IDisposable
 
         SettingsButton = settingsNode->GetAsAtkComponentButton();
 
-        var imageNode = (AtkImageNode*)SettingsButton->GetImageNodeById(4);
+        var imageNode = SettingsButton->GetImageNodeById(4);
 
         var createdAsset = AtkUtils.Calloc<AtkUldAsset>();
         createdAsset->Id = 99899;
@@ -375,6 +376,6 @@ public sealed unsafe class CharaListMenu : IDisposable
 
         RevertNativeUi();
 
-        SettingsImage.Dispose();
+        SettingsImageWrap.Dispose();
     }
 }

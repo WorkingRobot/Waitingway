@@ -34,7 +34,6 @@ public sealed class Service
     public static Plugin Plugin { get; private set; }
     public static Configuration Configuration => Plugin.Configuration;
     public static WindowSystem WindowSystem => Plugin.WindowSystem;
-    public static IconManager IconManager => Plugin.IconManager;
     public static Versioning Version => Plugin.Version;
     public static Hooks.Hooks Hooks => Plugin.Hooks;
     public static LoginQueueTracker LoginTracker => Plugin.LoginTracker;

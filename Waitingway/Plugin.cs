@@ -24,7 +24,6 @@ public sealed class Plugin : IDalamudPlugin
     public WorldSelector WorldSelector { get; }
 
     public Configuration Configuration { get; }
-    public IconManager IconManager { get; }
     public Versioning Version { get; }
     public Hooks.Hooks Hooks { get; }
     public LoginQueueTracker LoginTracker { get; }
@@ -40,7 +39,6 @@ public sealed class Plugin : IDalamudPlugin
 
         WindowSystem = new("Waitingway");
         Configuration = pluginInterface.GetPluginConfig() as Configuration ?? new();
-        IconManager = new();
         Version = new();
         Hooks = new();
         LoginTracker = new();
@@ -56,7 +54,7 @@ public sealed class Plugin : IDalamudPlugin
         SettingsButton = new();
         WorldSelector = new();
 
-        Service.TitleScreenMenu.AddEntry("Waitingway Settings", IconManager.GetAssemblyTextureCached("Graphics.menu_icon.png").Source, () => OpenSettingsWindow(true));
+        Service.TitleScreenMenu.AddEntry("Waitingway Settings", IconManager.GetAssemblyTexture("Graphics.menu_icon.png"), () => OpenSettingsWindow(true));
 
         Service.PluginInterface.UiBuilder.Draw += WindowSystem.Draw;
         Service.PluginInterface.UiBuilder.OpenConfigUi += () => OpenSettingsWindow();
@@ -135,6 +133,5 @@ public sealed class Plugin : IDalamudPlugin
         LoginTracker.Dispose();
         DutyTracker.Dispose();
         Hooks.Dispose();
-        IconManager.Dispose();
     }
 }

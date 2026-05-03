@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Dalamud.Interface.Textures;
 
 namespace Waitingway.Utils;
 
@@ -9,7 +10,7 @@ public sealed class Versioning
     public string VersionString { get; }
     public string Author { get; }
     public string BuildConfiguration { get; }
-    public ITextureIcon Icon { get; }
+    public ISharedImmediateTexture Icon { get; }
 
     public Versioning()
     {
@@ -18,6 +19,6 @@ public sealed class Versioning
         VersionString = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
         Author = assembly.GetCustomAttribute<AssemblyCompanyAttribute>()!.Company;
         BuildConfiguration = assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
-        Icon = Service.IconManager.GetAssemblyTextureCached("icon.png");
+        Icon = IconManager.GetAssemblyTexture("icon.png");
     }
 }

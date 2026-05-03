@@ -452,19 +452,19 @@ public sealed class Settings : Window, IDisposable
         ImGuiHelpers.ScaledDummy(5);
 
         var version = Service.Version;
-        var iconDim = version.Icon.Dimensions ?? new(128);
+        var icon = version.Icon.GetWrapOrEmpty();
 
         using (var table = ImRaii.Table("settingsAboutTable", 2))
         {
             if (table)
             {
-                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, iconDim.X);
+                ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, icon.Width);
 
                 ImGui.TableNextColumn();
-                ImGui.Image(version.Icon.ImGuiHandle, iconDim);
+                ImGui.Image(icon.Handle, icon.Size);
 
                 ImGui.TableNextColumn();
-                ImGuiUtils.AlignMiddle(new(float.PositiveInfinity, HeaderFont.GetFontSize() + SubheaderFont.GetFontSize() + ImGui.GetFontSize() * 3 + ImGui.GetStyle().ItemSpacing.Y * 4), new(0, iconDim.Y));
+                ImGuiUtils.AlignMiddle(new(float.PositiveInfinity, HeaderFont.GetFontSize() + SubheaderFont.GetFontSize() + ImGui.GetFontSize() * 3 + ImGui.GetStyle().ItemSpacing.Y * 4), new(0, icon.Height));
 
                 using (HeaderFont.Push())
                 {
