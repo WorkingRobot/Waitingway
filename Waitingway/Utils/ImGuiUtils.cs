@@ -149,7 +149,7 @@ public static class ImGuiUtils
         if (!remainingBuf.IsEmpty)
         {
             ImGui.SetCursorPosX(basePosX);
-            using (ImRaii2.TextWrapPos(wrapPosX))
+            using (ImRaii.TextWrapPos(wrapPosX))
                 ImGui.TextWrapped(remainingBuf.ToString());
         }
     }
@@ -165,7 +165,7 @@ public static class ImGuiUtils
     {
         using var _font = ImRaii.PushFont(UiBuilder.DefaultFont);
         using var _tooltip = ImRaii.Tooltip();
-        using var _wrap = ImRaii2.TextWrapPos(width);
+        using var _wrap = ImRaii.TextWrapPos(width);
         ImGui.TextUnformatted(text);
     }
 

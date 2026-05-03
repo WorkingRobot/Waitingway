@@ -54,7 +54,7 @@ public sealed unsafe class DutyQueue : IDisposable
             else if (flags.HasFlag(QueueFlags.Lootmaster))
                 LootRule = LootRuleFlags.Lootmaster;
             else
-                LootRule = LootRuleFlags.None;
+                LootRule = LootRuleFlags.Normal;
 
             if (flags.HasFlag(QueueFlags.Unrestricted))
                 IsUnrestrictedParty = true;

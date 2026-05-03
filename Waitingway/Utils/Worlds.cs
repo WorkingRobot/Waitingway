@@ -27,7 +27,8 @@ public sealed record World
         Oceania,
         China,
         Korea,
-        Cloud
+        Cloud,
+        Taiwan
     }
 
     static World()
@@ -42,7 +43,7 @@ public sealed record World
             if (world.DataCenter.ValueNullable is not { } datacenter)
                 continue;
 
-            var region = (RegionType)datacenter.Region;
+            var region = (RegionType)datacenter.Region.RowId;
 
             if (region == RegionType.Internal)
                 continue;
@@ -56,6 +57,7 @@ public sealed record World
                 RegionType.China => "CN",
                 RegionType.Korea => "KR",
                 RegionType.Cloud => "Cloud",
+                RegionType.Taiwan => "TW",
                 _ => "Unknown"
             };
 

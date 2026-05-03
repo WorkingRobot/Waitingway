@@ -72,14 +72,13 @@ public sealed class Settings : Window, IDisposable
         SelectedTab = label;
     }
 
-    private ImRaii.IEndObject TabItem(string label)
+    private ImRaii.TabItemDisposable TabItem(string label)
     {
         var isSelected = string.Equals(SelectedTab, label, StringComparison.Ordinal);
         if (isSelected)
         {
             SelectedTab = null;
-            var open = true;
-            return ImRaii.TabItem(label, ref open, ImGuiTabItemFlags.SetSelected);
+            return ImRaii.TabItem(label, ImGuiTabItemFlags.SetSelected);
         }
         return ImRaii.TabItem(label);
     }
