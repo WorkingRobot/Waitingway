@@ -55,9 +55,9 @@ public class Configuration : IPluginConfiguration
     public bool ShowDurationInWorldSelector { get; set; }
 
     public bool DutyNotificationEnabled { get; set; } = true;
-    public bool DutyNotificationRequireConfirmation { get; set; } = true;
-    public bool DutyNotificationAllowHidden { get; set; }
-    public int DutyNotificationThresholdMinutes { get; set; } = 10;
+    public bool DutyNotificationRequireConfirmation { get; set; }
+    public bool DutyNotificationAllowHidden { get; set; } = true;
+    public int DutyNotificationThresholdMinutes { get; set; } = 5;
 
     public void AddFailedRecap(Recap recap)
     {

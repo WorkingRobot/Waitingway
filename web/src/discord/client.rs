@@ -223,8 +223,7 @@ impl DiscordClient {
         let invite_url = format!("https://discord.gg/{}", self.config().guild_invite_code);
 
         let embed = CreateEmbed::new().title("You're linked up!")
-            .description(format!("You'll now get DMs from me whenever your queue is over {}.\n\n{}",
-                self.config().queue_size_dm_threshold,
+            .description(format!("You'll now get DMs from me whenever your queue is long enough.\n\n{}",
                 if already_in_guild {
                     format!("Thanks for joining the [official Discord server]({invite_url})! It's the best way to stay up to date with Waitingway!")
                 }

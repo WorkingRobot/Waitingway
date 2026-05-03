@@ -1,16 +1,17 @@
 use crate::{
     config::Config,
     discord::{
-        notifications::duty::{self as notifs, QueueData},
         DiscordClient,
+        notifications::duty::{self as notifs, QueueData},
     },
-    models::duty::{RecapUpdate, RecapUpdateData, WaitTime},
-    routes::api::notifications::{impl_notification_instance, NotificationInstance},
+    models::duty::RecapUpdate,
+    routes::api::notifications::{NotificationInstance, impl_notification_instance},
     storage::db::wrappers::DatabaseDateTime,
 };
 use actix_web::{
+    FromRequest, HttpRequest, Result,
     dev::{HttpServiceFactory, Payload},
-    web, FromRequest, HttpRequest, Result,
+    web,
 };
 use serde::{Deserialize, Serialize};
 use serenity::{
@@ -88,22 +89,12 @@ impl NotificationInstance for InstanceData {
         &self.messages
     }
 
-    fn passes_threshold(data: &CreateData, config: &Config) -> bool {
+    fn passes_threshold(data: &CreateData, _config: &Config) -> bool {
         if data.update.is_reserving_server {
             return false;
         }
-        let wait_time = match data.update.update_data {
-            Some(RecapUpdateData::Roulette { wait_time, .. }) => wait_time,
-            Some(RecapUpdateData::Thd { wait_time, .. }) => wait_time,
-            Some(RecapUpdateData::Players { wait_time, .. }) => wait_time,
-            Some(RecapUpdateData::WaitTime { wait_time }) => wait_time,
-            None => return false,
-        };
-        match wait_time {
-            WaitTime::Minutes(min) => min >= config.discord.duty_wait_time_dm_threshold,
-            WaitTime::Over30Minutes => 31 >= config.discord.duty_wait_time_dm_threshold,
-            WaitTime::Hidden => config.discord.duty_allow_hidden_wait_time_dm,
-        }
+
+        true
     }
 
     async fn dispatch_create(

@@ -394,8 +394,7 @@ public sealed class Settings : Window, IDisposable
         DrawOption(
             "Notification Threshold (Minutes)",
             "Only queue that are estimated to be at least this many minutes will " +
-            "trigger a notification. Keep in mind that the server also has its own " +
-            "threshold, so setting this below a certain point won't have any effect.",
+            "trigger a notification.",
             Config.DutyNotificationThresholdMinutes,
             0, 30,
             v => Config.DutyNotificationThresholdMinutes = v,

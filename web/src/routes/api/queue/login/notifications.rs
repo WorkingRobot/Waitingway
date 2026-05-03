@@ -1,11 +1,12 @@
 use crate::{
     config::Config,
-    discord::{notifications::login as notifs, DiscordClient},
-    routes::api::notifications::{impl_notification_instance, NotificationInstance},
+    discord::{DiscordClient, notifications::login as notifs},
+    routes::api::notifications::{NotificationInstance, impl_notification_instance},
 };
 use actix_web::{
+    FromRequest, HttpRequest, Result,
     dev::{HttpServiceFactory, Payload},
-    web, FromRequest, HttpRequest, Result,
+    web,
 };
 use serde::{Deserialize, Serialize};
 use serenity::{
@@ -82,8 +83,8 @@ impl NotificationInstance for InstanceData {
         &self.messages
     }
 
-    fn passes_threshold(data: &CreateData, config: &Config) -> bool {
-        data.update_data.position >= config.discord.queue_size_dm_threshold
+    fn passes_threshold(_data: &CreateData, _config: &Config) -> bool {
+        true
     }
 
     async fn dispatch_create(
