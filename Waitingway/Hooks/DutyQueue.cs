@@ -1,23 +1,22 @@
+using Dalamud.Game.ClientState;
 using Dalamud.Game.Gui.PartyFinder.Types;
 using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
+using FFXIVClientStructs.FFXIV.Client.Enums;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Group;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Waitingway.Utils;
-using static FFXIVClientStructs.FFXIV.Client.Game.UI.ContentsFinderQueueInfo;
 
 namespace Waitingway.Hooks;
 
@@ -82,7 +81,7 @@ public sealed unsafe class DutyQueue : IDisposable
         public QueueInfo(ContentsFinderUpdatePacket2* packet) : this()
         {
             Content = packet->RouletteId != 0
-                ? ([(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(packet->RouletteId)])
+                ? [(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(packet->RouletteId)]
                 : new ReadOnlySpan<uint>(packet->ContentFinderConditions, 5).ToArray().Where(c => c != 0).Select(c => (RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(c)).ToArray();
 
             Flags = new(packet->Flags);
@@ -98,7 +97,7 @@ public sealed unsafe class DutyQueue : IDisposable
 
         public PartyMakeup()
         {
-            IsPartyLeader = Service.Hooks.Duty.isLocalPlayerPartyLeader() == 1;
+            IsPartyLeader = InfoProxyCrossRealm.IsLocalPlayerPartyLeader();
             var currentWorld = (ushort)Service.Objects.LocalPlayer!.CurrentWorld.RowId;
             var numberArrayPartyMember = RaptureAtkModule.Instance()->GetNumberArrayData(InfoProxyPartyMember.Instance()->NumberArrayIndex);
             HashSet<ulong> memberContentIds = [];
@@ -173,8 +172,7 @@ public sealed unsafe class DutyQueue : IDisposable
 
         public static PartyMakeup? TryCreate()
         {
-            var inParty = Service.Hooks.Duty.isLocalPlayerInParty() == 1;
-            if (!inParty)
+            if (!InfoProxyCrossRealm.IsLocalPlayerInParty())
                 return null;
             return new();
         }
@@ -305,7 +303,7 @@ public sealed unsafe class DutyQueue : IDisposable
     [StructLayout(LayoutKind.Explicit, Size = 0x28)]
     public struct ContentsFinderUpdatePacket2
     {
-        [FieldOffset(0x00)] public QueueStates QueueState;
+        [FieldOffset(0x00)] public ContentsFinderQueueState QueueState;
         [FieldOffset(0x01)] public byte ClassJobId;
         [FieldOffset(0x02)] public QueueLanguage LanguageFlags;
         [FieldOffset(0x08)] public QueueFlags Flags;
@@ -350,45 +348,39 @@ public sealed unsafe class DutyQueue : IDisposable
         Unk_H = 0x10
     }
 
-    private delegate void QueueInfoProcessInfoStateDelegate(ContentsFinderQueueInfo* @this, QueueStates newState, QueueInfoState* newInfoState);
     private delegate void ProcessContentsFinderUpdatePacket2Delegate(ContentsFinderUpdatePacket2* packet);
     private delegate void QueueInfoWithdrawQueueDelegate(ContentsFinderQueueInfo* @this, uint logMessageId, ulong contentId);
-    private delegate void QueueInfoDutyPopDelegate(ContentsFinderQueueInfo* @this, QueueStates newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling);
-    private delegate void GameMainStartTerritoryTransitionDelegate(GameMain* a1, uint localPlayerEntityId, uint nextTerritoryTypeId, nint a4, nint a5, nint a6, ushort conditionId, nint a8, nint a9);
+    private delegate void QueueInfoDutyPopDelegate(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling);
 
-    [Signature("40 53 57 41 57 48 83 EC 30 0F B6 41 55", DetourName = nameof(QueueInfoProcessInfoStateDetour))]
-    private readonly Hook<QueueInfoProcessInfoStateDelegate> queueInfoProcessInfoStateHook = null!;
+    private readonly Hook<ContentsFinderQueueInfo.Delegates.ProcessInfoState> queueInfoProcessInfoStateHook = null!;
 
+    // TODO: Update from CS (PacketDispatcher.HandleQueueUpdatePacket)
     [Signature("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 50 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B D9 48 8D 0D", DetourName = nameof(ProcessContentsFinderUpdatePacket2Detour))]
     private readonly Hook<ProcessContentsFinderUpdatePacket2Delegate> processContentsFinderUpdatePacket2Hook = null!;
 
-    [Signature("4C 8B DC 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? C6 01 00", DetourName = nameof(QueueInfoWithdrawQueueDetour))]
+    // TODO: Update from CS (OnQueueWithdrawn)
+    [Signature("4C 8B DC 53 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 4C 8B F1", DetourName = nameof(QueueInfoWithdrawQueueDetour))]
     private readonly Hook<QueueInfoWithdrawQueueDelegate> queueInfoWithdrawQueueHook = null!;
 
     [Signature("48 89 5C 24 ?? 57 48 83 EC 20 80 79 55 00", DetourName = nameof(QueueInfoDutyPopDetour))]
     private readonly Hook<QueueInfoDutyPopDelegate> queueInfoDutyPopHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 45 84 ED 75 57", DetourName = nameof(GameMainStartTerritoryTransitionDetour))]
-    private readonly Hook<GameMainStartTerritoryTransitionDelegate> gameMainStartTerritoryTransitionHook = null!;
-
-    [Signature("E8 ?? ?? ?? ?? 88 9F ?? ?? ?? ?? 0F B6 F0")]
-    private readonly delegate* unmanaged<byte> isLocalPlayerInParty = null!;
-
-    [Signature("E8 ?? ?? ?? ?? 84 C0 75 3F 33 D2")]
-    private readonly delegate* unmanaged<byte> isLocalPlayerPartyLeader = null!;
-
     public DutyQueue()
     {
+
+        queueInfoProcessInfoStateHook = Service.GameInteropProvider.HookFromAddress<ContentsFinderQueueInfo.Delegates.ProcessInfoState>((nint)ContentsFinderQueueInfo.MemberFunctionPointers.ProcessInfoState, QueueInfoProcessInfoStateDetour);
+
         Service.GameInteropProvider.InitializeFromAttributes(this);
 
         queueInfoProcessInfoStateHook.Enable();
         processContentsFinderUpdatePacket2Hook.Enable();
         queueInfoWithdrawQueueHook.Enable();
         queueInfoDutyPopHook.Enable();
-        gameMainStartTerritoryTransitionHook.Enable();
+
+        Service.ClientState.ZoneInit += ZoneInit;
     }
 
-    private void QueueInfoProcessInfoStateDetour(ContentsFinderQueueInfo* @this, QueueStates newState, QueueInfoState* newInfoState)
+    private void QueueInfoProcessInfoStateDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, FFXIVClientStructs.FFXIV.Client.Game.UI.QueueInfoState* newInfoState)
     {
         //Log.Debug("Packet1");
         //Log.Debug($"State: {newState}");
@@ -407,7 +399,7 @@ public sealed unsafe class DutyQueue : IDisposable
 
         try
         {
-            OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*newInfoState));
+            OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*(QueueInfoState*)newInfoState));
         }
         catch (Exception e)
         {
@@ -462,7 +454,7 @@ public sealed unsafe class DutyQueue : IDisposable
         queueInfoWithdrawQueueHook.Original(@this, logMessageId, contentId);
     }
 
-    private void QueueInfoDutyPopDetour(ContentsFinderQueueInfo* @this, QueueStates newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling)
+    private void QueueInfoDutyPopDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling)
     {
         //Log.Debug("Duty Pop");
         //Log.Debug($"State: {newState}");
@@ -485,8 +477,8 @@ public sealed unsafe class DutyQueue : IDisposable
             var queueInfo = new QueueInfo()
             {
                 Content = rouletteId != 0
-                    ? ([(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(rouletteId)])
-                    : ([(RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(contentId)]),
+                    ? [(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(rouletteId)]
+                    : [(RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(contentId)],
                 Flags = new()
                 {
                     LootRule = (LootRuleFlags)lootRule,
@@ -510,29 +502,24 @@ public sealed unsafe class DutyQueue : IDisposable
         queueInfoDutyPopHook.Original(@this, newState, contentId, a4, isInProgressParty, lootRule, inProgressPartyStartTimestamp, a8, isUnrestricted, isMinIlvl, isSilenceEcho, isExplorer, isSynced, isLimitedLeveling);
     }
 
-    private void GameMainStartTerritoryTransitionDetour(GameMain* a1, uint localPlayerEntityId, uint nextTerritoryTypeId, nint a4, nint a5, nint a6, ushort conditionId, nint a8, nint a9)
+    private void ZoneInit(ZoneInitEventArgs args)
     {
-        //Log.Debug("Start Territory Transition");
-        //Log.Debug($"LocalPlayer: {localPlayerEntityId:X8}");
-        //Log.Debug($"Next Territory: {nextTerritoryTypeId}");
-        //Log.Debug($"A4: {a4:X16}");
-        //Log.Debug($"A5: {a5:X16}");
-        //Log.Debug($"A6: {a6:X16}");
-        //Log.Debug($"Condition: {conditionId:X8}");
-        //Log.Debug($"A8: {a8:X16}");
-        //Log.Debug($"A9: {a9:X16}");
+        // Log.Debug("Zone Init");
+        // Log.Debug($"Territory: {args.TerritoryType.RowId}");
+        // Log.Debug($"Instance: {args.Instance}");
+        // Log.Debug($"Condition: {args.ContentFinderCondition.RowId}");
+        // Log.Debug($"Weather: {args.Weather.RowId}");
+        // Log.Debug($"Festivals: {string.Join(", ", args.ActiveFestivals.Select(f => $"{f.Festival.RowId} - {f.FestivalPhase}"))}");
 
         try
         {
-            if (conditionId != 0)
-                OnEnterContent?.Invoke(LuminaSheets.CreateRowRef<ContentFinderCondition>(conditionId));
+            if (args.ContentFinderCondition.RowId != 0)
+                OnEnterContent?.Invoke(args.ContentFinderCondition);
         }
         catch (Exception e)
         {
-            Log.ErrorNotify(e, "Error invoking GameMainStartTerritoryTransitionDetour", "Please report this as a bug");
+            Log.ErrorNotify(e, "Error invoking ZoneInit event", "Please report this as a bug");
         }
-
-        gameMainStartTerritoryTransitionHook.Original(a1, localPlayerEntityId, nextTerritoryTypeId, a4, a5, a6, conditionId, a8, a9);
     }
 
     public void Dispose()
@@ -541,6 +528,6 @@ public sealed unsafe class DutyQueue : IDisposable
         processContentsFinderUpdatePacket2Hook?.Dispose();
         queueInfoWithdrawQueueHook?.Dispose();
         queueInfoDutyPopHook?.Dispose();
-        gameMainStartTerritoryTransitionHook?.Dispose();
+        Service.ClientState.ZoneInit -= ZoneInit;
     }
 }

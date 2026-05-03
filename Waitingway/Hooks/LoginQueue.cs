@@ -25,13 +25,13 @@ public sealed unsafe class LoginQueue : IDisposable
     public event NewQueuePositionDelegate? OnNewQueuePosition; // New position
 
     [StructLayout(LayoutKind.Explicit, Size = 0x40)]
-    public unsafe struct StatusCodeHandler
+    public struct StatusCodeHandler
     {
 
     }
 
     [StructLayout(LayoutKind.Explicit, Size = 0x80)]
-    public unsafe struct LobbyStatusCode
+    public struct LobbyStatusCode
     {
         [FieldOffset(0x00)] public int Code;
         [FieldOffset(0x08)] public int CodeType;
@@ -46,13 +46,19 @@ public sealed unsafe class LoginQueue : IDisposable
 
     private readonly Hook<AgentLobby.Delegates.ReceiveEvent> agentLobbyReceiveEventHook = null!;
 
+    // vf1 at vtable located at "50 78 D3 41 01 00"
+    // vf1 probably detaches the status code handler
+    // Probably called GameLoginOperation or LobbyLoginOperation from classinformer
     [Signature("40 53 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
     private readonly Hook<StatusCodeHandlerLoginDelegate> statusCodeHandlerLoginHook = null!;
 
+    // Replace with AgentLobby.UpdateLoginPosition
     [Signature("40 53 56 57 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 8B 99", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
     private readonly Hook<AgentLobbyUpdatePositionDelegate> agentLobbyUpdatePositionHook = null!;
 
-    [Signature("E8 ?? ?? ?? ?? 83 7E 20 00 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
+    // To get the new sig: Go to AgentLobby.Update, and find the function called on case 0x1F
+    // Replace with AgentLobby.SendLoginRequestPacket
+    [Signature("E8 ?? ?? ?? ?? 48 8B 4E 10 48 8B 01 FF 50 40 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
     private readonly Hook<AgentLobbySendIdentify6Delegate> agentLobbySendIdentify6Hook = null!;
 
     private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;
@@ -78,8 +84,8 @@ public sealed unsafe class LoginQueue : IDisposable
 
     public static long? AgentLobbyGetTimeSinceLastIdentify()
     {
-        var agent = (AgentLobby2*)AgentLobby.Instance();
-        if (agent->Base.LobbyUpdateStage != 31)
+        var agent = AgentLobby.Instance();
+        if (agent->LobbyUpdateStage != 31)
             return null;
         return agent->QueueTimeSinceLastUpdate;
     }
@@ -108,18 +114,8 @@ public sealed unsafe class LoginQueue : IDisposable
         return statusCodeHandlerLoginHook.Original(handler, packetData);
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x2308)]
-    public unsafe partial struct AgentLobby2
-    {
-        [FieldOffset(0)] public AgentLobby Base;
-        [FieldOffset(0x48)] public LobbySubscriptionInfo* SubscriptionInfo;
-        [FieldOffset(0x1179)] public byte SelectedCharacterIndex;
-        [FieldOffset(0x11F0)] public long QueueTimeSinceLastUpdate;
-    }
-
     private AtkValue* AgentLobbyReceiveEventDetour(AgentLobby* @this, AtkValue* returnValue, AtkValue* values, uint valueCount, ulong eventKind)
     {
-        var agent2 = (AgentLobby2*)@this;
         if (valueCount > 0)
         {
             switch (eventKind)
@@ -129,11 +125,11 @@ public sealed unsafe class LoginQueue : IDisposable
                     // 1 = Cancel
                     if (values[0].Int == 0)
                     {
-                        var entry = @this->LobbyData.CharaSelectEntries[agent2->SelectedCharacterIndex].Value;
+                        var entry = @this->LobbyData.CharaSelectEntries[@this->SelectedCharacterIndex].Value;
                         OnEnterQueue?.Invoke(
                             entry->NameString,
                             entry->ContentId,
-                            (agent2->SubscriptionInfo->Flags & 0x10000000) != 0,
+                            (@this->LobbyData.LobbyUIClient.SubscriptionInfo->Flags & 0x10000000) != 0,
                             entry->HomeWorldId,
                             entry->CurrentWorldId);
                     }

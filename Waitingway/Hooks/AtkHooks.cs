@@ -5,6 +5,7 @@ namespace Waitingway.Hooks;
 
 public sealed unsafe class AtkHooks
 {
+    // TODO: These two are in CS now
     public delegate void DuplicateComponentNodeDelegate(AtkUldManager* manager, int componentNodeId, int duplicateCount, int nodeIdOffset);
     public delegate AtkResNode* GetDuplicatedNodeDelegate(AtkUldManager* manager, int nodeId, int idx, int offset);
 

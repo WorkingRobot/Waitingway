@@ -46,7 +46,7 @@ public sealed unsafe class WorldSelector : IDisposable
         [FieldOffset(0x74)] public uint CharacterCount;
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x664)]
+    [StructLayout(LayoutKind.Explicit, Size = 0x298)]
     private struct AddonCharaSelectWorldServer
     {
         [FieldOffset(0x000)] public AtkUnitBase Base;
