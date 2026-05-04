@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
 using Waitingway.Api.Duty.Models;
+using Waitingway.Hooks;
 using Waitingway.Utils;
 using static Waitingway.Hooks.DutyQueue;
 using Action = System.Action;

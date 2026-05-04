@@ -1,5 +1,5 @@
 using System;
-using static Waitingway.Hooks.DutyQueue;
+using Waitingway.Hooks;
 
 namespace Waitingway.Api.Duty.Models;
 

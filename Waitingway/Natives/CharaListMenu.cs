@@ -96,10 +96,10 @@ public sealed unsafe class CharaListMenu : IDisposable
         var width = MathF.Round(backupBtn->Width * Settings + SettingsPadding);
         SettingsDecreasedWidth = width;
 
-        var settingsNode = Service.Hooks.Atk.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
+        var settingsNode = Addon->UldManager.GetDuplicatedNode(6, 1, 0);
         if (settingsNode == null)
-            Service.Hooks.Atk.duplicateComponentNode(&Addon->UldManager, 6, 1, 0);
-        settingsNode = Service.Hooks.Atk.getDuplicatedNode(&Addon->UldManager, 6, 1, 0);
+            Addon->UldManager.DuplicateComponentNode(6, 1, 0);
+        settingsNode = Addon->UldManager.GetDuplicatedNode(6, 1, 0);
 
         SettingsButton = settingsNode->GetAsAtkComponentButton();
 

@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using System.Web;
 using Waitingway.Api.Duty.Models;
 using Waitingway.Api.Models;
+using Waitingway.Hooks;
 using Waitingway.Utils;
-using static Waitingway.Hooks.DutyQueue;
 
 namespace Waitingway.Api.Duty;
 
@@ -27,7 +27,7 @@ public sealed class DutyApi(Api api)
     public const string EP_QUEUE_DUTY_RECAP = Api.EP_QUEUE_DUTY_RECAP;
     public const string EP_QUEUE_DUTY_GET = Api.EP_QUEUE_DUTY_GET;
     public const string EP_QUEUE_DUTY_NOTIFICATIONS = Api.EP_QUEUE_DUTY_NOTIFICATIONS;
-    
+
     public async Task SendRouletteSizeAsync(RouletteSize size)
     {
         var resp = await Client.PostAsJsonAsync(EP_QUEUE_DUTY_SIZE, size, JsonOptions).ConfigureAwait(false);

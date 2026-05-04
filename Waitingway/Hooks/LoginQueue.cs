@@ -1,6 +1,6 @@
 using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
-using FFXIVClientStructs.FFXIV.Client.System.String;
+using FFXIVClientStructs.FFXIV.Application.Network.LobbyClient;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
@@ -30,19 +30,7 @@ public sealed unsafe class LoginQueue : IDisposable
 
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x80)]
-    public struct LobbyStatusCode
-    {
-        [FieldOffset(0x00)] public int Code;
-        [FieldOffset(0x08)] public int CodeType;
-        [FieldOffset(0x10)] public Utf8String String;
-        [FieldOffset(0x78)] public ushort ErrorSheetRow;
-    }
-
     private delegate bool StatusCodeHandlerLoginDelegate(StatusCodeHandler* handler, nint packetData);
-    private delegate void AgentLobbyUpdatePositionDelegate(AgentLobby* agent, int newPosition);
-    private delegate bool AgentLobbySendIdentify6Delegate(AgentLobby* agent, int characterEntryIdx);
-    private delegate void LobbyUIClientReportErrorDelegate(LobbyUIClient* client, LobbyStatusCode* status);
 
     private readonly Hook<AgentLobby.Delegates.ReceiveEvent> agentLobbyReceiveEventHook = null!;
 
@@ -52,16 +40,11 @@ public sealed unsafe class LoginQueue : IDisposable
     [Signature("40 53 48 83 EC 20 66 83 7A", DetourName = nameof(StatusCodeHandlerLoginDetour))]
     private readonly Hook<StatusCodeHandlerLoginDelegate> statusCodeHandlerLoginHook = null!;
 
-    // Replace with AgentLobby.UpdateLoginPosition
-    [Signature("40 53 56 57 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 8B 99", DetourName = nameof(AgentLobbyUpdatePositionDetour))]
-    private readonly Hook<AgentLobbyUpdatePositionDelegate> agentLobbyUpdatePositionHook = null!;
+    private readonly Hook<AgentLobby.Delegates.UpdateLoginPosition> agentLobbyUpdatePositionHook = null!;
 
-    // To get the new sig: Go to AgentLobby.Update, and find the function called on case 0x1F
-    // Replace with AgentLobby.SendLoginRequestPacket
-    [Signature("E8 ?? ?? ?? ?? 48 8B 4E 10 48 8B 01 FF 50 40 4C 8B BC 24", DetourName = nameof(AgentLobbySendIdentify6Detour))]
-    private readonly Hook<AgentLobbySendIdentify6Delegate> agentLobbySendIdentify6Hook = null!;
+    private readonly Hook<AgentLobby.Delegates.SendLoginRequestPacket> agentLobbySendLoginRequestPacketHook = null!;
 
-    private readonly Hook<LobbyUIClientReportErrorDelegate> lobbyUIClientReportErrorHook = null!;
+    private readonly Hook<LobbyUIClient.Delegates.ReportError> lobbyUIClientReportErrorHook = null!;
 
     public LoginQueue()
     {
@@ -69,8 +52,16 @@ public sealed unsafe class LoginQueue : IDisposable
             (nint)AgentLobby.StaticVirtualTablePointer->ReceiveEvent,
             AgentLobbyReceiveEventDetour);
 
-        lobbyUIClientReportErrorHook = Service.GameInteropProvider.HookFromAddress<LobbyUIClientReportErrorDelegate>(
-            ((nint*)LobbyUIClient.StaticVirtualTablePointer)[4],
+        agentLobbyUpdatePositionHook = Service.GameInteropProvider.HookFromAddress<AgentLobby.Delegates.UpdateLoginPosition>(
+            AgentLobby.Addresses.UpdateLoginPosition.Value,
+            AgentLobbyUpdatePositionDetour);
+
+        agentLobbySendLoginRequestPacketHook = Service.GameInteropProvider.HookFromAddress<AgentLobby.Delegates.SendLoginRequestPacket>(
+            AgentLobby.Addresses.SendLoginRequestPacket.Value,
+            AgentLobbySendLoginRequestPacketDetour);
+
+        lobbyUIClientReportErrorHook = Service.GameInteropProvider.HookFromAddress<LobbyUIClient.Delegates.ReportError>(
+            (nint)LobbyUIClient.StaticVirtualTablePointer->ReportError,
             LobbyUIClientReportErrorDetour);
 
         Service.GameInteropProvider.InitializeFromAttributes(this);
@@ -78,7 +69,7 @@ public sealed unsafe class LoginQueue : IDisposable
         agentLobbyReceiveEventHook.Enable(); // for login start and premature cancels
         statusCodeHandlerLoginHook.Enable();
         agentLobbyUpdatePositionHook.Enable();
-        agentLobbySendIdentify6Hook.Enable();
+        agentLobbySendLoginRequestPacketHook.Enable();
         lobbyUIClientReportErrorHook.Enable();
     }
 
@@ -102,10 +93,10 @@ public sealed unsafe class LoginQueue : IDisposable
         agentLobbyUpdatePositionHook.Original(agent, newPosition);
     }
 
-    private bool AgentLobbySendIdentify6Detour(AgentLobby* agent, int characterEntryIdx)
+    private bool AgentLobbySendLoginRequestPacketDetour(AgentLobby* agent, int characterEntryIdx)
     {
         OnSendIdentify?.Invoke();
-        return agentLobbySendIdentify6Hook.Original(agent, characterEntryIdx);
+        return agentLobbySendLoginRequestPacketHook.Original(agent, characterEntryIdx);
     }
 
     private bool StatusCodeHandlerLoginDetour(StatusCodeHandler* handler, nint packetData)
@@ -151,7 +142,7 @@ public sealed unsafe class LoginQueue : IDisposable
         agentLobbyReceiveEventHook?.Dispose();
         statusCodeHandlerLoginHook?.Dispose();
         agentLobbyUpdatePositionHook?.Dispose();
-        agentLobbySendIdentify6Hook?.Dispose();
+        agentLobbySendLoginRequestPacketHook?.Dispose();
         lobbyUIClientReportErrorHook?.Dispose();
     }
 }

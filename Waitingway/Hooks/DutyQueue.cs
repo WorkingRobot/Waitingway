@@ -1,11 +1,11 @@
 using Dalamud.Game.ClientState;
 using Dalamud.Game.Gui.PartyFinder.Types;
 using Dalamud.Hooking;
-using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.Enums;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Group;
+using FFXIVClientStructs.FFXIV.Client.Game.Network;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using FFXIVClientStructs.FFXIV.Client.Network;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using Lumina.Excel;
@@ -14,9 +14,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Waitingway.Utils;
+using static FFXIVClientStructs.FFXIV.Client.Game.Network.QueueUpdatePacket;
 
 namespace Waitingway.Hooks;
 
@@ -78,11 +78,11 @@ public sealed unsafe class DutyQueue : IDisposable
         public required ContentFlags Flags { get; init; }
 
         [SetsRequiredMembers]
-        public QueueInfo(ContentsFinderUpdatePacket2* packet) : this()
+        public QueueInfo(QueueUpdatePacket* packet) : this()
         {
             Content = packet->RouletteId != 0
                 ? [(RowRef)LuminaSheets.CreateRowRef<Lumina.Excel.Sheets.ContentRoulette>(packet->RouletteId)]
-                : new ReadOnlySpan<uint>(packet->ContentFinderConditions, 5).ToArray().Where(c => c != 0).Select(c => (RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(c)).ToArray();
+                : [.. packet->ContentFinderConditions.ToArray().Where(c => c != 0).Select(c => (RowRef)LuminaSheets.CreateRowRef<ContentFinderCondition>(c))];
 
             Flags = new(packet->Flags);
         }
@@ -265,112 +265,20 @@ public sealed unsafe class DutyQueue : IDisposable
         public required FillParam Players { get; init; }
     }
 
-    [StructLayout(LayoutKind.Explicit, Size = 0x10)]
-    public struct QueueInfoState
-    {
-        [FieldOffset(0x2)] public QueueContentType ContentType;
-        [FieldOffset(0x3)] public bool IsReservingServer;
-
-        // ContentType: 0
-        [FieldOffset(0x4)] public byte PositionInQueue;
-
-        // ContentType: 0-3
-        [FieldOffset(0x5)] public byte AverageWaitTime;
-
-        // ContentType: 1
-        [FieldOffset(0x8)] public byte TanksFound;
-        [FieldOffset(0x9)] public byte TanksNeeded;
-        [FieldOffset(0xA)] public byte HealersFound;
-        [FieldOffset(0xB)] public byte HealersNeeded;
-        [FieldOffset(0xC)] public byte DPSFound;
-        [FieldOffset(0xD)] public byte DPSNeeded;
-
-        // ContentType: 2
-        [FieldOffset(0xE)] public byte PlayersFound;
-        [FieldOffset(0xF)] public byte PlayersNeeded;
-
-        public enum QueueContentType : byte
-        {
-            PositionAndWaitTime = 0, // Roulette
-            THDAndWaitTime = 1,
-            PlayersAndWaitTime = 2,
-            WaitTime = 3,
-            None4 = 4,
-            None5 = 5
-        }
-    }
-
-    [StructLayout(LayoutKind.Explicit, Size = 0x28)]
-    public struct ContentsFinderUpdatePacket2
-    {
-        [FieldOffset(0x00)] public ContentsFinderQueueState QueueState;
-        [FieldOffset(0x01)] public byte ClassJobId;
-        [FieldOffset(0x02)] public QueueLanguage LanguageFlags;
-        [FieldOffset(0x08)] public QueueFlags Flags;
-        [FieldOffset(0x10)] public byte RouletteId;
-        [FieldOffset(0x13)] public bool BeganQueue;
-        [FieldOffset(0x14)] public unsafe fixed uint ContentFinderConditions[5];
-    }
-
-    [Flags]
-    public enum QueueLanguage : byte
-    {
-        Japanese = 1,
-        English = 2,
-        German = 4,
-        French = 8
-    }
-
-    [Flags]
-    public enum QueueFlags : ulong
-    {
-        // Queue Pop Flags
-        ReqsDisabled = 0x8,
-        Unrestricted = 0x2000,
-        MinIlvl = 0x4000,
-        GreedOnly = 0x8000,
-        Lootmaster = 0x10000,
-        IsSynced = 0x200000,
-        LimitedLevelingRoulette = 0x400000,
-        SilenceEcho = 0x10000000,
-        IsExplorer = 0x100000000,
-        InProgressParty = 0x80,
-
-        // Queue Join Flags
-        Unk20 = 0x20,
-        Unk_A = 1 << 30,
-        Unk_B = 0x20000,
-        Unk_C = 0x400,
-        Unk_D = 0x40,
-        RequestJoinPartyInProgress = 0x2,
-        Unk_F = 0x20000000,
-        InitiatedByPartyMember = 0x4,
-        Unk_H = 0x10
-    }
-
-    private delegate void ProcessContentsFinderUpdatePacket2Delegate(ContentsFinderUpdatePacket2* packet);
-    private delegate void QueueInfoWithdrawQueueDelegate(ContentsFinderQueueInfo* @this, uint logMessageId, ulong contentId);
-    private delegate void QueueInfoDutyPopDelegate(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling);
-
     private readonly Hook<ContentsFinderQueueInfo.Delegates.ProcessInfoState> queueInfoProcessInfoStateHook = null!;
 
-    // TODO: Update from CS (PacketDispatcher.HandleQueueUpdatePacket)
-    [Signature("48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC 50 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B D9 48 8D 0D", DetourName = nameof(ProcessContentsFinderUpdatePacket2Detour))]
-    private readonly Hook<ProcessContentsFinderUpdatePacket2Delegate> processContentsFinderUpdatePacket2Hook = null!;
+    private readonly Hook<PacketDispatcher.Delegates.HandleQueueUpdatePacket> processContentsFinderUpdatePacket2Hook = null!;
 
-    // TODO: Update from CS (OnQueueWithdrawn)
-    [Signature("4C 8B DC 53 41 56 41 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 4C 8B F1", DetourName = nameof(QueueInfoWithdrawQueueDetour))]
-    private readonly Hook<QueueInfoWithdrawQueueDelegate> queueInfoWithdrawQueueHook = null!;
+    private readonly Hook<ContentsFinderQueueInfo.Delegates.OnQueueWithdrawn> queueInfoWithdrawQueueHook = null!;
 
-    [Signature("48 89 5C 24 ?? 57 48 83 EC 20 80 79 55 00", DetourName = nameof(QueueInfoDutyPopDetour))]
-    private readonly Hook<QueueInfoDutyPopDelegate> queueInfoDutyPopHook = null!;
+    private readonly Hook<ContentsFinderQueueInfo.Delegates.OnQueuePop> queueInfoDutyPopHook = null!;
 
     public DutyQueue()
     {
-
         queueInfoProcessInfoStateHook = Service.GameInteropProvider.HookFromAddress<ContentsFinderQueueInfo.Delegates.ProcessInfoState>((nint)ContentsFinderQueueInfo.MemberFunctionPointers.ProcessInfoState, QueueInfoProcessInfoStateDetour);
-
-        Service.GameInteropProvider.InitializeFromAttributes(this);
+        processContentsFinderUpdatePacket2Hook = Service.GameInteropProvider.HookFromAddress<PacketDispatcher.Delegates.HandleQueueUpdatePacket>((nint)PacketDispatcher.MemberFunctionPointers.HandleQueueUpdatePacket, ProcessContentsFinderUpdatePacket2Detour);
+        queueInfoWithdrawQueueHook = Service.GameInteropProvider.HookFromAddress<ContentsFinderQueueInfo.Delegates.OnQueueWithdrawn>((nint)ContentsFinderQueueInfo.MemberFunctionPointers.OnQueueWithdrawn, QueueInfoWithdrawQueueDetour);
+        queueInfoDutyPopHook = Service.GameInteropProvider.HookFromAddress<ContentsFinderQueueInfo.Delegates.OnQueuePop>((nint)ContentsFinderQueueInfo.MemberFunctionPointers.OnQueuePop, QueueInfoDutyPopDetour);
 
         queueInfoProcessInfoStateHook.Enable();
         processContentsFinderUpdatePacket2Hook.Enable();
@@ -380,7 +288,7 @@ public sealed unsafe class DutyQueue : IDisposable
         Service.ClientState.ZoneInit += ZoneInit;
     }
 
-    private void QueueInfoProcessInfoStateDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, FFXIVClientStructs.FFXIV.Client.Game.UI.QueueInfoState* newInfoState)
+    private void QueueInfoProcessInfoStateDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, QueueInfoState* newInfoState)
     {
         //Log.Debug("Packet1");
         //Log.Debug($"State: {newState}");
@@ -399,7 +307,7 @@ public sealed unsafe class DutyQueue : IDisposable
 
         try
         {
-            OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*(QueueInfoState*)newInfoState));
+            OnUpdateQueue?.Invoke(BaseQueueUpdate.Create(*newInfoState));
         }
         catch (Exception e)
         {
@@ -409,7 +317,7 @@ public sealed unsafe class DutyQueue : IDisposable
         queueInfoProcessInfoStateHook.Original(@this, newState, newInfoState);
     }
 
-    private void ProcessContentsFinderUpdatePacket2Detour(ContentsFinderUpdatePacket2* packet)
+    private void ProcessContentsFinderUpdatePacket2Detour(QueueUpdatePacket* packet)
     {
         //Log.Debug("Packet2");
         //Log.Debug($"State: {packet->QueueState}");
@@ -427,7 +335,7 @@ public sealed unsafe class DutyQueue : IDisposable
                 var makeup = PartyMakeup.TryCreate();
                 var queueInfo = new QueueInfo(packet);
                 var languages = packet->LanguageFlags;
-                OnEnterQueue?.Invoke(queueInfo, languages, LuminaSheets.CreateRowRef<ClassJob>(packet->ClassJobId), makeup);
+                OnEnterQueue?.Invoke(queueInfo, (QueueLanguage)languages, LuminaSheets.CreateRowRef<ClassJob>(packet->ClassJobId), makeup);
             }
         }
         catch (Exception e)
@@ -454,7 +362,7 @@ public sealed unsafe class DutyQueue : IDisposable
         queueInfoWithdrawQueueHook.Original(@this, logMessageId, contentId);
     }
 
-    private void QueueInfoDutyPopDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, uint contentId, nint a4, byte isInProgressParty, byte lootRule, ulong inProgressPartyStartTimestamp, nint a8, byte isUnrestricted, byte isMinIlvl, byte isSilenceEcho, byte isExplorer, byte isSynced, byte isLimitedLeveling)
+    private void QueueInfoDutyPopDetour(ContentsFinderQueueInfo* @this, ContentsFinderQueueState newState, uint contentId, nint a4, bool isInProgressParty, ContentsFinder.LootRule lootRule, ulong inProgressPartyStartTimestamp, nint a8, bool isUnrestrictedParty, bool isMinimalIL, bool isSilenceEcho, bool isExplorerMode, bool isLevelSync, bool isLimitedLeveling)
     {
         //Log.Debug("Duty Pop");
         //Log.Debug($"State: {newState}");
@@ -482,13 +390,13 @@ public sealed unsafe class DutyQueue : IDisposable
                 Flags = new()
                 {
                     LootRule = (LootRuleFlags)lootRule,
-                    IsUnrestrictedParty = isUnrestricted != 0,
-                    IsMinIlvl = isMinIlvl != 0,
-                    IsSilenceEcho = isSilenceEcho != 0,
-                    IsExplorer = isExplorer != 0,
-                    IsLevelSynced = isSynced != 0,
-                    IsLimitedLeveling = isLimitedLeveling != 0,
-                    InProgressParty = isInProgressParty != 0
+                    IsUnrestrictedParty = isUnrestrictedParty,
+                    IsMinIlvl = isMinimalIL,
+                    IsSilenceEcho = isSilenceEcho,
+                    IsExplorer = isExplorerMode,
+                    IsLevelSynced = isLevelSync,
+                    IsLimitedLeveling = isLimitedLeveling,
+                    InProgressParty = isInProgressParty
                 }
             };
             DateTime? inProgressStartTimestamp = inProgressPartyStartTimestamp == 0 ? null : DateTimeOffset.FromUnixTimeSeconds((long)inProgressPartyStartTimestamp).UtcDateTime;
@@ -499,7 +407,7 @@ public sealed unsafe class DutyQueue : IDisposable
             Log.ErrorNotify(e, "Error invoking QueueInfoDutyPopDetour", "Please report this as a bug");
         }
 
-        queueInfoDutyPopHook.Original(@this, newState, contentId, a4, isInProgressParty, lootRule, inProgressPartyStartTimestamp, a8, isUnrestricted, isMinIlvl, isSilenceEcho, isExplorer, isSynced, isLimitedLeveling);
+        queueInfoDutyPopHook.Original(@this, newState, contentId, a4, isInProgressParty, lootRule, inProgressPartyStartTimestamp, a8, isUnrestrictedParty, isMinimalIL, isSilenceEcho, isExplorerMode, isLevelSync, isLimitedLeveling);
     }
 
     private void ZoneInit(ZoneInitEventArgs args)
@@ -530,4 +438,13 @@ public sealed unsafe class DutyQueue : IDisposable
         queueInfoDutyPopHook?.Dispose();
         Service.ClientState.ZoneInit -= ZoneInit;
     }
+}
+
+[Flags]
+public enum QueueLanguage
+{
+    Japanese = 1,
+    English = 2,
+    German = 4,
+    French = 8
 }
