@@ -91,11 +91,10 @@ async fn main() -> Result<(), ServerError> {
     let update_activity_token =
         crons::create_cron_job(crons::UpdateActivity::new(discord_bot.clone()));
 
-    let update_stasis_token = crons::create_cron_job(
-        crons::UpdateStasis::new(config.stasis.clone())
-            .await
-            .expect("Error creating update stasis cron job"),
-    );
+    let update_stasis_token = crons::create_cron_job(crons::UpdateStasis::new(
+        web_client.clone(),
+        config.stasis.clone(),
+    ));
 
     let refresh_queue_estimates_token =
         crons::create_cron_job(crons::RefreshMaterializedViews::new(db_pool.clone()));

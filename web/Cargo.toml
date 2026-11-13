@@ -69,10 +69,7 @@ tokio = { version = "1.47", features = [
 tokio-util = "0.7"
 url = "2.5"
 uuid = { version = "1.19", features = ["serde", "fast-rng", "v7"] }
-sha1 = "0.10"
 
-xiv-dl-core = { git = "https://github.com/WorkingRobot/ffxiv-downloader.git", branch = "main" }
-xiv-dl-cache = { git = "https://github.com/WorkingRobot/ffxiv-downloader.git", branch = "main" }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { version = "0.62", features = ["Win32_System_Threading"] }
