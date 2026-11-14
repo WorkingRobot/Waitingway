@@ -99,8 +99,8 @@ public sealed class DutyApi(Api api)
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
             resp = await Client.SendAsync(message).ConfigureAwait(false);
+            await resp.EnsureSuccess().ConfigureAwait(false);
         }
-        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_DUTY_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }
@@ -115,8 +115,8 @@ public sealed class DutyApi(Api api)
             message.Content = JsonContent.Create(data, options: JsonOptions);
 
             resp = await Client.SendAsync(message).ConfigureAwait(false);
+            await resp.EnsureSuccess().ConfigureAwait(false);
         }
-        await resp.EnsureSuccess().ConfigureAwait(false);
         if (resp.StatusCode != HttpStatusCode.NoContent)
             throw new ApiException(EP_QUEUE_DUTY_NOTIFICATIONS, $"Unexpected status code {resp.StatusCode}");
     }
